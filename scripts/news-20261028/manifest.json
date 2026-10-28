@@ -1,0 +1,41 @@
+{
+  "batch": "game-news-20261028-v1",
+  "entries": [
+    {
+      "key": "valorant-1309",
+      "asset": "valorant.png",
+      "imageSource": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/news_live/b8299cbf36d68d63a8d359d513ae1619a98b38c9-1920x1080.png",
+      "source": "https://playvalorant.com/en-us/news/game-updates/valorant-patch-notes-1309/",
+      "text": "【无畏契约｜13.09 国际服：Hush 登场】\nRiot 于 10 月 27 日发布更新公告：来自广东的新特工 Hush 加入游戏，技能围绕念动力、拉拽、闪光和悬浮展开，被动还能从更远距离拾取武器与 Spike。\n本次也调整了技能说明与提示，Clove 的 Pick-me-up 移速加成由 15% 降至 10%。\n你更期待新特工，还是更在意老特工的手感？\n注：以上为国际服公告，国服更新时间请以国服通知为准。\n来源及配图：Riot Games（2026-10-27）\nhttps://playvalorant.com/en-us/news/game-updates/valorant-patch-notes-1309/",
+      "sha256": "dc612ef9c7fd4a1cdedb22b98e1f6ecfde2b467832a1848063a3d2255d5e6cf6",
+      "mediaType": "image/png"
+    },
+    {
+      "key": "lol-2621",
+      "asset": "lol.jpg",
+      "imageSource": "https://ddragon.leagueoflegends.com/cdn/img/champion/splash/Caitlyn_0.jpg",
+      "source": "https://www.leagueoflegends.com/en-au/news/game-updates/league-of-legends-patch-26-21-notes/",
+      "text": "【英雄联盟｜26.21 国际服：女警的强势期变了】\n这轮更新调整了凯特琳的成长曲线：后期爆头的额外攻击力收益降低，Q 技能后几级的基础伤害提高。喜欢女警的朋友，可以留意对线消耗和后期输出的变化。\n另外，回放下载将限制为每小时 10 次，仍可下载自己、好友和其他玩家的回放。\n公告发布于北京时间 10 月 21 日；国服具体数值与上线安排以国服公告为准。\n配图为凯特琳官方原画，非本次新皮肤。\n来源及配图：Riot Games\nhttps://www.leagueoflegends.com/en-au/news/game-updates/league-of-legends-patch-26-21-notes/",
+      "sha256": "3e164b540b074edd792f4444ab1efe6d887143260a24fd99681e95a982e659cc",
+      "mediaType": "image/jpeg"
+    },
+    {
+      "key": "hok-anniversary",
+      "asset": "hok.png",
+      "imageSource": "https://static.gametalk.qq.com/image/18/1792478098_10fb15c77258a991b0028080a64fb42d.png",
+      "source": "https://pvp.qq.com/web201706/newsdetail.shtml?tid=811292",
+      "text": "【王者荣耀｜周年庆：这两个截止时间记一下】\n根据官方《10月21日版本更新公告》，周年庆活动仍在进行：\n① 史诗皮肤活动持续至 11 月 22 日，奖励兑换截止到 11 月 23 日；可在活动中心的周年庆入口查看任务。\n② 票选前三的限定皮肤返场持续至 10 月 30 日 23:59，分别为妲己·愿照众生和、司空震·愿照山河定、西施·续相思。\n达摩的大招击退距离、技能指示器和连招输入也有优化。活动条件与资格以游戏内说明为准。\n你今年周年庆最想拿到什么？\n来源及配图：王者荣耀官方（公告发布于 2026-10-20）\nhttps://pvp.qq.com/web201706/newsdetail.shtml?tid=811292",
+      "sha256": "295c6db1b2b7e2cca589d6368ad0b78a1fe1937c0347beea7e6a1630991af83c",
+      "mediaType": "image/png"
+    },
+    {
+      "key": "cs2-map-scripting",
+      "asset": "cs2.jpg",
+      "imageSource": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/730/162664aa5da85f418105350c5d67ca565f6c3713/header.jpg?t=1793054556",
+      "source": "https://steamcommunity.com/app/730/announcements/",
+      "text": "【CS:GO / CS2｜10月22日更新：社区地图工具继续完善】\nValve 这轮 CS2 更新主要面向地图脚本：新增资源预加载、人质拾取与救援等事件接口，并提供 Console、GameRules 顶层接口。\n地图中的雷达元素可以在所有游戏模式显示，不再仅限 Rush；同时修复部分接口返回值、枚举和崩溃问题，并改善创意工坊地图命令的自动补全。\n平时玩社区图、做地图的朋友可以关注。你最常玩的社区地图是哪张？\n日期按 Steam 公告页面显示：2026-10-22。配图为 CS2 官方宣传图。\n来源及配图：Valve / Steam\nhttps://steamcommunity.com/app/730/announcements/",
+      "sha256": "747527645619ecf6fbbec78aa543ab0c9a5be12f0bd7c17ccf559e1522678ded",
+      "mediaType": "image/jpeg"
+    }
+  ]
+}
