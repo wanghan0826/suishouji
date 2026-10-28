@@ -63,16 +63,18 @@ async function apiGet(path) {
   return res.json();
 }
 async function apiPost(path, body) {
-  const opt = { method: 'POST' };
+  await window.SJAuth.ready;
+  if(!window.SJAuth.user){window.SJAuth.open();throw Error('请先登录后再操作');}
+  const opt = { method: 'POST', headers: {'X-SJ-CSRF':window.SJAuth.csrf} };
   if (body instanceof FormData) {
     opt.body = body;
   } else {
-    opt.headers = { 'Content-Type': 'application/json' };
+    opt.headers['Content-Type'] = 'application/json';
     opt.body = JSON.stringify(body || {});
   }
   const res = await fetch(path, opt);
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || '请求失败');
+  if (!res.ok) {if(res.status===401){await window.SJAuth.refresh();window.SJAuth.open();}throw new Error(data.error || '请求失败');}
   return data;
 }
 
@@ -572,6 +574,7 @@ function setupPostForm() {
       toast('发布成功～');
       $('#postModal').classList.remove('show');
       $('#postForm').reset();
+      window.SJAuth.render();
       $('#charCount').textContent = '0';
       $('#filePreview').style.display = 'none';
       $('#topicHint').style.display = 'none';

@@ -2,7 +2,7 @@
   'use strict';
   const $=id=>document.getElementById(id),local=['localhost','127.0.0.1','[::1]'].includes(location.hostname);
   const themes={mood:'心情',daily:'日常',scene:'风景',food:'美食',vent:'吐槽',secret:'树洞',game:'游戏',campus:'校园',life:'生活',music:'音乐',travel:'旅行',tech:'科技'};
-  const titles={overview:['SITE OVERVIEW','数据概览'],posts:['POST MANAGEMENT','帖子管理'],comments:['COMMENT MANAGEMENT','评论管理'],topics:['DAILY TOPICS','每日话题']};
+  const titles={users:['ACCOUNT MANAGEMENT','账号管理'],overview:['SITE OVERVIEW','数据概览'],posts:['POST MANAGEMENT','帖子管理'],comments:['COMMENT MANAGEMENT','评论管理'],topics:['DAILY TOPICS','每日话题']};
   let csrf='',view='overview',page=1,totalPages=1,requestId=0,toastTimer;
   const fmt=value=>new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(value));
   const node=(tag,className,text)=>{const e=document.createElement(tag);if(className)e.className=className;if(text!==undefined)e.textContent=String(text);return e;};
@@ -51,7 +51,7 @@
       action.disabled=true;
       try{await api(view+'/'+post.id+'/'+(restore?'restore':'archive'),{method:'POST',body:{}});toast(restore?'已恢复展示':'已移入回收站');await load();}catch(e){showError(e.message);}finally{action.disabled=false;}
     };
-    actions.append(open,action);item.append(copy,actions);return item;
+    if(post.user_id){const account=node('button','text-button','账号 #'+post.user_id);account.onclick=()=>traceUser(post.user_id);actions.append(account);}else actions.append(node('span','muted','历史匿名记录'));actions.append(open,action);item.append(copy,actions);return item;
   }
   async function loadContent(id){
     const params=new URLSearchParams({page:String(page),limit:'20',state:$('stateFilter').value,q:$('searchInput').value.trim()});if(view==='posts'&&$('themeFilter').value)params.set('theme',$('themeFilter').value);
@@ -59,6 +59,32 @@
     totalPages=Math.max(1,Math.ceil(data.total/data.limit));if(page>totalPages){page=totalPages;return load();}
     $('contentList').replaceChildren(...(data.items.length?data.items.map(contentItem):[node('div','empty-state',$('stateFilter').value==='archived'?'回收站是空的':'没有找到符合条件的内容')]));
     $('listTotal').textContent='共 '+data.total+' 条';$('pageIndicator').textContent=page+' / '+totalPages;$('prevPage').disabled=page<=1;$('nextPage').disabled=page>=totalPages;
+  }
+  async function traceUser(id){
+    try{
+      const data=await api('users/'+id),u=data.user;
+      $('detailTitle').textContent='账号 '+u.username+' · #'+u.id;
+      $('detailMeta').textContent=(u.disabled?'已封禁':'正常')+' · 注册于 '+fmt(u.created_at);
+      $('detailText').textContent='注册 IP：'+u.registration_ip+'。以下记录仅供站主管理。内容归属为站内账号，不代表已核验真实身份。';
+      const wrap=$('detailMedia');wrap.replaceChildren();
+      for(const [title,rows,format] of [
+        ['最近帖子（最多50条）',data.posts,p=>'#'+p.id+' · '+fmt(p.created_at)+' · '+p.text],
+        ['最近评论（最多50条）',data.comments,p=>'#'+p.id+' / 帖子 #'+p.post_id+' · '+fmt(p.created_at)+' · '+p.text],
+        ['近30天登录记录（最多30条）',data.access,p=>fmt(p.created_at)+' · '+(p.event==='register'?'注册':'登录')+' · '+p.ip]
+      ]){wrap.append(node('h3','',title));for(const row of rows)wrap.append(node('p','account-record',format(row)));if(!rows.length)wrap.append(node('p','muted','暂无记录'));}
+      $('postDialog').showModal();
+    }catch(e){showError(e.message);}
+  }
+  async function loadUsers(id){
+    const data=await api('users?'+new URLSearchParams({page:String(page),limit:'20',q:$('userSearch').value.trim()}));if(id!==requestId)return;
+    totalPages=Math.max(1,Math.ceil(data.total/data.limit));$('userTotal').textContent='共 '+data.total+' 个账号';$('userPage').textContent=page+' / '+totalPages;$('userPrev').disabled=page<=1;$('userNext').disabled=page>=totalPages;
+    $('userList').replaceChildren(...(data.items.length?data.items.map(u=>{
+      const row=node('article','content-item'),copy=node('div','content-copy');
+      copy.append(node('strong','',u.username+' · #'+u.id+(u.disabled?' · 已封禁':'')),node('p','muted','帖子 '+u.posts+' / 评论 '+u.comments+' · 最近登录 '+fmt(u.last_login)));
+      const actions=node('div','content-actions'),detail=node('button','text-button','查看关联记录'),ban=node('button',u.disabled?'restore-button':'danger-button',u.disabled?'解除封禁':'封禁账号');detail.onclick=()=>traceUser(u.id);
+      ban.onclick=async()=>{if(!await confirmAction(u.disabled?'解除封禁？':'封禁这个账号？',u.disabled?'账号将可以重新登录和发布。':'会立即注销该账号的全部会话，并阻止登录和发布。已有内容保留，可另行移入回收站。'))return;ban.disabled=true;try{await api('users/'+u.id+'/'+(u.disabled?'unban':'ban'),{method:'POST',body:{}});await load();}catch(e){showError(e.message);}finally{ban.disabled=false;}};
+      actions.append(detail,ban);row.append(copy,actions);return row;
+    }):[node('p','empty-state','还没有符合条件的注册账号')]));
   }
   async function loadTopics(id){
     const data=await api('topics');if(id!==requestId)return;
@@ -72,12 +98,13 @@
     }):[node('div','empty-state','暂未安排手动话题，系统正在自动轮换')]));
   }
   function showError(message){$('pageError').textContent=message;$('pageError').classList.remove('hidden');}
-  async function load(){const id=++requestId;$('pageError').classList.add('hidden');$('refreshButton').disabled=true;try{if(view==='overview')await loadOverview(id);else if(view==='topics')await loadTopics(id);else await loadContent(id);}catch(e){if(id===requestId)showError(e.message);}finally{if(id===requestId)$('refreshButton').disabled=false;}}
-  function navigate(next){if(!titles[next])return;view=next;page=1;document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===next));$('pageEyebrow').textContent=titles[next][0];$('pageTitle').textContent=titles[next][1];$('overviewView').classList.toggle('hidden',next!=='overview');$('contentView').classList.toggle('hidden',!['posts','comments'].includes(next));$('topicsView').classList.toggle('hidden',next!=='topics');$('themeFilter').classList.toggle('hidden',next!=='posts');$('listTitle').textContent=next==='comments'?'评论列表':'帖子列表';$('searchInput').value='';$('stateFilter').value='visible';$('themeFilter').value='';load();}
+  async function load(){const id=++requestId;$('pageError').classList.add('hidden');$('refreshButton').disabled=true;try{if(view==='overview')await loadOverview(id);else if(view==='users')await loadUsers(id);else if(view==='topics')await loadTopics(id);else await loadContent(id);}catch(e){if(id===requestId)showError(e.message);}finally{if(id===requestId)$('refreshButton').disabled=false;}}
+  function navigate(next){if(!titles[next])return;view=next;page=1;document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===next));$('pageEyebrow').textContent=titles[next][0];$('pageTitle').textContent=titles[next][1];$('overviewView').classList.toggle('hidden',next!=='overview');$('contentView').classList.toggle('hidden',!['posts','comments'].includes(next));$('topicsView').classList.toggle('hidden',next!=='topics');$('usersView').classList.toggle('hidden',next!=='users');$('themeFilter').classList.toggle('hidden',next!=='posts');$('listTitle').textContent=next==='comments'?'评论列表':'帖子列表';$('searchInput').value='';$('stateFilter').value='visible';$('themeFilter').value='';load();}
   function enter(data){csrf=data.csrf;$('accountName').textContent=data.username;$('loginView').classList.add('hidden');$('appView').classList.remove('hidden');$('previewBadge').classList.toggle('hidden',!local);$('password').value='';navigate('overview');}
   function updateChars(){$('topicCharCount').textContent=$('topicInput').value.length+' / 80';}
   for(const [value,label] of Object.entries(themes)){const option=node('option','',label);option.value=value;$('themeFilter').append(option);}
   document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>navigate(b.dataset.view));document.querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>navigate(b.dataset.goto));
+  $('userFilterForm').onsubmit=e=>{e.preventDefault();page=1;load();};$('userPrev').onclick=()=>{if(page>1){page--;load();}};$('userNext').onclick=()=>{if(page<totalPages){page++;load();}};
   $('refreshButton').onclick=load;$('postDialog').querySelector('.dialog-close').onclick=()=>$('postDialog').close();
   $('filterForm').onsubmit=e=>{e.preventDefault();page=1;load();};$('resetFilter').onclick=()=>{$('searchInput').value='';$('stateFilter').value='visible';$('themeFilter').value='';page=1;load();};
   $('prevPage').onclick=()=>{if(page>1){page--;load();}};$('nextPage').onclick=()=>{if(page<totalPages){page++;load();}};

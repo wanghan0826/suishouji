@@ -2,6 +2,7 @@
 /* 随手记 · 弹幕分享站：零依赖 Node 后端（SQLite + 媒体上传 + 评论 + 签到 + 话题 + 静态托管） */
 import http from 'node:http';
 import { createAdminService } from './admin-service.mjs';
+import {createUserAuth} from './scripts/user-auth.mjs';
 import { stat, mkdir, writeFile } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import path from 'node:path';
@@ -156,7 +157,7 @@ function parseMultipart(buf, boundary) {
   return { fields, file };
 }
 function clientIp(req) {
-  return (TRUST_PROXY ? req.headers['x-forwarded-for'] || '' : '').split(',')[0].trim() || req.socket.remoteAddress || '';
+  return (TRUST_PROXY ? req.headers['x-forwarded-for'] || '' : '').split(',').map(x=>x.trim()).filter(Boolean).at(-1) || req.socket.remoteAddress || '';
 }
 async function serveFile(res, file) {
   try {
@@ -239,7 +240,7 @@ async function api(req, res, url) {
 
     const text = String(fields.text || '').trim().slice(0, MAX_TEXT);
     if (!text) return send(res, 400, { error: '说点什么吧，一个字也行' });
-    const name = String(fields.name || '').trim().slice(0, MAX_NAME);
+    const name = req.siteUser.username;
     const theme = THEMES.has(fields.theme) ? fields.theme : 'mood';
     const topic = fields.topic === todayTopic().date ? fields.topic : '';
 
@@ -256,8 +257,8 @@ async function api(req, res, url) {
 
     const now = Date.now();
     const r = db.prepare(
-      'INSERT INTO posts(text,name,theme,media,media_type,ip,topic,created_at) VALUES(?,?,?,?,?,?,?,?)'
-    ).run(text, name, theme, media, mediaType, ip, topic, now);
+      'INSERT INTO posts(text,name,theme,media,media_type,ip,topic,created_at,user_id) VALUES(?,?,?,?,?,?,?,?,?)'
+    ).run(text, name, theme, media, mediaType, ip, topic, now, req.siteUser.id);
     const post = db.prepare(`SELECT ${POST_FIELDS} FROM posts WHERE id=?`).get(r.lastInsertRowid);
     return send(res, 200, { post });
   }
@@ -294,11 +295,11 @@ async function api(req, res, url) {
     try { body = await readJson(req); } catch { return send(res, 400, { error: 'bad json' }); }
     const text = String(body.text || '').trim().slice(0, MAX_COMMENT);
     if (!text) return send(res, 400, { error: '评论不能为空' });
-    const name = String(body.name || '').trim().slice(0, MAX_NAME);
+    const name = req.siteUser.username;
     const now = Date.now();
     const r = db.prepare(
-      'INSERT INTO comments(post_id,text,name,ip,created_at) VALUES(?,?,?,?,?)'
-    ).run(postId, text, name, ip, now);
+      'INSERT INTO comments(post_id,text,name,ip,created_at,user_id) VALUES(?,?,?,?,?,?)'
+    ).run(postId, text, name, ip, now, req.siteUser.id);
     const comment = db.prepare('SELECT id,text,name,created_at FROM comments WHERE id=?').get(r.lastInsertRowid);
     return send(res, 200, { comment });
   }
@@ -336,12 +337,15 @@ async function api(req, res, url) {
   return send(res, 404, { error: 'not found' });
 }
 
+const users = createUserAuth({db,origin:SITE_ORIGIN,localHttp,trustProxy:TRUST_PROXY});
 const admin = createAdminService({ db, dataDir: DATA, publicDir: PUBLIC, origin: SITE_ORIGIN, allowLocalHttp: localHttp, trustProxy: TRUST_PROXY, automaticTopic: todayTopic });
 
 /* ---------- 服务 ---------- */
 async function handler(req, res) {
   try {
   if (await admin.handle(req, res)) return;
+  if (await users.handle(req, res)) return;
+  if (!users.authorizeWrite(req, res)) return;
   if (admin.handlePublic(req, res)) return;
   const url = new URL(req.url, 'http://x');
   if (url.pathname.startsWith('/api/')) return api(req, res, url).catch(e => send(res, 500, { error: String(e.message || e) }));

@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="/style.css?v=20261027-appearance-1">
 <link rel="stylesheet" href="/appearance.css?v=20261027-appearance-1">
 <script src="/appearance.js?v=20261027-appearance-1"></script>
+<link rel="stylesheet" href="/user-auth.css?v=20261028-user">
 </head>
 <body>
 
@@ -21,6 +22,7 @@
     <a class="brand" href="/" aria-label="随手记首页"><span class="brand-icon">记</span><span class="brand-name">随手记<small>把生活，慢慢记下来</small></span></a><nav class="main-nav" aria-label="主导航"><a href="#selected">发现灵感</a><a href="#shares">大家的日常</a></nav>
     <div class="header-actions">
       <button class="btn-ghost" id="btnAppearance" aria-haspopup="dialog" aria-controls="appearanceDialog">◐ 主题</button>
+      <button class="btn-ghost" id="btnAccount" aria-haspopup="dialog">登录 / 注册</button>
       <button class="btn-ghost" id="btnHot">🔥 热门</button>
       <button class="btn-ghost" id="btnCheckin">📅 签到</button>
       <button class="btn-post" id="btnOpenPost">✏️ 写一条</button>
@@ -69,6 +71,7 @@
   </div>
   <p class="appearance-state" id="appearanceState" role="status"></p><p class="appearance-saved" id="appearanceSaved">选择会自动保存在当前浏览器</p>
 </dialog>
+<dialog id="accountDialog" class="account-dialog" aria-labelledby="accountTitle"><button id="accountClose" class="account-close" aria-label="关闭账号窗口">×</button><p class="account-kicker">SUISHOUJI / YOUR ACCOUNT</p><h2 id="accountTitle">让每一条分享，都有来处。</h2><p class="account-description">浏览无需登录，发布和评论需要账号。</p><div id="accountSignedOut"><div class="account-tabs"><button id="accountLoginTab" aria-pressed="true">登录</button><button id="accountRegisterTab" aria-pressed="false">注册</button></div><form id="accountForm"><label for="accountUsername">用户名</label><input id="accountUsername" autocomplete="username" required minlength="3" maxlength="20" pattern="[a-zA-Z0-9_]{3,20}" placeholder="3–20 位字母、数字或下划线"><label for="accountPassword">密码</label><input id="accountPassword" type="password" autocomplete="current-password" required minlength="12" maxlength="128" placeholder="12–128 位密码"><div id="accountConfirmWrap" hidden><label for="accountConfirm">再次输入密码</label><input id="accountConfirm" type="password" autocomplete="new-password" maxlength="128"><label class="account-consent"><input id="accountAccept" type="checkbox"><span>我了解：内容会关联固定账号；站点记录注册 IP 和近30天登录记录，仅供站主管理与处理违规使用。</span></label><p class="account-footnote">不绑定邮箱，不支持邮箱找回，请妥善保存密码。</p></div><p class="account-error" id="accountError" role="alert"></p><button id="accountSubmit" class="account-primary" type="submit">登录 →</button></form></div><div id="accountSignedIn" hidden><p id="accountIdentity" class="account-identity"></p><p class="account-description">分享使用这个账号名，不能填写他人的账号。</p><form id="accountPasswordForm"><label for="accountCurrentPassword">当前密码</label><input id="accountCurrentPassword" type="password" autocomplete="current-password" required minlength="12" maxlength="128"><label for="accountNewPassword">新密码</label><input id="accountNewPassword" type="password" autocomplete="new-password" required minlength="12" maxlength="128"><p id="accountPasswordError" class="account-error" role="alert"></p><button class="account-primary" type="submit">修改密码</button></form><button id="accountLogout" class="account-logout">退出登录</button></div></dialog>
 <!-- 发布弹窗 -->
 <div class="modal-mask" id="postModal">
   <div class="modal-box">
@@ -79,8 +82,8 @@
       <textarea aria-label="分享内容" id="postText" maxlength="500" placeholder="此刻的心情、今天的见闻、想说又不好意思说的话..."></textarea>
       <div class="char-count"><span id="charCount">0</span>/500</div>
 
-      <label>昵称 <span style="font-weight:400">（留空就是匿名）</span></label>
-      <input type="text" aria-label="发布昵称" id="postName" maxlength="12" placeholder="比如：摸鱼的柯基">
+      <label>发布账号</label>
+      <input type="text" aria-label="发布昵称" id="postName" readonly placeholder="登录后显示账号">
 
       <label>选择主题</label>
       <div class="theme-picker" id="themePicker"></div>
@@ -122,7 +125,7 @@
       <div class="comments-title">💬 评论 <span id="commentCount"></span></div>
       <div class="comments-list" id="commentsList"></div>
       <form class="comment-form" id="commentForm">
-        <input type="text" aria-label="评论昵称" id="commentName" maxlength="12" placeholder="昵称（留空匿名）">
+        <input type="text" aria-label="评论昵称" id="commentName" readonly placeholder="登录后显示账号">
         <div class="comment-input-row">
           <input type="text" aria-label="评论内容" id="commentText" maxlength="200" placeholder="说点什么…">
           <button type="submit" class="comment-send">发送</button>
@@ -143,6 +146,7 @@
 
 <div class="toast" role="status" aria-live="polite" id="toast"></div>
 
+<script src="/user-auth.js?v=20261028-user"></script>
 <script src="/app.js?v=20261019-wall-4"></script>
 <script src="/wall.js?v=20261027-appearance-1"></script>
 <script src="/enhance.js?v=20261019-wall-4"></script>

@@ -1,3 +1,4 @@
+import {ensureUserSchema} from './scripts/user-auth.mjs';
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -19,6 +20,7 @@ const validDate=d=>/^\d{4}-\d{2}-\d{2}$/.test(d)&&!Number.isNaN(Date.parse(d+'T0
 function failure(status,message){return Object.assign(Error(message),{status});}
 export function createAdminService({db,dataDir,publicDir,origin='https://example.com',allowLocalHttp=false,trustProxy=false,automaticTopic,sessionMs=8*3600000}){
   if(!db||!dataDir||!publicDir||typeof automaticTopic!=='function')throw Error('Missing admin service configuration');
+  ensureUserSchema(db);
   const expectedOrigin=new URL(origin).origin;
   if(new URL(expectedOrigin).protocol!=='https:'&&!allowLocalHttp)throw Error('Admin origin must use HTTPS');
   const cookieName=allowLocalHttp?'sj_admin_local':'__Host-sj_admin';
@@ -93,7 +95,7 @@ export function createAdminService({db,dataDir,publicDir,origin='https://example
         const theme=url.searchParams.get('theme');if(isPost&&theme){if(!THEMES.has(theme))throw failure(400,'无效主题');condition.push('p.theme=?');args.push(theme);}
         const where=condition.length?' WHERE '+condition.join(' AND '):'';
         const from=isPost?'posts p':'comments c JOIN posts p ON p.id=c.post_id';
-        const columns=isPost?`${publicColumns},(SELECT count(*) FROM comments c WHERE c.post_id=p.id AND ${visibleComment}) comment_count`:'c.id,c.post_id,c.text,c.name,c.created_at,p.text post_text';
+        const columns=isPost?`${publicColumns},p.user_id,(SELECT count(*) FROM comments c WHERE c.post_id=p.id AND ${visibleComment}) comment_count`:'c.id,c.post_id,c.text,c.name,c.created_at,c.user_id,p.text post_text';
         const total=Number(db.prepare(`SELECT count(*) n FROM ${from}${where}`).get(...args).n);
         const items=db.prepare(`SELECT ${columns},EXISTS(SELECT 1 FROM admin_archive a WHERE a.kind='${kind}' AND a.item_id=${alias}.id) archived FROM ${from}${where} ORDER BY ${alias}.created_at DESC,${alias}.id DESC LIMIT ? OFFSET ?`).all(...args,limit,(page-1)*limit);
         json(res,200,{items,total,page,limit});return true;
@@ -104,6 +106,20 @@ export function createAdminService({db,dataDir,publicDir,origin='https://example
         if(!db.prepare(`SELECT id FROM ${table} WHERE id=?`).get(id))throw failure(404,'内容不存在');
         db.exec('BEGIN IMMEDIATE');try{if(action[3]==='archive')db.prepare('INSERT INTO admin_archive VALUES(?,?,?) ON CONFLICT DO NOTHING').run(kind,id,Date.now());else db.prepare('DELETE FROM admin_archive WHERE kind=? AND item_id=?').run(kind,id);audit(s.username,action[3],kind+':'+id);db.exec('COMMIT');}catch(e){db.exec('ROLLBACK');throw e;}
         json(res,200,{ok:true});return true;
+      }
+      if(p==='/api/admin/users'&&req.method==='GET'){
+        const {limit,page}=pagination(url),q=(url.searchParams.get('q')||'').trim();if(q.length>40)throw failure(400,'搜索内容过长');
+        const where=q?' WHERE instr(u.username,?)>0 OR CAST(u.id AS TEXT)=?':'',args=q?[q.toLowerCase(),q]:[];
+        const total=Number(db.prepare('SELECT count(*) n FROM site_users u'+where).get(...args).n);
+        const items=db.prepare('SELECT u.id,u.username,u.disabled,u.created_at,u.last_login,(SELECT count(*) FROM posts WHERE user_id=u.id) posts,(SELECT count(*) FROM comments WHERE user_id=u.id) comments FROM site_users u'+where+' ORDER BY u.id DESC LIMIT ? OFFSET ?').all(...args,limit,(page-1)*limit);
+        json(res,200,{items,total,page,limit});return true;
+      }
+      const userAction=p.match(/^\/api\/admin\/users\/(\d+)(?:\/(ban|unban))?$/);
+      if(userAction){
+        const id=checkId(userAction[1]),user=db.prepare('SELECT id,username,disabled,created_at,last_login,registration_ip FROM site_users WHERE id=?').get(id);
+        if(!user)throw failure(404,'账号不存在');
+        if(req.method==='GET'&&!userAction[2]){json(res,200,{user,posts:db.prepare('SELECT id,text,created_at FROM posts WHERE user_id=? ORDER BY created_at DESC LIMIT 50').all(id),comments:db.prepare('SELECT id,post_id,text,created_at FROM comments WHERE user_id=? ORDER BY created_at DESC LIMIT 50').all(id),access:db.prepare('SELECT event,ip,created_at FROM user_access WHERE user_id=? AND created_at>? ORDER BY id DESC LIMIT 30').all(id,Date.now()-30*86400000)});return true;}
+        if(req.method==='POST'&&userAction[2]){await body(req);db.exec('BEGIN IMMEDIATE');try{db.prepare('UPDATE site_users SET disabled=? WHERE id=?').run(userAction[2]==='ban'?1:0,id);if(userAction[2]==='ban')db.prepare('DELETE FROM user_sessions WHERE user_id=?').run(id);audit(s.username,userAction[2],'user:'+id);db.exec('COMMIT');}catch(e){db.exec('ROLLBACK');throw e;}json(res,200,{ok:true});return true;}
       }
       if(p==='/api/admin/topics'&&req.method==='GET'){const items=db.prepare('SELECT date,topic,updated_at FROM admin_topics WHERE date>=? ORDER BY date LIMIT 90').all(chinaDate());json(res,200,{items,current:currentTopic(),today:chinaDate(),automatic:automaticTopic().topic});return true;}
       const topic=p.match(/^\/api\/admin\/topics\/(\d{4}-\d{2}-\d{2})$/);
