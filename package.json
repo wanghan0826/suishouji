@@ -1,0 +1,16 @@
+{
+  "name": "suishouji",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "满屏弹幕、图文分享与站主管理",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "admin:setup": "node admin-setup.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "seed:demo": "node scripts/seed-demo.mjs"
+  }
+}

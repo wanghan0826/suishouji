@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>随手记 · 满屏都是你的心情</title>
+<meta name="description" content="随手记，一个记录日常、分享照片与心情的小角落。看看风景，聊聊生活，用文字和图片收藏每一个普通而珍贵的瞬间。">
+<meta name="theme-color" content="#236451">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2718%27 fill=%27%23236451%27/%3E%3Ctext x=%2732%27 y=%2745%27 text-anchor=%27middle%27 font-size=%2742%27 fill=%27white%27%3E记%3C/text%3E%3C/svg%3E">
+<link rel="preload" as="image" href="/assets/lake.jpg">
+<link rel="stylesheet" href="/style.css?v=20261027-appearance-1">
+<link rel="stylesheet" href="/appearance.css?v=20261027-appearance-1">
+<script src="/appearance.js?v=20261027-appearance-1"></script>
+</head>
+<body>
+
+<!-- 顶栏 -->
+<a class="skip-link" href="#shares">跳到最新分享</a>
+<header class="header">
+  <div class="header-top">
+    <a class="brand" href="/" aria-label="随手记首页"><span class="brand-icon">记</span><span class="brand-name">随手记<small>把生活，慢慢记下来</small></span></a><nav class="main-nav" aria-label="主导航"><a href="#selected">发现灵感</a><a href="#shares">大家的日常</a></nav>
+    <div class="header-actions">
+      <button class="btn-ghost" id="btnAppearance" aria-haspopup="dialog" aria-controls="appearanceDialog">◐ 主题</button>
+      <button class="btn-ghost" id="btnHot">🔥 热门</button>
+      <button class="btn-ghost" id="btnCheckin">📅 签到</button>
+      <button class="btn-post" id="btnOpenPost">✏️ 写一条</button>
+    </div>
+  </div>
+  
+</header>
+
+<main>
+<section class="wall-stage" aria-labelledby="wallTitle">
+  <div class="danmaku-area" id="danmakuArea" aria-label="实时帖子弹幕，点击任意弹幕打开帖子"><div class="danmaku-bg show" id="danmakuBg" style="background-image:url('/assets/lake.jpg')"></div><div class="danmaku-bg-mask"></div></div>
+  <div class="wall-intro"><div><p class="eyebrow">SUISHOUJI / LIVE MOMENTS</p><h1 id="wallTitle"><span class="live-dot"></span>让每一种心情，自由飘过。</h1></div><p class="wall-help">每条弹幕，都是一个故事 · 悬停单条暂停，点击进入帖子</p></div>
+  <div class="wall-toolbar"><p class="wall-status" id="wallStatus" role="status">正在加载大家的分享…</p><div class="wall-actions"><button id="toggleDanmaku" class="text-button" aria-pressed="false">Ⅱ 暂停弹幕</button><button class="btn-post" id="wallPost">＋ 发一条弹幕</button></div><a class="wall-browse" href="#shares">往下看帖子 <span aria-hidden="true">↓</span></a></div>
+</section>
+<!-- 每日话题 -->
+<div class="topic-banner" id="topicBanner">
+  <span class="topic-label">今日话题</span>
+  <span class="topic-text" id="topicText">加载中…</span>
+  <button class="topic-join" id="btnJoinTopic">参与 →</button>
+</div>
+
+<section class="selected-section page-width" id="selected" aria-labelledby="selectedTitle"><div class="section-heading"><div><p class="eyebrow">THE EDITOR'S PICKS</p><h2 id="selectedTitle">给日常一点灵感<span class="tiny-spark">✳</span></h2></div><p>四篇图文，陪你慢下来。</p></div><div class="editorial-grid"><button class="editorial-card" data-article="0" aria-haspopup="dialog"><div class="editorial-photo"><img src="/assets/lake.jpg" alt="木船前方的翡翠色湖泊与群山" loading="lazy" width="800" height="600"><span class="editorial-tag">风景手记</span><span class="photo-arrow" aria-hidden="true">↗</span></div><div class="editorial-copy"><span class="editorial-number">01 / 编辑精选</span><h3>把脚步放慢，把风景装进口袋</h3><p>山有回声，水有倒影。偶尔停下来，也是一种向前。</p><span class="read-link">阅读手记 <span aria-hidden="true">→</span></span></div></button><button class="editorial-card" data-article="1" aria-haspopup="dialog"><div class="editorial-photo"><img src="/assets/coffee.jpg" alt="桌面上盛着拉花咖啡的杯子" loading="lazy" width="800" height="600"><span class="editorial-tag">日常灵感</span><span class="photo-arrow" aria-hidden="true">↗</span></div><div class="editorial-copy"><span class="editorial-number">02 / 编辑精选</span><h3>一杯咖啡的时间，留给自己</h3><p>不用把每一分钟都填满，发一会儿呆也很好。</p><span class="read-link">阅读手记 <span aria-hidden="true">→</span></span></div></button><button class="editorial-card" data-article="2" aria-haspopup="dialog"><div class="editorial-photo"><img src="/assets/plants.jpg" alt="花盆、园艺工具与绿色植物" loading="lazy" width="800" height="600"><span class="editorial-tag">生活小事</span><span class="photo-arrow" aria-hidden="true">↗</span></div><div class="editorial-copy"><span class="editorial-number">03 / 编辑精选</span><h3>在一抹绿色里，找到生活的节奏</h3><p>新叶慢慢长，日子也可以慢慢过。</p><span class="read-link">阅读手记 <span aria-hidden="true">→</span></span></div></button><button class="editorial-card" data-article="3" aria-haspopup="dialog"><div class="editorial-photo"><img src="/assets/travel.jpg" alt="山湖边的木屋与远山倒影" loading="lazy" width="800" height="600"><span class="editorial-tag">远方来信</span><span class="photo-arrow" aria-hidden="true">↗</span></div><div class="editorial-copy"><span class="editorial-number">04 / 编辑精选</span><h3>下一次出发，给自己留一点空白</h3><p>少排一个行程，多留一个偶遇的可能。</p><span class="read-link">阅读手记 <span aria-hidden="true">→</span></span></div></button></div></section>
+
+<!-- 瀑布流 -->
+<section class="waterfall-section" id="shares" aria-labelledby="waterfallTitle"><div class="section-heading"><div><p class="eyebrow">EVERYDAY STORIES</p><h2>看看大家的日常</h2></div><p>普通的每一天，也有闪光的瞬间。</p></div><nav class="theme-bar" id="themeBar" aria-label="按主题筛选"></nav>
+  <div class="waterfall-title" id="waterfallTitle">最新分享</div>
+  <div class="waterfall-grid" id="waterfallGrid"></div>
+  <button class="load-more" id="btnLoadMore">再翻一页</button>
+</section>
+
+</main><footer class="site-footer page-width"><div><span class="footer-brand">随手记</span><span>认真生活，随手记录。</span></div><p>编辑精选为本站整理的灵感文章 · 配图来自 Unsplash<br>用户分享由发布者提供，请友善交流并尊重原创。</p><a href="/admin">站主管理</a><a href="#" aria-label="回到顶部">回到顶部 ↑</a></footer>
+<dialog id="articleDialog" class="article-dialog" aria-labelledby="articleTitle"><button class="article-close" aria-label="关闭图文">×</button><img id="articleImage" alt=""><div class="article-body"><p class="eyebrow" id="articleTag"></p><h2 id="articleTitle"></h2><p class="article-intro" id="articleIntro"></p><div id="articleContent"></div><p class="article-credit">编辑精选 · 灵感文章 / 配图：Unsplash</p><button class="btn-post" id="articlePost">记录我的这一刻 →</button></div></dialog>
+<dialog id="appearanceDialog" class="appearance-dialog" aria-labelledby="appearanceTitle" aria-describedby="appearanceDescription">
+  <div class="appearance-heading"><div><p class="appearance-kicker">MAKE IT YOUR MOMENT</p><h2 id="appearanceTitle">换一种心情，看世界</h2></div><button class="appearance-close" data-appearance-close aria-label="关闭主题设置">×</button></div>
+  <p id="appearanceDescription" class="appearance-description">选择喜欢的视觉主题。手动选择后将固定显示，随时可以开启自动变化。</p>
+  <div class="appearance-choices" role="group" aria-label="选择视觉主题">
+    <button class="appearance-choice" data-appearance-choice="night" aria-pressed="true"><span class="appearance-preview" style="--swatch:#101e26;--swatch-pill:#7faaa4" aria-hidden="true"><i></i><i></i></span><strong>静谧夜色</strong></button>
+    <button class="appearance-choice" data-appearance-choice="forest" aria-pressed="false"><span class="appearance-preview" style="--swatch:#142e27;--swatch-pill:#b1c98a" aria-hidden="true"><i></i><i></i></span><strong>林间微光</strong></button>
+    <button class="appearance-choice" data-appearance-choice="sunset" aria-pressed="false"><span class="appearance-preview" style="--swatch:#3c252d;--swatch-pill:#d9a580" aria-hidden="true"><i></i><i></i></span><strong>暖橙日落</strong></button>
+    <button class="appearance-choice" data-appearance-choice="paper" aria-pressed="false"><span class="appearance-preview" style="--swatch:#f0ede3;--swatch-pill:#8caa85" aria-hidden="true"><i></i><i></i></span><strong>晴日纸白</strong></button>
+  </div>
+  <div class="appearance-options">
+    <label class="appearance-option"><span>自动切换主题<small>按顺序轮换四种风格，关闭后固定当前主题</small></span><input id="appearanceAutomatic" type="checkbox"></label>
+    <label class="appearance-interval" for="appearanceInterval">切换间隔<select id="appearanceInterval" aria-label="切换间隔" disabled><option value="30">30 秒</option><option value="60" selected>1 分钟</option><option value="300">5 分钟</option></select></label>
+    <label class="appearance-option"><span>背景图片轮播<small>每 12 秒更换一张帖子配图，关闭后固定当前图片</small></span><input id="appearanceSlideshow" type="checkbox"></label>
+  </div>
+  <p class="appearance-state" id="appearanceState" role="status"></p><p class="appearance-saved" id="appearanceSaved">选择会自动保存在当前浏览器</p>
+</dialog>
+<!-- 发布弹窗 -->
+<div class="modal-mask" id="postModal">
+  <div class="modal-box">
+    <button class="modal-close" data-close="postModal">×</button>
+    <h3>写一条碎语</h3>
+    <form class="post-form" id="postForm">
+      <label>说点什么 <span style="font-weight:400">（500字以内）</span></label>
+      <textarea aria-label="分享内容" id="postText" maxlength="500" placeholder="此刻的心情、今天的见闻、想说又不好意思说的话..."></textarea>
+      <div class="char-count"><span id="charCount">0</span>/500</div>
+
+      <label>昵称 <span style="font-weight:400">（留空就是匿名）</span></label>
+      <input type="text" aria-label="发布昵称" id="postName" maxlength="12" placeholder="比如：摸鱼的柯基">
+
+      <label>选择主题</label>
+      <div class="theme-picker" id="themePicker"></div>
+
+      <div class="topic-hint" id="topicHint" style="display:none">
+        📌 正在参与今日话题：<b id="topicHintText"></b>
+        <button type="button" class="topic-cancel" id="btnCancelTopic">取消</button>
+      </div>
+
+      <label>图片/视频 <span style="font-weight:400">（60MB以内，可选）</span></label>
+      <div class="file-area" id="fileArea">
+        📎 点击选择文件（支持拍照/相册）
+        <input type="file" id="postFile" accept="image/*,video/*">
+      </div>
+      <img class="file-preview" id="filePreview" style="display:none">
+
+      <button type="submit" class="submit-btn" id="btnSubmit">发布 🚀</button>
+    </form>
+  </div>
+</div>
+
+<!-- 详情弹窗 -->
+<div class="modal-mask detail-modal" id="detailModal">
+  <div class="modal-box">
+    <button class="modal-close" data-close="detailModal">×</button>
+    <div class="detail-header">
+      <span class="card-theme-badge" id="detailTheme"></span>
+      <span class="detail-name" id="detailName"></span>
+      <span class="detail-time" id="detailTime"></span>
+    </div>
+    <div class="detail-topic-tag" id="detailTopicTag" style="display:none"></div>
+    <div class="detail-text" id="detailText"></div>
+    <div id="detailMediaWrap"></div>
+    <div class="detail-actions">
+      <button class="heart-btn" id="btnHeart">❤️ <span id="detailHearts">0</span></button>
+    </div>
+    <!-- 评论区 -->
+    <div class="comments-section">
+      <div class="comments-title">💬 评论 <span id="commentCount"></span></div>
+      <div class="comments-list" id="commentsList"></div>
+      <form class="comment-form" id="commentForm">
+        <input type="text" aria-label="评论昵称" id="commentName" maxlength="12" placeholder="昵称（留空匿名）">
+        <div class="comment-input-row">
+          <input type="text" aria-label="评论内容" id="commentText" maxlength="200" placeholder="说点什么…">
+          <button type="submit" class="comment-send">发送</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- 热门弹窗 -->
+<div class="modal-mask" id="hotModal">
+  <div class="modal-box">
+    <button class="modal-close" data-close="hotModal">×</button>
+    <h3>🔥 本周热门 Top 10</h3>
+    <div id="hotList" class="hot-list"></div>
+  </div>
+</div>
+
+<div class="toast" role="status" aria-live="polite" id="toast"></div>
+
+<script src="/app.js?v=20261019-wall-4"></script>
+<script src="/wall.js?v=20261027-appearance-1"></script>
+<script src="/enhance.js?v=20261019-wall-4"></script>
+</body>
+</html>

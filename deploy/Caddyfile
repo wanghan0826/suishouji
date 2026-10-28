@@ -1,0 +1,6 @@
+{$SITE_DOMAIN} {
+    request_body {
+        max_size 65MB
+    }
+    reverse_proxy app:8080
+}
