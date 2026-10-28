@@ -41,6 +41,36 @@ test('password rotation revokes other sessions and login failures are throttled'
  assert.equal((await f.login('account_one',password)).status,401);assert.equal((await f.login('account_one',next)).status,200);
  let last;for(let i=0;i<13;i++)last=await f.login('unknown_name',password);assert.equal(last.status,429);
 });
+
+test('replies preserve old comments, bind real authors, validate targets, and respect moderation',async t=>{
+ const f=await fixture(t),one=await f.register(),two=await f.register('reply_other'),admin=await f.admin();
+ const now=Date.now();
+ for(const text of ['discussion','another post'])f.db.prepare("INSERT INTO posts(text,name,theme,created_at) VALUES(?,'legacy','daily',?)").run(text,now);
+ f.db.prepare("INSERT INTO comments(post_id,text,name,created_at) VALUES(1,'Original old comment','历史用户',?)").run(now);
+ const route='/api/posts/1/comments',write=(body,session=one)=>f.call(route,{method:'POST',body,session});
+ const old=(await f.call(route)).data.comments[0];assert.equal(old.id,1);assert.equal(old.parent_id,null);assert.equal(old.thread_id,null);
+ const ordinary=await write({text:'A normal comment'});assert.equal(ordinary.status,200);assert.equal(ordinary.data.comment.parent_id,null);
+ const reply=await write({text:'Reply to old comment',parent_id:1,name:'fake_author',reply_to_name:'fake_target',thread_id:999},two);assert.equal(reply.status,200);
+ const child=reply.data.comment;assert.equal(child.name,'reply_other');assert.equal(child.reply_to_name,'历史用户');assert.equal(child.parent_id,1);assert.equal(child.thread_id,1);
+ const nested=await write({text:'Reply to the reply',parent_id:child.id});assert.equal(nested.status,200);assert.equal(nested.data.comment.thread_id,1);assert.equal(nested.data.comment.parent_id,child.id);assert.equal(nested.data.comment.reply_to_name,'reply_other');
+ assert.equal(f.db.prepare('SELECT user_id FROM comments WHERE id=?').get(child.id).user_id,two.user.id);
+ assert.equal((await f.call('/api/posts/2/comments',{method:'POST',body:{text:'wrong post',parent_id:1},session:one})).status,404);
+ assert.equal((await write({text:'missing',parent_id:99999})).status,404);
+ assert.equal((await write({text:'invalid',parent_id:'1'})).status,400);
+ assert.equal((await f.call(route,{method:'POST',body:{text:'unsigned',parent_id:1}})).status,401);
+ assert.equal((await f.call(route,{method:'POST',body:{text:'bad csrf',parent_id:1},session:one,csrfOverride:'bad'})).status,403);
+ const count=f.db.prepare('SELECT COUNT(*) n FROM comments').get().n;assert.equal(count,4);
+ const manage=async(id,action)=>{const r=await f.call('/api/admin/comments/'+id+'/'+action,{method:'POST',body:{},session:admin});assert.equal(r.status,200);};
+ await manage(child.id,'archive');const moderated=(await f.call(route)).data.comments;
+ assert.ok(!moderated.some(c=>c.id===child.id));assert.equal(moderated.find(c=>c.id===nested.data.comment.id).reply_to_name,null);assert.ok(!JSON.stringify(moderated).includes('reply_other'));
+ assert.equal((await write({text:'hidden target',parent_id:child.id})).status,404);
+ await manage(child.id,'restore');assert.equal((await f.call(route)).data.comments.find(c=>c.id===nested.data.comment.id).reply_to_name,'reply_other');
+ await manage(1,'archive');assert.deepEqual((await f.call(route)).data.comments.map(c=>c.id),[ordinary.data.comment.id]);
+ assert.equal((await write({text:'hidden root',parent_id:nested.data.comment.id})).status,404);
+ await manage(1,'restore');const restored=(await f.call(route)).data.comments;
+ assert.equal(restored.length,4);assert.equal(f.db.prepare('SELECT COUNT(*) n FROM comments').get().n,count);assert.ok(restored.every(c=>!('ip' in c)&&!('user_id' in c)));
+ const management=await f.call('/api/admin/comments',{session:admin});assert.equal(management.data.items.find(c=>c.id===child.id).parent_id,1);
+});
 test('management traces content, bans accounts immediately and preserves legacy anonymous records',async t=>{
  const f=await fixture(t),user=await f.register(),admin=await f.admin();
  f.db.prepare("INSERT INTO posts(text,name,theme,media,media_type,ip,created_at,user_id) VALUES('linked','account_one','daily','','','test',?,?)").run(Date.now(),user.user.id);

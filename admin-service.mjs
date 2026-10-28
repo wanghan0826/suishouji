@@ -1,4 +1,5 @@
 import {ensureUserSchema} from './scripts/user-auth.mjs';
+import {ensureCommentThreads,readPublicComments,publicCommentVisible} from './scripts/comment-threads.mjs';
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -21,6 +22,7 @@ function failure(status,message){return Object.assign(Error(message),{status});}
 export function createAdminService({db,dataDir,publicDir,origin='https://example.com',allowLocalHttp=false,trustProxy=false,automaticTopic,sessionMs=8*3600000}){
   if(!db||!dataDir||!publicDir||typeof automaticTopic!=='function')throw Error('Missing admin service configuration');
   ensureUserSchema(db);
+  ensureCommentThreads(db);
   const expectedOrigin=new URL(origin).origin;
   if(new URL(expectedOrigin).protocol!=='https:'&&!allowLocalHttp)throw Error('Admin origin must use HTTPS');
   const cookieName=allowLocalHttp?'sj_admin_local':'__Host-sj_admin';
@@ -33,7 +35,7 @@ export function createAdminService({db,dataDir,publicDir,origin='https://example
   const attempts=new Map();
   const publicColumns='p.id,p.text,p.name,p.theme,p.media,p.media_type,p.hearts,p.topic,p.created_at';
   const visiblePost="NOT EXISTS(SELECT 1 FROM admin_archive a WHERE a.kind='post' AND a.item_id=p.id)";
-  const visibleComment="NOT EXISTS(SELECT 1 FROM admin_archive a WHERE a.kind='comment' AND a.item_id=c.id)";
+  const visibleComment=publicCommentVisible();
   const headers={
     'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Referrer-Policy':'same-origin',
     'Content-Security-Policy':"default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"
@@ -95,7 +97,7 @@ export function createAdminService({db,dataDir,publicDir,origin='https://example
         const theme=url.searchParams.get('theme');if(isPost&&theme){if(!THEMES.has(theme))throw failure(400,'无效主题');condition.push('p.theme=?');args.push(theme);}
         const where=condition.length?' WHERE '+condition.join(' AND '):'';
         const from=isPost?'posts p':'comments c JOIN posts p ON p.id=c.post_id';
-        const columns=isPost?`${publicColumns},p.user_id,(SELECT count(*) FROM comments c WHERE c.post_id=p.id AND ${visibleComment}) comment_count`:'c.id,c.post_id,c.text,c.name,c.created_at,c.user_id,p.text post_text';
+        const columns=isPost?`${publicColumns},p.user_id,(SELECT count(*) FROM comments c WHERE c.post_id=p.id AND ${visibleComment}) comment_count`:'c.id,c.post_id,c.text,c.name,c.created_at,c.user_id,c.parent_id,c.thread_id,p.text post_text';
         const total=Number(db.prepare(`SELECT count(*) n FROM ${from}${where}`).get(...args).n);
         const items=db.prepare(`SELECT ${columns},EXISTS(SELECT 1 FROM admin_archive a WHERE a.kind='${kind}' AND a.item_id=${alias}.id) archived FROM ${from}${where} ORDER BY ${alias}.created_at DESC,${alias}.id DESC LIMIT ? OFFSET ?`).all(...args,limit,(page-1)*limit);
         json(res,200,{items,total,page,limit});return true;
@@ -154,7 +156,7 @@ export function createAdminService({db,dataDir,publicDir,origin='https://example
         json(res,post?200:404,post?{post}:{error:'帖子不存在或已下架'});return true;
       }
       if(match[2]==='comments'&&req.method==='GET'){
-        json(res,200,{comments:db.prepare(`SELECT c.id,c.text,c.name,c.created_at FROM comments c WHERE c.post_id=? AND ${visibleComment} ORDER BY c.created_at ASC,c.id ASC LIMIT 200`).all(id)});return true;
+        json(res,200,{comments:readPublicComments(db,id)});return true;
       }
     }
     return false;

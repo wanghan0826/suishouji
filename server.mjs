@@ -3,6 +3,7 @@
 import http from 'node:http';
 import { createAdminService } from './admin-service.mjs';
 import {createUserAuth} from './scripts/user-auth.mjs';
+import {findReplyTarget,readPublicComments} from './scripts/comment-threads.mjs';
 import { stat, mkdir, writeFile } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import path from 'node:path';
@@ -278,9 +279,7 @@ async function api(req, res, url) {
   const commentsGetM = /^\/api\/posts\/(\d+)\/comments$/.exec(url.pathname);
   if (req.method === 'GET' && commentsGetM) {
     const postId = Number(commentsGetM[1]);
-    const rows = db.prepare(
-      'SELECT id,text,name,created_at FROM comments WHERE post_id=? ORDER BY created_at ASC LIMIT 200'
-    ).all(postId);
+    const rows = readPublicComments(db, postId);
     return send(res, 200, { comments: rows });
   }
 
@@ -295,12 +294,18 @@ async function api(req, res, url) {
     try { body = await readJson(req); } catch { return send(res, 400, { error: 'bad json' }); }
     const text = String(body.text || '').trim().slice(0, MAX_COMMENT);
     if (!text) return send(res, 400, { error: '评论不能为空' });
+    const parentId = body.parent_id ?? null;
+    if (parentId !== null && (!Number.isSafeInteger(parentId) || parentId <= 0)) return send(res, 400, { error: '无效的回复评论' });
+    const target = parentId === null ? null : findReplyTarget(db, postId, parentId);
+    if (parentId !== null && !target) return send(res, 404, { error: '要回复的评论不存在或已下架，请刷新评论后重试' });
+    const threadId = target ? (target.thread_id || target.id) : null;
     const name = req.siteUser.username;
     const now = Date.now();
     const r = db.prepare(
-      'INSERT INTO comments(post_id,text,name,ip,created_at,user_id) VALUES(?,?,?,?,?,?)'
-    ).run(postId, text, name, ip, now, req.siteUser.id);
-    const comment = db.prepare('SELECT id,text,name,created_at FROM comments WHERE id=?').get(r.lastInsertRowid);
+      'INSERT INTO comments(post_id,text,name,ip,created_at,user_id,parent_id,thread_id) VALUES(?,?,?,?,?,?,?,?)'
+    ).run(postId, text, name, ip, now, req.siteUser.id, parentId, threadId);
+    const comment = db.prepare('SELECT id,text,name,created_at,parent_id,thread_id FROM comments WHERE id=?').get(r.lastInsertRowid);
+    comment.reply_to_name = target?.name || null;
     return send(res, 200, { comment });
   }
 

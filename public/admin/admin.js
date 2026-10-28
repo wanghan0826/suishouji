@@ -42,6 +42,7 @@
     const item=node('article','content-item');if(view==='posts')item.append(mediaElement(post));
     const copy=node('div','content-copy'),meta=node('div','content-meta');meta.append(node('span','tiny-tag',view==='posts'?(themes[post.theme]||'分享'):'评论'),node('span','',post.name||'匿名小伙伴'),node('time','',fmt(post.created_at)),node('span','','#'+post.id));
     if(post.archived)meta.append(node('span','archived-label','回收站'));
+    if(post.parent_id)meta.append(node('span','tiny-tag','回复评论 #'+post.parent_id));
     copy.append(meta,node('div','content-text',post.text));if(post.post_id)copy.append(node('p','post-reference','所属帖子 #'+post.post_id+'：'+post.post_text));
     const actions=node('div','content-actions'),open=node('button','text-button','查看详情');open.onclick=()=>details(post);
     const action=node('button',post.archived?'restore-button':'danger-button',post.archived?'恢复展示':'移入回收站');
