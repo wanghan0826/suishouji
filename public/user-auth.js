@@ -8,7 +8,7 @@
   for(const id of ['postName','commentName'])$(id).value=state.user?.username||'';
  }
  function mode(value){register=value;$('accountLoginTab').setAttribute('aria-pressed',String(!value));$('accountRegisterTab').setAttribute('aria-pressed',String(value));$('accountConfirmWrap').hidden=!value;$('accountConfirm').required=value;$('accountAccept').required=value;$('accountSubmit').textContent=value?'注册并登录 →':'登录 →';$('accountPassword').autocomplete=value?'new-password':'current-password';$('accountError').textContent='';$('accountPassword').value='';$('accountConfirm').value='';}
- function open(){render();if(!dialog.open)dialog.showModal();}
+ function open(){if(location.protocol!=='https:'&&!['localhost','127.0.0.1','[::1]'].includes(location.hostname)){location.replace('https://'+location.host+location.pathname+location.search+location.hash);return;}render();if(!dialog.open)dialog.showModal();}
  async function call(route,body){const response=await fetch('/api/auth/'+route,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-SJ-CSRF':state.csrf},body:JSON.stringify(body)});const data=await response.json();if(!response.ok)throw Error(data.error||'暂时无法完成操作');return data;}
  async function refresh(){try{const r=await fetch('/api/auth/status',{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw Error();const data=await r.json();state.user=data.user;state.csrf=data.csrf||'';render();}catch{state.user=null;state.csrf='';render();$('accountError').textContent='账号服务暂时不可用，请刷新后重试。';}}
  $('btnAccount').addEventListener('click',open);$('accountClose').onclick=()=>dialog.close();$('accountLoginTab').onclick=()=>mode(false);$('accountRegisterTab').onclick=()=>mode(true);
