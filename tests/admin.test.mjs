@@ -24,6 +24,15 @@ async function fixture(t,{configured=true,secure=false,trustProxy=false}={}){
 test('management data requires login, and setup is locked without an account',async t=>{
  const f=await fixture(t,{configured:false});assert.equal((await f.call('/api/admin/overview')).status,401);assert.equal((await f.call('/api/admin/status')).data.configured,false);assert.equal((await f.call('/api/admin/login',{method:'POST',body:{username:'admin',password}})).status,503);
 });
+
+test('public post permalinks return only visible content and public fields',async t=>{
+ const f=await fixture(t),session=await f.login();
+ const detail=await f.call('/api/posts/1');assert.equal(detail.status,200);assert.equal(detail.data.post.text,'100% effort');
+ assert.deepEqual(Object.keys(detail.data.post).sort(),['id','text','name','theme','media','media_type','hearts','topic','created_at'].sort());
+ assert.equal((await f.call('/api/posts/999')).status,404);assert.equal((await f.call('/api/posts/99999999999999999999999999')).status,404);
+ await f.call('/api/admin/posts/1/archive',{method:'POST',session,body:{}});assert.equal((await f.call('/api/posts/1')).status,404);
+ await f.call('/api/admin/posts/1/restore',{method:'POST',session,body:{}});assert.equal((await f.call('/api/posts/1')).status,200);
+});
 test('login creates a protected session; logout revokes it',async t=>{
  const f=await fixture(t);const invalid=await f.call('/api/admin/login',{method:'POST',body:{username:'admin',password:'wrong'}});assert.equal(invalid.status,401);
  const result=await f.call('/api/admin/login',{method:'POST',body:{username:'admin',password}});assert.equal(result.status,200);assert.match(result.cookie,/HttpOnly/);assert.match(result.cookie,/SameSite=Strict/);

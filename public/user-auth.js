@@ -5,7 +5,7 @@
   $('btnAccount').textContent=state.user?state.user.username:'登录 / 注册';$('btnAccount').title=state.user?'账号：'+state.user.username:'登录或注册';
   $('accountSignedOut').hidden=!!state.user;$('accountSignedIn').hidden=!state.user;
   $('accountIdentity').textContent=state.user?state.user.username+' · 账号 #'+state.user.id:'';
-  for(const id of ['postName','commentName'])$(id).value=state.user?.username||'';
+  for(const id of ['postName','commentName'])if($(id))$(id).value=state.user?.username||'';
  }
  function mode(value){register=value;$('accountLoginTab').setAttribute('aria-pressed',String(!value));$('accountRegisterTab').setAttribute('aria-pressed',String(value));$('accountConfirmWrap').hidden=!value;$('accountConfirm').required=value;$('accountAccept').required=value;$('accountSubmit').textContent=value?'注册并登录 →':'登录 →';$('accountPassword').autocomplete=value?'new-password':'current-password';$('accountPassword').maxLength=value?12:128;$('accountPassword').placeholder=value?'6–12 位密码':'输入密码';$('accountError').textContent='';$('accountPassword').value='';$('accountConfirm').value='';}
  function open(){if(location.protocol!=='https:'&&!['localhost','127.0.0.1','[::1]'].includes(location.hostname)){location.replace('https://'+location.host+location.pathname+location.search+location.hash);return;}render();if(!dialog.open)dialog.showModal();}
@@ -15,7 +15,7 @@
  $('accountForm').onsubmit=async event=>{event.preventDefault();$('accountError').textContent='';if(register&&$('accountPassword').value!==$('accountConfirm').value){$('accountError').textContent='两次输入的密码不一致';return;}const button=$('accountSubmit');button.disabled=true;try{const data=await call(register?'register':'login',{username:$('accountUsername').value,password:$('accountPassword').value,accept:$('accountAccept').checked});state.user=data.user;state.csrf=data.csrf;$('accountForm').reset();render();dialog.close();}catch(e){$('accountError').textContent=e.message;$('accountPassword').value='';$('accountConfirm').value='';}finally{button.disabled=false;}};
  $('accountLogout').onclick=async()=>{const button=$('accountLogout');button.disabled=true;try{await call('logout',{});state.user=null;state.csrf='';$('accountPasswordForm').reset();render();mode(false);}catch(e){$('accountPasswordError').textContent=e.message;}finally{button.disabled=false;}};
  $('accountPasswordForm').onsubmit=async e=>{e.preventDefault();const button=e.submitter;button.disabled=true;$('accountPasswordError').textContent='';try{const data=await call('password',{currentPassword:$('accountCurrentPassword').value,password:$('accountNewPassword').value});state.csrf=data.csrf;$('accountPasswordForm').reset();$('accountPasswordError').textContent='密码已修改，其他设备已退出登录。';}catch(error){$('accountPasswordError').textContent=error.message;}finally{button.disabled=false;}};
- $('btnOpenPost').addEventListener('click',async e=>{if(state.user)return;e.stopImmediatePropagation();await state.ready;if(state.user)$('btnOpenPost').click();else open();},true);
+ $('btnOpenPost')?.addEventListener('click',async e=>{if(state.user)return;e.stopImmediatePropagation();await state.ready;if(state.user)$('btnOpenPost').click();else open();},true);
  dialog.addEventListener('close',()=>{$('accountPassword').value='';$('accountConfirm').value='';$('accountPasswordForm').reset();});
  state.ready=refresh();render();
 })();

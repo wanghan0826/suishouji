@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>帖子详情 · 随手记</title>
+<meta name="description" content="随手记，一个记录日常、分享照片与心情的小角落。看看风景，聊聊生活，用文字和图片收藏每一个普通而珍贵的瞬间。">
+<meta name="theme-color" content="#236451">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2718%27 fill=%27%23236451%27/%3E%3Ctext x=%2732%27 y=%2745%27 text-anchor=%27middle%27 font-size=%2742%27 fill=%27white%27%3E记%3C/text%3E%3C/svg%3E">
+
+<link rel="stylesheet" href="/style.css?v=20261027-appearance-1">
+<link rel="stylesheet" href="/appearance.css?v=20261027-appearance-1">
+<script src="/appearance.js?v=20261027-appearance-1"></script>
+<link rel="stylesheet" href="/user-auth.css?v=20261028-user">
+<link rel="stylesheet" href="/post.css?v=20261028-post">
+</head>
+<body class="post-page">
+<a class="skip-link" href="#postContent">跳到帖子正文</a>
+<header class="header"><div class="header-top"><a class="brand" href="/" aria-label="随手记首页"><span class="brand-icon">记</span><span class="brand-name">随手记<small>每个故事，都有自己的角落</small></span></a><div class="header-actions"><button class="btn-ghost" id="btnAppearance" aria-haspopup="dialog" aria-controls="appearanceDialog">◐ 主题</button><button class="btn-ghost" id="btnAccount" aria-haspopup="dialog">登录 / 注册</button></div></div></header>
+<main class="post-layout" id="postContent">
+<nav class="post-breadcrumb" aria-label="位置"><a href="/">← 返回弹幕墙</a><span>一条随手记</span></nav>
+<p id="postState" class="post-state" role="status">正在打开这条分享…</p>
+<article id="postArticle" class="post-sheet" hidden>
+ <div class="detail-header"><span class="card-theme-badge" id="postTheme"></span><span id="postAuthor" class="detail-name"></span><time id="postDate" class="detail-time"></time></div>
+ <h1 id="postTitle"></h1><p class="post-topic" id="postTopic" hidden></p>
+ <div id="postBody" class="post-body"></div><div id="postMedia" class="post-media"></div>
+ <div class="post-actions"><button class="heart-btn" id="postHeart" type="button">♡ 点赞 <span id="postHearts">0</span></button><button class="post-share" id="postShare" type="button">复制帖子链接 ↗</button></div>
+ <div id="postShareFallback" hidden><label for="postShareUrl">帖子链接</label><input id="postShareUrl" readonly aria-label="帖子链接"></div>
+ <section class="post-comments" aria-labelledby="commentsTitle"><h2 id="commentsTitle">聊聊这条分享 <span id="postCommentCount"></span></h2><div id="postComments" aria-live="polite"></div>
+ <form class="comment-form" id="postCommentForm"><label for="commentName">评论账号</label><input id="commentName" type="text" readonly placeholder="登录后显示账号"><label for="postCommentText">你的评论</label><textarea id="postCommentText" maxlength="200" required placeholder="友善交流，说说你的想法…"></textarea><div class="post-comment-bottom"><span>200 字以内 · 登录后可评论</span><button type="submit" class="btn-post" id="postCommentSubmit">发表评论 →</button></div></form>
+ </section>
+</article>
+<noscript><p class="post-state">请启用 JavaScript 阅读帖子内容，或<a href="/">返回首页</a>。</p></noscript>
+<a class="post-return" href="/">回到弹幕墙，看看其他故事 →</a>
+</main>
+<footer class="post-footer">随手记 · 认真生活，随手记录。</footer>
+<dialog id="appearanceDialog" class="appearance-dialog" aria-labelledby="appearanceTitle" aria-describedby="appearanceDescription">
+  <div class="appearance-heading"><div><p class="appearance-kicker">MAKE IT YOUR MOMENT</p><h2 id="appearanceTitle">换一种心情，看世界</h2></div><button class="appearance-close" data-appearance-close aria-label="关闭主题设置">×</button></div>
+  <p id="appearanceDescription" class="appearance-description">选择喜欢的视觉主题。手动选择后将固定显示，随时可以开启自动变化。</p>
+  <div class="appearance-choices" role="group" aria-label="选择视觉主题">
+    <button class="appearance-choice" data-appearance-choice="night" aria-pressed="true"><span class="appearance-preview" style="--swatch:#101e26;--swatch-pill:#7faaa4" aria-hidden="true"><i></i><i></i></span><strong>静谧夜色</strong></button>
+    <button class="appearance-choice" data-appearance-choice="forest" aria-pressed="false"><span class="appearance-preview" style="--swatch:#142e27;--swatch-pill:#b1c98a" aria-hidden="true"><i></i><i></i></span><strong>林间微光</strong></button>
+    <button class="appearance-choice" data-appearance-choice="sunset" aria-pressed="false"><span class="appearance-preview" style="--swatch:#3c252d;--swatch-pill:#d9a580" aria-hidden="true"><i></i><i></i></span><strong>暖橙日落</strong></button>
+    <button class="appearance-choice" data-appearance-choice="paper" aria-pressed="false"><span class="appearance-preview" style="--swatch:#f0ede3;--swatch-pill:#8caa85" aria-hidden="true"><i></i><i></i></span><strong>晴日纸白</strong></button>
+  </div>
+  <div class="appearance-options">
+    <label class="appearance-option"><span>自动切换主题<small>按顺序轮换四种风格，关闭后固定当前主题</small></span><input id="appearanceAutomatic" type="checkbox"></label>
+    <label class="appearance-interval" for="appearanceInterval">切换间隔<select id="appearanceInterval" aria-label="切换间隔" disabled><option value="30">30 秒</option><option value="60" selected>1 分钟</option><option value="300">5 分钟</option></select></label>
+    <label class="appearance-option"><span>背景图片轮播<small>每 12 秒更换一张帖子配图，关闭后固定当前图片</small></span><input id="appearanceSlideshow" type="checkbox"></label>
+  </div>
+  <p class="appearance-state" id="appearanceState" role="status"></p><p class="appearance-saved" id="appearanceSaved">选择会自动保存在当前浏览器</p>
+</dialog>
+<dialog id="accountDialog" class="account-dialog" aria-labelledby="accountTitle"><button id="accountClose" class="account-close" aria-label="关闭账号窗口">×</button><p class="account-kicker">SUISHOUJI / YOUR ACCOUNT</p><h2 id="accountTitle">让每一条分享，都有来处。</h2><p class="account-description">浏览无需登录，发布和评论需要账号。</p><div id="accountSignedOut"><div class="account-tabs"><button id="accountLoginTab" aria-pressed="true">登录</button><button id="accountRegisterTab" aria-pressed="false">注册</button></div><form id="accountForm"><label for="accountUsername">用户名</label><input id="accountUsername" autocomplete="username" required minlength="3" maxlength="20" pattern="[a-zA-Z0-9_]{3,20}" placeholder="3–20 位字母、数字或下划线"><label for="accountPassword">密码</label><input id="accountPassword" type="password" autocomplete="current-password" required minlength="6" maxlength="128" placeholder="输入密码"><div id="accountConfirmWrap" hidden><label for="accountConfirm">再次输入密码</label><input id="accountConfirm" type="password" autocomplete="new-password" maxlength="12"><label class="account-consent"><input id="accountAccept" type="checkbox"><span>我了解：内容会关联固定账号；站点记录注册 IP 和近30天登录记录，仅供站主管理与处理违规使用。</span></label><p class="account-footnote">不绑定邮箱，不支持邮箱找回，请妥善保存密码。</p></div><p class="account-error" id="accountError" role="alert"></p><button id="accountSubmit" class="account-primary" type="submit">登录 →</button></form></div><div id="accountSignedIn" hidden><p id="accountIdentity" class="account-identity"></p><p class="account-description">分享使用这个账号名，不能填写他人的账号。</p><form id="accountPasswordForm"><label for="accountCurrentPassword">当前密码</label><input id="accountCurrentPassword" type="password" autocomplete="current-password" required minlength="6" maxlength="128"><label for="accountNewPassword">新密码</label><input id="accountNewPassword" type="password" autocomplete="new-password" required minlength="6" maxlength="12" placeholder="6–12 位新密码"><p id="accountPasswordError" class="account-error" role="alert"></p><button class="account-primary" type="submit">修改密码</button></form><button id="accountLogout" class="account-logout">退出登录</button></div></dialog>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="/user-auth.js?v=20261028-post"></script><script src="/post.js?v=20261028-post"></script>
+</body></html>

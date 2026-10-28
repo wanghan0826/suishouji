@@ -159,12 +159,12 @@ function parseMultipart(buf, boundary) {
 function clientIp(req) {
   return (TRUST_PROXY ? req.headers['x-forwarded-for'] || '' : '').split(',').map(x=>x.trim()).filter(Boolean).at(-1) || req.socket.remoteAddress || '';
 }
-async function serveFile(res, file) {
+async function serveFile(res, file, status = 200) {
   try {
     const st = await stat(file);
     if (!st.isFile()) throw 0;
     const ext = path.extname(file).toLowerCase();
-    res.writeHead(200, {
+    res.writeHead(status, {
       'Content-Type': MIME[path.extname(file).toLowerCase()] || 'application/octet-stream',
       'Content-Length': st.size, 'Cache-Control': ['.html','.json'].includes(ext) ? 'no-cache' : 'public, max-age=86400'
     });
@@ -353,6 +353,12 @@ async function handler(req, res) {
     const f = path.normalize(path.join(UPLOADS, url.pathname.slice(9)));
     if (!f.startsWith(UPLOADS + path.sep)) return send(res, 403, 'forbidden');
     return serveFile(res, f);
+  }
+  const postPage = /^\/post\/(\d+)\/?$/.exec(url.pathname);
+  if (postPage && ['GET','HEAD'].includes(req.method)) {
+    const id = Number(postPage[1]);
+    const visible = Number.isSafeInteger(id) && db.prepare("SELECT 1 FROM posts p WHERE p.id=? AND NOT EXISTS(SELECT 1 FROM admin_archive a WHERE a.kind='post' AND a.item_id=p.id)").get(id);
+    return serveFile(res, path.join(PUBLIC, 'post.html'), visible ? 200 : 404);
   }
   let p = url.pathname === '/' ? '/index.html' : url.pathname;
   const f = path.normalize(path.join(PUBLIC, p));

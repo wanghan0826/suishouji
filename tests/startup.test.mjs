@@ -8,12 +8,16 @@ test('fresh deployment uses independent data and serves the complete application
  const base='http://127.0.0.1:'+port;let ready=false;
  for(let i=0;i<80;i++){try{if((await fetch(base+'/api/topic')).ok){ready=true;break;}}catch{}await delay(50);}
  assert.ok(ready,logs);
- for(const route of ['/','/appearance.js','/wall.js','/assets/lake.jpg','/admin'])assert.equal((await fetch(base+route)).status,200,route);
+ for(const route of ['/','/appearance.js','/wall.js','/post.js','/post.css','/assets/lake.jpg','/admin'])assert.equal((await fetch(base+route)).status,200,route);
+ const missing=await fetch(base+'/post/999');assert.equal(missing.status,404);assert.match(await missing.text(),/id="postState"/);
  assert.equal((await(await fetch(base+'/api/posts')).json()).posts.length,0);
  assert.equal((await(await fetch(base+'/api/admin/status')).json()).configured,false);
  assert.equal((await fetch(base+'/api/admin/overview')).status,401);
  const seed=spawn(process.execPath,['scripts/seed-demo.mjs'],{env,stdio:['ignore','pipe','pipe']});let seedLogs='';seed.stderr.on('data',x=>seedLogs+=x);assert.equal(await new Promise(r=>seed.once('exit',r)),0,seedLogs);
  const posts=(await(await fetch(base+'/api/posts')).json()).posts;assert.equal(posts.length,4);assert.ok(posts.every(p=>p.name==='站点示例'));
+ const permalink=base+'/post/'+posts[0].id;
+ for(const route of [permalink,permalink+'/']){const page=await fetch(route);assert.equal(page.status,200);assert.match(await page.text(),/id="postArticle"/);}
+ const detail=(await(await fetch(base+'/api/posts/'+posts[0].id)).json()).post;assert.equal(detail.text,posts[0].text);assert.ok(!('ip' in detail));assert.ok(!('user_id' in detail));
  assert.equal((await fetch(base+'/uploads/'+posts[0].media)).status,200);
  const repeat=spawn(process.execPath,['scripts/seed-demo.mjs'],{env,stdio:'ignore'});assert.notEqual(await new Promise(r=>repeat.once('exit',r)),0);
  assert.equal((await(await fetch(base+'/api/posts')).json()).posts.length,4);

@@ -29,10 +29,9 @@
   function nextPost(){return pool[cursor++%pool.length];}
   function item(post,lane,x){
     const theme=THEMES[post.theme]||THEMES.mood;
-    const button=document.createElement('button');
-    button.type='button';button.className='danmaku-item wall-post';
+    const button=document.createElement('a');
+    button.href='/post/'+post.id;button.className='danmaku-item wall-post';
     button.dataset.postId=String(post.id);
-    button.setAttribute('aria-haspopup','dialog');
     button.setAttribute('aria-label',`打开${post.name||'匿名小伙伴'}的帖子：${post.text}`);
     button.style.setProperty('--post-color',theme.color);
     const avatar=document.createElement('span');avatar.className='wall-avatar';avatar.textContent=icons[post.theme]||'✦';avatar.setAttribute('aria-hidden','true');
@@ -47,7 +46,6 @@
     button.append(avatar,copy,arrow);button.style.top=lane.y+'px';
     area.appendChild(button);
     const obj={element:button,x,width:button.getBoundingClientRect().width,hovered:false,focused:false};
-    button.addEventListener('click',()=>{obj.hovered=false;obj.focused=false;showDetail(post);});
     button.addEventListener('pointerenter',e=>{if(e.pointerType==='mouse')obj.hovered=true;});
     button.addEventListener('pointerleave',()=>{obj.hovered=false;});
     button.addEventListener('focus',()=>{obj.focused=true;});

@@ -217,32 +217,22 @@ function cardHTML(post) {
   }
   const topicTag = post.topic ? `<div style="font-size:11px;color:#d946ef;margin-bottom:6px">📌 今日话题</div>` : '';
   return `
-    <div class="card" tabindex="0" role="button" aria-label="查看${esc(t.label)}分享" data-id="${post.id}">
+    <article class="card" data-id="${post.id}"><a class="card-link" href="/post/${post.id}" aria-label="查看${esc(t.label)}分享">
       ${topicTag}${media}
-      <div class="card-text">${esc(post.text)}</div>
+      <div class="card-text">${esc(post.text)}</div></a>
       <div class="card-footer">
         <span class="card-theme-badge" style="background:${t.color}">${t.label}</span>
         <div class="card-meta">
           <span>${esc(name)}</span>
-          <span class="card-heart" data-heart-id="${post.id}">❤️ ${post.hearts}</span>
+          <button type="button" class="card-heart" aria-label="点赞" data-heart-id="${post.id}">❤️ ${post.hearts}</button>
         </div>
       </div>
-    </div>`;
+    </article>`;
 }
 
 let allPosts = [];
 
 function bindCardEvents(container) {
-  container.querySelectorAll('.card:not([data-bound])').forEach(card => {
-    card.setAttribute('data-bound', '1');
-    card.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === card) { e.preventDefault(); card.click(); } });
-    card.addEventListener('click', (e) => {
-      if (e.target.closest('.card-heart')) return;
-      const id = Number(card.dataset.id);
-      const post = allPosts.find(p => p.id === id);
-      if (post) showDetail(post);
-    });
-  });
   container.querySelectorAll('.card-heart:not([data-bound])').forEach(h => {
     h.setAttribute('data-bound', '1');
     h.addEventListener('click', (e) => {
@@ -423,53 +413,8 @@ function setupHot() {
 }
 
 /* ---------- 详情弹窗 + 评论 ---------- */
-async function showDetail(post) {
-  currentDetailPost = post;
-  const t = THEMES[post.theme] || THEMES.mood;
-  const name = post.name || '匿名小伙伴';
-  $('#detailTheme').textContent = t.label;
-  $('#detailTheme').style.background = t.color;
-  $('#detailName').textContent = name;
-  $('#detailTime').textContent = timeAgo(post.created_at);
-  $('#detailText').textContent = post.text;
-  $('#detailHearts').textContent = post.hearts;
-  $('#btnHeart').classList.remove('liked');
-
-  const topicTag = $('#detailTopicTag');
-  if (post.topic) {
-    topicTag.style.display = 'inline-block';
-    topicTag.textContent = '📌 参与今日话题';
-  } else {
-    topicTag.style.display = 'none';
-  }
-
-  const wrap = $('#detailMediaWrap');
-  wrap.innerHTML = '';
-  if (post.media) {
-    const src = '/uploads/' + post.media;
-    if (post.media_type === 'image') {
-      const img = document.createElement('img');
-      img.className = 'detail-media'; img.src = src;
-      img.addEventListener('click', () => {
-        const lb = document.createElement('div');
-        lb.className = 'img-lightbox';
-        const big = document.createElement('img');
-        big.src = src;
-        lb.appendChild(big);
-        lb.addEventListener('click', () => lb.remove());
-        document.body.appendChild(lb);
-      });
-      wrap.appendChild(img);
-    } else if (post.media_type === 'video') {
-      const v = document.createElement('video');
-      v.className = 'detail-media'; v.src = src; v.controls = true;
-      wrap.appendChild(v);
-    }
-  }
-
-  $('#detailModal').classList.add('show');
-  $('#btnHeart').onclick = () => heartPost(post.id, $('#btnHeart'), post);
-  loadComments(post.id);
+function showDetail(post) {
+  location.assign('/post/' + post.id);
 }
 
 async function loadComments(postId) {

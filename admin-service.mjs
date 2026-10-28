@@ -149,6 +149,10 @@ export function createAdminService({db,dataDir,publicDir,origin='https://example
     const match=p.match(/^\/api\/posts\/(\d+)(?:\/(comments|heart))?$/);
     if(match){
       const id=Number(match[1]);if(!Number.isSafeInteger(id)||db.prepare("SELECT 1 FROM admin_archive WHERE kind='post' AND item_id=?").get(id)){json(res,404,{error:'帖子不存在或已下架'});return true;}
+      if(!match[2]&&req.method==='GET'){
+        const post=db.prepare(`SELECT ${publicColumns} FROM posts p WHERE p.id=? AND ${visiblePost}`).get(id);
+        json(res,post?200:404,post?{post}:{error:'帖子不存在或已下架'});return true;
+      }
       if(match[2]==='comments'&&req.method==='GET'){
         json(res,200,{comments:db.prepare(`SELECT c.id,c.text,c.name,c.created_at FROM comments c WHERE c.post_id=? AND ${visibleComment} ORDER BY c.created_at ASC,c.id ASC LIMIT 200`).all(id)});return true;
       }
