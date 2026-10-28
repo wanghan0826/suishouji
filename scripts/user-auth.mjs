@@ -21,7 +21,8 @@ export function createUserAuth({db,origin,localHttp=false,trustProxy=false}){
  function mutate(req,json=true){if(!encrypted(req))throw error(426,'请通过 HTTPS 登录和发布');if(req.headers.origin!==origin)throw error(403,'请求来源不正确，请刷新页面');if(json&&!String(req.headers['content-type']||'').startsWith('application/json'))throw error(415,'请求格式不正确');}
  async function body(req){let text='',size=0;for await(const chunk of req){size+=chunk.length;if(size>4096)throw error(413,'请求过大');text+=chunk;}try{return JSON.parse(text);}catch{throw error(400,'请求格式不正确');}}
  async function derive(password,salt){if(busy>=2)throw error(429,'登录服务繁忙，请稍后再试');busy++;try{return (await scrypt(password,salt,64,{N:32768,r:8,p:1,maxmem:64*1024*1024})).toString('hex');}finally{busy--;}}
- const passwordValid=p=>typeof p==='string'&&p.length>=12&&p.length<=128;
+ const passwordValid=p=>typeof p==='string'&&p.length>=6&&p.length<=128;
+ const newPasswordValid=p=>passwordValid(p)&&p.length<=12;
  const publicUser=u=>({id:u.id,username:u.username});
  function session(req){const raw=String(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith(cookieName+'='))?.slice(cookieName.length+1);if(!raw||!/^[A-Za-z0-9_-]{43}$/.test(raw))return null;return db.prepare('SELECT u.id,u.username,u.disabled,s.csrf FROM user_sessions s JOIN site_users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>?').get(digest(raw),Date.now())||null;}
  const cookie=(value,seconds)=>`${cookieName}=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${seconds}${localHttp?'':'; Secure'}`;
@@ -36,7 +37,7 @@ export function createUserAuth({db,origin,localHttp=false,trustProxy=false}){
     const username=typeof input.username==='string'?input.username.trim().toLowerCase():'';
     throttle('ip:'+ip(req),20,600000);throttle('account:'+digest(username),12,600000);
     if(!/^[a-z0-9_]{3,20}$/.test(username))throw error(400,'用户名须为3至20位字母、数字或下划线');
-    if(!passwordValid(input.password))throw error(400,'密码须为12至128位');
+    if(p.endsWith('/register')?!newPasswordValid(input.password):!passwordValid(input.password))throw error(400,p.endsWith('/register')?'密码须为6至12位':'请输入有效密码');
     const user=db.prepare('SELECT * FROM site_users WHERE username=?').get(username);
     if(p.endsWith('/register')){
      if(input.accept!==true)throw error(400,'请先确认账号记录说明');
@@ -53,7 +54,7 @@ export function createUserAuth({db,origin,localHttp=false,trustProxy=false}){
    const user=requireUser(req);
    if(p==='/api/auth/logout'){db.prepare('DELETE FROM user_sessions WHERE user_id=? AND csrf=?').run(user.id,user.csrf);send(res,200,{ok:true},{'Set-Cookie':cookie('',0)});return true;}
    if(p==='/api/auth/password'){
-    throttle('password:'+user.id,6,600000);if(!passwordValid(input.password)||!passwordValid(input.currentPassword))throw error(400,'密码须为12至128位');const account=db.prepare('SELECT * FROM site_users WHERE id=?').get(user.id);
+    throttle('password:'+user.id,6,600000);if(!newPasswordValid(input.password))throw error(400,'新密码须为6至12位');if(!passwordValid(input.currentPassword))throw error(400,'当前密码不正确');const account=db.prepare('SELECT * FROM site_users WHERE id=?').get(user.id);
     if(!equal(await derive(input.currentPassword,account.salt),account.password_hash))throw error(401,'当前密码不正确');
     const salt=crypto.randomBytes(16).toString('hex'),hash=await derive(input.password,salt);db.prepare('UPDATE site_users SET salt=?,password_hash=? WHERE id=?').run(salt,hash,user.id);db.prepare('DELETE FROM user_sessions WHERE user_id=?').run(user.id);issue(user,res);return true;
    }

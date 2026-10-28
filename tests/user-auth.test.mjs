@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs/promises';import os from 'node:os';import path from 'node:path';import net from 'node:net';import {spawn} from 'node:child_process';import {setTimeout as delay} from 'node:timers/promises';import {DatabaseSync} from 'node:sqlite';import {createAccount} from '../admin-service.mjs';
-const password='Isolated-test-account-password-42';
+const password='User_pw_42',adminPassword='Isolated-test-admin-password-42';
 async function fixture(t,{secure=false}={}){
- const data=await fs.mkdtemp(path.join(os.tmpdir(),'sj-account-'));await fs.writeFile(path.join(data,'admin-auth.json'),JSON.stringify(await createAccount(password)));
+ const data=await fs.mkdtemp(path.join(os.tmpdir(),'sj-account-'));await fs.writeFile(path.join(data,'admin-auth.json'),JSON.stringify(await createAccount(adminPassword)));
  const probe=net.createServer();await new Promise(r=>probe.listen(0,'127.0.0.1',r));const port=probe.address().port;await new Promise(r=>probe.close(r));const base='http://127.0.0.1:'+port,origin=secure?'https://test.example': 'http://localhost:'+port;
  const child=spawn(process.execPath,['server.mjs'],{env:{...process.env,PORT:String(port),EXTRA_PORTS:'',DATA_DIR:data,SITE_ORIGIN:origin,HOST:'127.0.0.1'},stdio:['ignore','pipe','pipe']});let logs='';child.stdout.on('data',x=>logs+=x);child.stderr.on('data',x=>logs+=x);
  let db;t.after(async()=>{db?.close();child.kill();await new Promise(r=>child.exitCode!==null?r():child.once('exit',r));await fs.rm(data,{recursive:true,force:true});});
@@ -14,7 +14,7 @@ async function fixture(t,{secure=false}={}){
  }
  const register=async(username='account_one')=>{const r=await call('/api/auth/register',{method:'POST',body:{username,password,accept:true}});assert.equal(r.status,200,JSON.stringify(r.data));return {...r.data,cookie:r.cookie.split(';')[0]};};
  const login=async(username='account_one',pwd=password)=>{const r=await call('/api/auth/login',{method:'POST',body:{username,password:pwd}});return {...r.data,cookie:r.cookie?.split(';')[0],status:r.status};};
- const admin=async()=>{const r=await call('/api/admin/login',{method:'POST',body:{username:'admin',password}});assert.equal(r.status,200);return {...r.data,cookie:r.cookie.split(';')[0]};};
+ const admin=async()=>{const r=await call('/api/admin/login',{method:'POST',body:{username:'admin',password:adminPassword}});assert.equal(r.status,200);return {...r.data,cookie:r.cookie.split(';')[0]};};
  return {call,register,login,admin,db,origin};
 }
 test('registration establishes hashed sessions; posting and comments use the account, never a supplied nickname',async t=>{
@@ -37,7 +37,7 @@ test('registration establishes hashed sessions; posting and comments use the acc
 });
 test('password rotation revokes other sessions and login failures are throttled',async t=>{
  const f=await fixture(t),first=await f.register(),second=await f.login();assert.equal(second.status,200);
- const next=password+'-changed';const changed=await f.call('/api/auth/password',{method:'POST',session:first,body:{currentPassword:password,password:next}});assert.equal(changed.status,200);assert.equal((await f.call('/api/auth/status',{session:second})).data.user,null);
+ const next='New_pw_42';const changed=await f.call('/api/auth/password',{method:'POST',session:first,body:{currentPassword:password,password:next}});assert.equal(changed.status,200);assert.equal((await f.call('/api/auth/status',{session:second})).data.user,null);
  assert.equal((await f.login('account_one',password)).status,401);assert.equal((await f.login('account_one',next)).status,200);
  let last;for(let i=0;i<13;i++)last=await f.login('unknown_name',password);assert.equal(last.status,429);
 });
@@ -57,4 +57,16 @@ test('public HTTPS deployment rejects plaintext registration and uses Secure use
  const f=await fixture(t,{secure:true});const body={username:'secure_user',password,accept:true};
  assert.equal((await f.call('/api/auth/register',{method:'POST',body})).status,426);
  const r=await f.call('/api/auth/register',{method:'POST',body,forwardTls:true});assert.equal(r.status,200);assert.match(r.cookie,/^__Host-sj_user=/);assert.match(r.cookie,/; Secure/);assert.match(r.cookie,/HttpOnly/);assert.match(r.cookie,/SameSite=Strict/);
+});
+test('new passwords accept 6 through 12 characters and existing longer passwords remain usable',async t=>{
+ const f=await fixture(t);
+ for(const [name,pwd,status] of [['bound_five','12345',400],['bound_six','123456',200],['bound_twelve','123456789012',200],['bound_thirteen','1234567890123',400]]){
+  const r=await f.call('/api/auth/register',{method:'POST',body:{username:name,password:pwd,accept:true}});assert.equal(r.status,status);
+ }
+ const legacy='Existing-longer-password-42',old=await createAccount(legacy,'legacy_user'),now=Date.now();
+ f.db.prepare('INSERT INTO site_users(username,salt,password_hash,created_at,last_login) VALUES(?,?,?,?,?)').run('legacy_user',old.salt,old.key,now,now);
+ const logged=await f.login('legacy_user',legacy);assert.equal(logged.status,200);
+ assert.equal((await f.call('/api/auth/password',{method:'POST',session:logged,body:{currentPassword:legacy,password:'1234567890123'}})).status,400);
+ assert.equal((await f.call('/api/auth/password',{method:'POST',session:logged,body:{currentPassword:legacy,password:'123456'}})).status,200);
+ assert.equal((await f.login('legacy_user','123456')).status,200);
 });
