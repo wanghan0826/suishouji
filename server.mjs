@@ -162,9 +162,10 @@ async function serveFile(res, file) {
   try {
     const st = await stat(file);
     if (!st.isFile()) throw 0;
+    const ext = path.extname(file).toLowerCase();
     res.writeHead(200, {
       'Content-Type': MIME[path.extname(file).toLowerCase()] || 'application/octet-stream',
-      'Content-Length': st.size, 'Cache-Control': 'public, max-age=86400'
+      'Content-Length': st.size, 'Cache-Control': ['.html','.json'].includes(ext) ? 'no-cache' : 'public, max-age=86400'
     });
     createReadStream(file).pipe(res);
   } catch { send(res, 404, 'not found'); }

@@ -4,6 +4,18 @@
 
 前端原生 HTML / CSS / JavaScript，后端 Node.js 内置 SQLite，无 npm 运行依赖。源码包含前后端；**GitHub Pages 不能运行本项目后端**。
 
+## 本仓库共同维护现有阿里云网站
+
+本仓库的 `main` 分支配置了自动部署到现有的 `https://suishouji.online/`：推送后 GitHub Actions 自动测试、上传版本并切换服务，无需站主点击批准。首次部署通道安装完成后启用。
+
+协作者接受仓库邀请后，可以直接推送到 `main` 触发部署；日常修改也可以通过分支和 Pull Request 协作，合并到 `main` 后自动上线。这里的部署目标就是同一个在线站点，部署成功后访客可以看到新版本。
+
+在仓库 **Actions → Test and deploy to Aliyun** 查看结果。GitHub 和服务器各执行一次测试；测试失败不会切换现有服务，切换后健康检查失败会回退上一代码版本。代码版本记录在 `/__deployment.json`。应用继续使用服务器已有的 `/opt/wall/data`，不会用仓库覆盖数据库、管理账户或上传图片；代码回退不回退数据库。
+
+部署账户仅允许接收发布包，并有重启 `wall.service` 的权限，不提供 SSH 交互式终端。Actions 的 SSH 私钥保存在仓库加密 Secrets 中，不写进源码。安装接收程序 `deploy/receive.py` 的服务器维护者需要单独更新它，它不会随普通代码部署自动替换。
+
+下方 Docker 部署章节供想独立搭站的人使用，现有阿里云站点继续使用原来的 systemd 服务和 Nginx。
+
 ## 在自己的服务器部署
 
 准备一台 Linux 服务器、一个指向该服务器的域名，以及 Docker Engine 和 Compose 插件。放行 TCP 80/443（可选 UDP 443），这两个端口应未被其他 Web 服务占用。

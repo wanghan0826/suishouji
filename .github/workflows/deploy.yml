@@ -1,0 +1,51 @@
+name: Test and deploy to Aliyun
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: suishouji-production
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check scripts and test a fresh deployment
+        run: |
+          node --check server.mjs
+          node --check public/app.js
+          node --check public/wall.js
+          node --check public/appearance.js
+          node --test tests/*.test.mjs
+      - name: Prepare static asset cache versions
+        env:
+          RELEASE_SHA: ${{ github.sha }}
+        run: node deploy/prepare-release.mjs
+      - name: Upload release and activate
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          tar -czf /tmp/release.tar.gz server.mjs admin-service.mjs admin-setup.mjs package.json public scripts tests deploy
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=20 "$DEPLOY_USER@$DEPLOY_HOST" "deploy $RELEASE_SHA" < /tmp/release.tar.gz
+      - name: Verify public release
+        env:
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          curl --fail --retry 3 --retry-delay 2 "https://suishouji.online/__deployment.json?check=$RELEASE_SHA" > /tmp/deployed.json
+          node -e 'const fs=require("fs");if(JSON.parse(fs.readFileSync("/tmp/deployed.json")).commit!==process.env.RELEASE_SHA)process.exit(1)'
