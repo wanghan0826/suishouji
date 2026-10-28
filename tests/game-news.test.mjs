@@ -11,7 +11,9 @@ test('news publishing requires an active account, preserves old posts, and appli
   const dry=run();assert.equal(dry.status,0,dry.stderr);assert.equal(JSON.parse(dry.stdout).mode,'dry-run');assert.equal(db.prepare('SELECT COUNT(*) n FROM posts').get().n,1);
   const result=run('--apply');assert.equal(result.status,0,result.stderr);assert.equal(JSON.parse(result.stdout).publishedIds.length,4);
   assert.equal(db.prepare('SELECT text FROM posts WHERE id=1').get().text,'existing');
-  for(const p of db.prepare('SELECT * FROM posts WHERE user_id=1').all()){assert.equal(p.name,'taid1');assert.equal(p.theme,'game');assert.ok(p.text.length<=500);assert.ok(fs.existsSync(path.join(data,'uploads',p.media)));}
+  for(const p of db.prepare('SELECT * FROM posts WHERE user_id=1').all()){assert.equal(p.name,'taid1');assert.equal(p.theme,'game');assert.equal(p.media_type,'image');assert.ok(p.text.length<=500);assert.ok(fs.existsSync(path.join(data,'uploads',p.media)));}
   const again=run('--apply');assert.equal(again.status,0,again.stderr);assert.equal(JSON.parse(again.stdout).mode,'already-applied');assert.equal(db.prepare('SELECT COUNT(*) n FROM posts').get().n,5);
+  db.prepare("UPDATE posts SET media_type='image/png' WHERE id=2").run();
+  const repaired=run('--apply');assert.equal(repaired.status,0,repaired.stderr);assert.deepEqual(JSON.parse(repaired.stdout).mediaTypesRepaired,[2]);assert.equal(db.prepare('SELECT media_type FROM posts WHERE id=2').get().media_type,'image');
  }finally{db.close();fs.rmSync(data,{recursive:true,force:true});}
 });

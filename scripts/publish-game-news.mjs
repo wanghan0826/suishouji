@@ -18,11 +18,6 @@ try {
  const owner=db.prepare('SELECT id,username,disabled FROM site_users WHERE username=?').get(account);
  if(!owner||owner.disabled)throw Error('An existing active account is required');
  const key=manifest.batch+':'+owner.id;
- if(db.prepare("SELECT 1 FROM sqlite_master WHERE name='site_maintenance'").get()){
-  const done=db.prepare('SELECT value FROM site_maintenance WHERE key=?').get(key);
-  if(done){console.log(JSON.stringify({mode:'already-applied',...JSON.parse(done.value)}));process.exitCode=0;}
-  if(done){db.close();process.exit(0);}
- }
  const items=manifest.entries.map(e=>{
   if(typeof e.text!=='string'||!e.text.trim()||e.text.length>500)throw Error('Invalid post text');
   if(path.basename(e.asset)!==e.asset||!/^image\/(png|jpeg)$/.test(e.mediaType))throw Error('Invalid asset');
@@ -32,6 +27,26 @@ try {
   const media=e.sha256.slice(0,24)+path.extname(e.asset);
   return {...e,bytes,media};
  });
+ if(db.prepare("SELECT 1 FROM sqlite_master WHERE name='site_maintenance'").get()){
+  const done=db.prepare('SELECT value FROM site_maintenance WHERE key=?').get(key);
+  if(done){
+   const saved=JSON.parse(done.value),repairIds=[];
+   if(saved.publishedIds.length!==items.length)throw Error('Unexpected saved batch');
+   for(let i=0;i<items.length;i++){
+    const e=items[i],p=db.prepare('SELECT * FROM posts WHERE id=?').get(saved.publishedIds[i]);
+    if(!p||p.user_id!==owner.id||p.text!==e.text||p.media!==e.media)throw Error('Published post changed; inspect before repairing');
+    if(p.media_type!=='image'){
+     if(p.media_type!==e.mediaType)throw Error('Unexpected published media type');
+     repairIds.push(p.id);
+    }
+   }
+   if(apply&&repairIds.length){
+    db.exec('BEGIN IMMEDIATE');
+    try{for(const id of repairIds){db.prepare("UPDATE posts SET media_type='image' WHERE id=?").run(id);db.prepare('INSERT INTO admin_audit(username,action,target,created_at) VALUES(?,?,?,?)').run('maintenance:'+owner.username,'repair_news_media','post:'+id,Date.now());}db.exec('COMMIT');}catch(error){db.exec('ROLLBACK');throw error;}
+   }
+   console.log(JSON.stringify({mode:'already-applied',...saved,mediaTypesRepaired:apply?repairIds:[],pendingMediaRepairs:apply?[]:repairIds}));db.close();process.exit(0);
+  }
+ }
  const publishedIds=[];
  if(apply){
   fs.mkdirSync(path.join(data,'uploads'),{recursive:true});
@@ -45,7 +60,7 @@ try {
    if(db.prepare('SELECT 1 FROM site_maintenance WHERE key=?').get(key))throw Error('Batch already published concurrently');
    const now=Date.now();
    for(const e of items){
-    const id=Number(db.prepare('INSERT INTO posts(text,name,theme,media,media_type,hearts,ip,topic,created_at,user_id) VALUES(?,?,?,?,?,0,?,?,?,?)').run(e.text,owner.username,'game',e.media,e.mediaType,'local-maintenance','',now,owner.id).lastInsertRowid);
+    const id=Number(db.prepare('INSERT INTO posts(text,name,theme,media,media_type,hearts,ip,topic,created_at,user_id) VALUES(?,?,?,?,?,0,?,?,?,?)').run(e.text,owner.username,'game',e.media,'image','local-maintenance','',now,owner.id).lastInsertRowid);
     publishedIds.push(id);
     db.prepare('INSERT INTO admin_audit(username,action,target,created_at) VALUES(?,?,?,?)').run('maintenance:'+owner.username,'publish_news','post:'+id,now);
    }
