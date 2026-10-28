@@ -31,7 +31,7 @@
  async function chooseReply(comment){
   await window.SJAuth.ready;setReply(comment);
   if(!window.SJAuth.user){window.SJAuth.open();return;}
-  $('postCommentText').focus();$('postCommentForm').scrollIntoView({block:'center',behavior:'smooth'});
+  $('postCommentText').focus({preventScroll:true});$('postCommentForm').scrollIntoView({block:'center',behavior:'instant'});
  }
  function commentElement(c){
   const item=document.createElement('article');item.className='post-comment';item.id='comment-'+c.id;
