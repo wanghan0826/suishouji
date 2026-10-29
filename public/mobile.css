@@ -16,8 +16,8 @@
  .wall-stage{height:calc(100svh - 64px - env(safe-area-inset-bottom,0px));min-height:520px}
  .wall-intro{top:calc(94px + env(safe-area-inset-top,0px));left:20px;right:20px;display:block}
  .wall-intro h1{font-size:clamp(22px,5.7vw,28px);letter-spacing:.3px}.wall-intro .eyebrow{font-size:9px}.wall-intro p.wall-help{font-size:12px;line-height:1.8;letter-spacing:0;margin-top:9px}
- .wall-stage .wall-post{height:62px;max-width:86vw;padding:8px 13px 8px 8px;gap:10px;touch-action:pan-y}
- .wall-avatar{width:39px;height:39px}.wall-meta{font-size:11px}.wall-text{font-size:14px}.wall-arrow{font-size:17px}
+ .wall-stage .wall-post{height:44px;max-width:74vw;padding:5px 10px 5px 6px;gap:7px;touch-action:pan-y}
+ .wall-avatar{width:28px;height:28px}.wall-meta{font-size:9px}.wall-text{font-size:12px}.wall-arrow{font-size:13px}.wall-copy{gap:0}
  .wall-toolbar{left:20px;right:20px;bottom:18px;gap:8px;flex-wrap:wrap}.wall-status{font-size:11px;width:100%;max-width:100%;letter-spacing:.3px}.wall-actions{gap:8px}.wall-actions .text-button,.wall-actions .btn-post{min-height:44px;font-size:12px;padding:10px 14px}.wall-browse{font-size:12px;min-height:44px;display:flex;align-items:center}
  .topic-banner{margin:18px 16px 0;padding:12px;gap:10px;align-items:center}.topic-label{font-size:11px;white-space:nowrap}.topic-text{min-width:0;white-space:normal;font-size:14px;line-height:1.6}.topic-join{min-width:48px;min-height:44px;font-size:13px;flex-shrink:0}
  .page-width{padding-left:16px;padding-right:16px}.selected-section{padding-top:30px;padding-bottom:22px}.section-heading h2{font-size:23px}.section-heading>p{display:none}.eyebrow{font-size:10px}

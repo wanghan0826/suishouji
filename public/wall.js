@@ -56,16 +56,16 @@
   function layout(){
     area.querySelectorAll('.danmaku-item').forEach(e=>e.remove());lanes=[];
     if(!pool.length){status.textContent='这里还很安静，写一条，让你的心情飘过屏幕。';return;}
-    const w=area.clientWidth,h=area.clientHeight,mobile=w<650;
+    const w=area.clientWidth,h=area.clientHeight,mobile=w<=760;
     const top=mobile?176:182,bottom=mobile?105:100;
     const usable=Math.max(180,h-top-bottom);
-    const count=Math.max(1,Math.min(pool.length,mobile?3:4,Math.floor(usable/(mobile?110:125))));
+    const count=Math.max(1,Math.min(pool.length,mobile?6:7,Math.floor(usable/(mobile?68:76))));
     const spacing=usable/count;
     for(let row=0;row<count;row++){
-      const lane={y:top+row*spacing+(spacing-57)/2,speed:(mobile?25:32)+(row%4)*4,gap:mobile?140:230,items:[]};
-      let x=35+(row%2)*120;
-      const allowance=Math.min(mobile?2:3,Math.floor(pool.length/count)+(row<pool.length%count?1:0));
-      while(x<w+150&&lane.items.length<allowance){const entry=item(nextPost(),lane,x);lane.items.push(entry);x+=entry.width+lane.gap;}
+      const lane={y:top+row*spacing+(spacing-(mobile?44:46))/2,speed:(mobile?25:32)+(row%4)*4,gap:mobile?56:90,items:[]};
+      let x=12+(row%3)*(mobile?38:75);
+      const allowance=Math.min(mobile?3:5,Math.max(2,Math.ceil(pool.length/count)));
+      while(x<w+100&&lane.items.length<allowance){const entry=item(nextPost(),lane,x);lane.items.push(entry);x+=entry.width+lane.gap;}
       lanes.push(lane);
     }
     status.textContent=pool.length+' 条分享正在循环播放';updateControl();
