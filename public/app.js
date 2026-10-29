@@ -108,15 +108,16 @@ function buildThemePicker() {
   const picker = $('#themePicker');
   let html = '';
   for (const [key, t] of Object.entries(THEMES)) {
-    html += `<div class="theme-pick" data-theme="${key}" style="background:${t.color}">${t.label}</div>`;
+    html += `<button type="button" class="theme-pick" data-theme="${key}" aria-pressed="${key === 'mood'}" style="background:${t.color}">${t.label}</button>`;
   }
   picker.innerHTML = html;
   let selected = 'mood';
   picker.querySelectorAll('.theme-pick').forEach(el => {
     if (el.dataset.theme === selected) el.classList.add('selected');
     el.addEventListener('click', () => {
-      picker.querySelectorAll('.theme-pick').forEach(x => x.classList.remove('selected'));
+      picker.querySelectorAll('.theme-pick').forEach(x => {x.classList.remove('selected');x.setAttribute('aria-pressed','false');});
       el.classList.add('selected');
+      el.setAttribute('aria-pressed','true');
       selected = el.dataset.theme;
     });
   });

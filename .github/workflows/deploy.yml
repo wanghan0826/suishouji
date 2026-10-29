@@ -24,6 +24,7 @@ jobs:
           node --check public/wall.js
           node --check public/appearance.js
           node --check public/post.js
+          node --check public/mobile.js
           node --test tests/*.test.mjs
       - name: Prepare static asset cache versions
         env:

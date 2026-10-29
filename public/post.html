@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
 <title>帖子详情 · 随手记</title>
 <meta name="description" content="随手记，一个记录日常、分享照片与心情的小角落。看看风景，聊聊生活，用文字和图片收藏每一个普通而珍贵的瞬间。">
 <meta name="theme-color" content="#236451">
@@ -13,6 +13,7 @@
 <script src="/appearance.js?v=20261027-appearance-1"></script>
 <link rel="stylesheet" href="/user-auth.css?v=20261028-user">
 <link rel="stylesheet" href="/post.css?v=20261029-sharing">
+<link rel="stylesheet" href="/mobile.css?v=20261029-mobile">
 </head>
 <body class="post-page">
 <a class="skip-link" href="#postContent">跳到帖子正文</a>
@@ -34,7 +35,7 @@
 <a class="post-return" href="/">回到弹幕墙，看看其他故事 →</a>
 </main>
 <footer class="post-footer">随手记 · 认真生活，随手记录。</footer>
-<dialog class="share-dialog" id="shareDialog" aria-labelledby="shareTitle"><div class="share-heading"><div><p class="share-kicker">PASS A MOMENT ON</p><h2 id="shareTitle">把这条分享，带给朋友</h2></div><button type="button" id="shareClose" aria-label="关闭分享">×</button></div><div class="share-preview"><img id="shareImage" alt="分享封面"><div><strong id="sharePostTitle"></strong><p id="shareDescription"></p><small>随手记 · suishouji.online</small></div></div><div class="share-options"><a id="shareQQ" target="_blank" rel="noopener noreferrer"><span class="share-icon qq-icon">QQ</span>QQ 好友 / 群</a><button id="shareWechat" type="button"><span class="share-icon wechat-icon">微</span>微信好友</button><button id="shareNative" type="button" hidden><span class="share-icon">↗</span>手机系统分享</button><button id="shareCopy" type="button"><span class="share-icon">⌁</span>复制链接</button></div><p class="share-guide" id="shareGuide" role="status">选择分享方式，由你选择朋友并确认发送。</p><p class="share-note">上方为链接预览，聊天中的实际展示以分享平台为准。</p></dialog>
+<dialog class="share-dialog" id="shareDialog" aria-labelledby="shareTitle"><div class="share-heading"><div><p class="share-kicker">PASS A MOMENT ON</p><h2 id="shareTitle">分享给朋友</h2></div><button type="button" id="shareClose" aria-label="关闭分享">×</button></div><div class="share-preview"><img id="shareImage" alt="分享封面"><div><strong id="sharePostTitle"></strong><p id="shareDescription"></p><small>随手记 · suishouji.online</small></div></div><div class="share-options"><a id="shareQQ" target="_blank" rel="noopener noreferrer"><span class="share-icon qq-icon">QQ</span>QQ 分享</a><button id="shareWechat" type="button"><span class="share-icon wechat-icon">微</span>微信好友</button><button id="shareNative" type="button" hidden><span class="share-icon">↗</span>系统分享</button><button id="shareCopy" type="button"><span class="share-icon">⌁</span>复制链接</button></div><p class="share-guide" id="shareGuide" role="status">选择分享方式，由你选择朋友并确认发送。</p><p class="share-note">上方为链接预览，聊天中的实际展示以分享平台为准。</p></dialog>
 <dialog id="appearanceDialog" class="appearance-dialog" aria-labelledby="appearanceTitle" aria-describedby="appearanceDescription">
   <div class="appearance-heading"><div><p class="appearance-kicker">MAKE IT YOUR MOMENT</p><h2 id="appearanceTitle">换一种心情，看世界</h2></div><button class="appearance-close" data-appearance-close aria-label="关闭主题设置">×</button></div>
   <p id="appearanceDescription" class="appearance-description">选择喜欢的视觉主题。手动选择后将固定显示，随时可以开启自动变化。</p>
@@ -54,4 +55,6 @@
 <dialog id="accountDialog" class="account-dialog" aria-labelledby="accountTitle"><button id="accountClose" class="account-close" aria-label="关闭账号窗口">×</button><p class="account-kicker">SUISHOUJI / YOUR ACCOUNT</p><h2 id="accountTitle">让每一条分享，都有来处。</h2><p class="account-description">浏览无需登录，发布和评论需要账号。</p><div id="accountSignedOut"><div class="account-tabs"><button id="accountLoginTab" aria-pressed="true">登录</button><button id="accountRegisterTab" aria-pressed="false">注册</button></div><form id="accountForm"><label for="accountUsername">用户名</label><input id="accountUsername" autocomplete="username" required minlength="3" maxlength="20" pattern="[a-zA-Z0-9_]{3,20}" placeholder="3–20 位字母、数字或下划线"><label for="accountPassword">密码</label><input id="accountPassword" type="password" autocomplete="current-password" required minlength="6" maxlength="128" placeholder="输入密码"><div id="accountConfirmWrap" hidden><label for="accountConfirm">再次输入密码</label><input id="accountConfirm" type="password" autocomplete="new-password" maxlength="12"><label class="account-consent"><input id="accountAccept" type="checkbox"><span>我了解：内容会关联固定账号；站点记录注册 IP 和近30天登录记录，仅供站主管理与处理违规使用。</span></label><p class="account-footnote">不绑定邮箱，不支持邮箱找回，请妥善保存密码。</p></div><p class="account-error" id="accountError" role="alert"></p><button id="accountSubmit" class="account-primary" type="submit">登录 →</button></form></div><div id="accountSignedIn" hidden><p id="accountIdentity" class="account-identity"></p><p class="account-description">分享使用这个账号名，不能填写他人的账号。</p><form id="accountPasswordForm"><label for="accountCurrentPassword">当前密码</label><input id="accountCurrentPassword" type="password" autocomplete="current-password" required minlength="6" maxlength="128"><label for="accountNewPassword">新密码</label><input id="accountNewPassword" type="password" autocomplete="new-password" required minlength="6" maxlength="12" placeholder="6–12 位新密码"><p id="accountPasswordError" class="account-error" role="alert"></p><button class="account-primary" type="submit">修改密码</button></form><button id="accountLogout" class="account-logout">退出登录</button></div></dialog>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="/user-auth.js?v=20261028-post"></script><script src="/post.js?v=20261029-sharing"></script>
+<nav class="mobile-nav" id="mobileNav" aria-label="手机导航"><a href="/">← 弹幕墙</a><a href="#commentsTitle">💬 评论</a><button type="button" data-mobile-share>↗ 分享</button></nav>
+<script src="/mobile.js?v=20261029-mobile"></script>
 </body></html>

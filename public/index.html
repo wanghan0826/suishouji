@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
 <title>随手记 · 满屏都是你的心情</title>
 <meta name="description" content="随手记，一个记录日常、分享照片与心情的小角落。看看风景，聊聊生活，用文字和图片收藏每一个普通而珍贵的瞬间。">
 <meta name="theme-color" content="#236451">
@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="/appearance.css?v=20261027-appearance-1">
 <script src="/appearance.js?v=20261027-appearance-1"></script>
 <link rel="stylesheet" href="/user-auth.css?v=20261028-user">
+<link rel="stylesheet" href="/mobile.css?v=20261029-mobile">
 </head>
 <body>
 
@@ -32,7 +33,7 @@
 </header>
 
 <main>
-<section class="wall-stage" aria-labelledby="wallTitle">
+<section id="wall" class="wall-stage" aria-labelledby="wallTitle">
   <div class="danmaku-area" id="danmakuArea" aria-label="实时帖子弹幕，点击任意弹幕打开帖子"><div class="danmaku-bg show" id="danmakuBg" style="background-image:url('/assets/lake.jpg')"></div><div class="danmaku-bg-mask"></div></div>
   <div class="wall-intro"><div><p class="eyebrow">SUISHOUJI / LIVE MOMENTS</p><h1 id="wallTitle"><span class="live-dot"></span>让每一种心情，自由飘过。</h1></div><p class="wall-help">每条弹幕，都是一个故事 · 悬停单条暂停，点击进入帖子</p></div>
   <div class="wall-toolbar"><p class="wall-status" id="wallStatus" role="status">正在加载大家的分享…</p><div class="wall-actions"><button id="toggleDanmaku" class="text-button" aria-pressed="false">Ⅱ 暂停弹幕</button><button class="btn-post" id="wallPost">＋ 发一条弹幕</button></div><a class="wall-browse" href="#shares">往下看帖子 <span aria-hidden="true">↓</span></a></div>
@@ -147,8 +148,10 @@
 <div class="toast" role="status" aria-live="polite" id="toast"></div>
 
 <script src="/user-auth.js?v=20261028-user"></script>
-<script src="/app.js?v=20261019-wall-4"></script>
+<script src="/app.js?v=20261029-mobile"></script>
 <script src="/wall.js?v=20261027-appearance-1"></script>
 <script src="/enhance.js?v=20261019-wall-4"></script>
+<nav class="mobile-nav" id="mobileNav" aria-label="手机导航"><a href="#wall" aria-current="location">◌ 弹幕墙</a><a href="#shares">▤ 看帖子</a><button type="button" data-mobile-compose>＋ 写一条</button></nav>
+<script src="/mobile.js?v=20261029-mobile"></script>
 </body>
 </html>
