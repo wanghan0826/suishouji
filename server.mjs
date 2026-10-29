@@ -4,7 +4,8 @@ import http from 'node:http';
 import { createAdminService } from './admin-service.mjs';
 import {createUserAuth} from './scripts/user-auth.mjs';
 import {findReplyTarget,readPublicComments} from './scripts/comment-threads.mjs';
-import { stat, mkdir, writeFile } from 'node:fs/promises';
+import {renderPostShareHtml} from './scripts/post-sharing.mjs';
+import { stat, mkdir, writeFile, readFile } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -362,8 +363,10 @@ async function handler(req, res) {
   const postPage = /^\/post\/(\d+)\/?$/.exec(url.pathname);
   if (postPage && ['GET','HEAD'].includes(req.method)) {
     const id = Number(postPage[1]);
-    const visible = Number.isSafeInteger(id) && db.prepare("SELECT 1 FROM posts p WHERE p.id=? AND NOT EXISTS(SELECT 1 FROM admin_archive a WHERE a.kind='post' AND a.item_id=p.id)").get(id);
-    return serveFile(res, path.join(PUBLIC, 'post.html'), visible ? 200 : 404);
+    const post = Number.isSafeInteger(id) && db.prepare(`SELECT ${POST_FIELDS} FROM posts p WHERE p.id=? AND NOT EXISTS(SELECT 1 FROM admin_archive a WHERE a.kind='post' AND a.item_id=p.id)`).get(id);
+    const html = renderPostShareHtml(await readFile(path.join(PUBLIC,'post.html'),'utf8'),post,SITE_ORIGIN);
+    res.writeHead(post?200:404,{'Content-Type':'text/html; charset=utf-8','Content-Length':Buffer.byteLength(html),'Cache-Control':'no-cache'});
+    return res.end(req.method==='HEAD'?undefined:html);
   }
   let p = url.pathname === '/' ? '/index.html' : url.pathname;
   const f = path.normalize(path.join(PUBLIC, p));

@@ -16,7 +16,7 @@ test('fresh deployment uses independent data and serves the complete application
  const seed=spawn(process.execPath,['scripts/seed-demo.mjs'],{env,stdio:['ignore','pipe','pipe']});let seedLogs='';seed.stderr.on('data',x=>seedLogs+=x);assert.equal(await new Promise(r=>seed.once('exit',r)),0,seedLogs);
  const posts=(await(await fetch(base+'/api/posts')).json()).posts;assert.equal(posts.length,4);assert.ok(posts.every(p=>p.name==='站点示例'));
  const permalink=base+'/post/'+posts[0].id;
- for(const route of [permalink,permalink+'/']){const page=await fetch(route);assert.equal(page.status,200);assert.match(await page.text(),/id="postArticle"/);}
+ for(const route of [permalink,permalink+'/']){const page=await fetch(route);assert.equal(page.status,200);const html=await page.text();assert.match(html,/id="postArticle"/);assert.match(html,/property="og:title"/);assert.match(html,/property="og:image"/);assert.ok(html.includes('http://localhost:'+port+'/post/'+posts[0].id));}
  const detail=(await(await fetch(base+'/api/posts/'+posts[0].id)).json()).post;assert.equal(detail.text,posts[0].text);assert.ok(!('ip' in detail));assert.ok(!('user_id' in detail));
  assert.equal((await fetch(base+'/uploads/'+posts[0].media)).status,200);
  const repeat=spawn(process.execPath,['scripts/seed-demo.mjs'],{env,stdio:'ignore'});assert.notEqual(await new Promise(r=>repeat.once('exit',r)),0);

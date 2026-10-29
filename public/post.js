@@ -72,7 +72,7 @@
     }else if(post.media_type==='video'){const video=document.createElement('video');video.src=src;video.controls=true;video.preload='metadata';video.setAttribute('aria-label','帖子视频');$('postMedia').append(video);}
    }
    $('postState').hidden=true;$('postArticle').hidden=false;
-   const canonical=document.createElement('link');canonical.rel='canonical';canonical.href=location.origin+'/post/'+id;document.head.append(canonical);
+   if(!document.querySelector('link[rel="canonical"]')){const canonical=document.createElement('link');canonical.rel='canonical';canonical.href=location.origin+'/post/'+id;document.head.append(canonical);}
    comments();
   }catch(error){$('postState').textContent=error.status===404?'这条分享不存在或已下架，回到弹幕墙看看吧。':'帖子暂时无法加载，请刷新重试。';document.title=error.status===404?'帖子不存在 · 随手记':'帖子加载失败 · 随手记';}
  }
@@ -82,9 +82,20 @@
   try{const replying=!!replyTo;await request('/api/posts/'+id+'/comments',{text,parent_id:replyTo?.id??null});$('postCommentText').value='';setReply(null);await comments();notify(replying?'回复已发布':'评论已发布');}catch(error){notify(error.message);}finally{button.disabled=false;}
  });
  $('commentReplyCancel').addEventListener('click',()=>{setReply(null);$('postCommentText').focus();});
- $('postShare').addEventListener('click',async()=>{
+ async function copyLink(){
   const url=location.origin+'/post/'+id;
-  try{await navigator.clipboard.writeText(url);notify('帖子链接已复制，可以分享给朋友了');}catch{$('postShareFallback').hidden=false;$('postShareUrl').value=url;$('postShareUrl').focus();$('postShareUrl').select();notify('长按或复制下方帖子链接');}
+  try{await navigator.clipboard.writeText(url);notify('帖子链接已复制，可以分享给朋友了');return true;}catch{$('shareDialog').close();$('postShareFallback').hidden=false;$('postShareUrl').value=url;$('postShareUrl').focus();$('postShareUrl').select();notify('长按或复制下方帖子链接');return false;}
+ }
+ const shareData=()=>({title:document.querySelector('meta[property="og:title"]')?.content||document.title,text:document.querySelector('meta[property="og:description"]')?.content||post.text.slice(0,100),url:location.origin+'/post/'+id});
+ $('postShare').addEventListener('click',()=>{
+  if(!post)return;const data=shareData(),image=document.querySelector('meta[property="og:image"]')?.content||location.origin+'/assets/lake.jpg';
+  $('sharePostTitle').textContent=data.title;$('shareDescription').textContent=data.text;$('shareImage').src=image;
+  $('shareQQ').href='https://connect.qq.com/widget/shareqq/index.html?'+new URLSearchParams({url:data.url,title:data.title,summary:data.text,pics:image,site:'随手记'});
+  $('shareNative').hidden=typeof navigator.share!=='function';$('shareGuide').textContent='选择分享方式，由你选择朋友并确认发送。';$('shareDialog').showModal();
  });
+ $('shareClose').addEventListener('click',()=>$('shareDialog').close());
+ $('shareCopy').addEventListener('click',copyLink);
+ $('shareWechat').addEventListener('click',async()=>{const copied=await copyLink();$('shareGuide').textContent=/MicroMessenger/i.test(navigator.userAgent)?'在微信右上角点击「···」→「发送给朋友」或「分享到朋友圈」。':copied?'链接已复制。打开微信，粘贴给好友；也可先在微信中打开，再用右上角「···」转发。':'请复制帖子链接，打开微信粘贴给好友。';});
+ $('shareNative').addEventListener('click',async()=>{try{await navigator.share(shareData());}catch(error){if(error.name!=='AbortError')$('shareGuide').textContent='当前浏览器暂时无法系统分享，请选择 QQ 或复制链接。';}});
  load();
 })();
