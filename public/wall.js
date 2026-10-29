@@ -57,8 +57,9 @@
     area.querySelectorAll('.danmaku-item').forEach(e=>e.remove());lanes=[];
     if(!pool.length){status.textContent='这里还很安静，写一条，让你的心情飘过屏幕。';return;}
     const w=area.clientWidth,h=area.clientHeight,mobile=w<=760;
-    const top=mobile?176:182,bottom=mobile?105:100;
-    const usable=Math.max(180,h-top-bottom);
+    const reading=mobile&&document.body.classList.contains('has-open-post');
+    const top=reading?126:mobile?176:182,bottom=reading?(document.getElementById('postReader')?.getBoundingClientRect().height||0)+16:mobile?105:100;
+    const usable=Math.max(44,h-top-bottom);
     const count=Math.max(1,Math.min(pool.length,mobile?6:7,Math.floor(usable/(mobile?68:76))));
     const spacing=usable/count;
     for(let row=0;row<count;row++){
@@ -107,6 +108,7 @@
   toggle.addEventListener('click',()=>{manualPaused=!manualPaused;updateControl();});
   document.getElementById('wallPost').addEventListener('click',()=>document.getElementById('btnOpenPost').click());
   document.addEventListener('visibilitychange',()=>{last=0;updateControl();});
+  document.addEventListener('sj:reading-change',layout);
   new ResizeObserver(()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(layout,120);}).observe(area);
   if(allPosts.length)setPosts(allPosts);
   updateControl();raf=requestAnimationFrame(frame);

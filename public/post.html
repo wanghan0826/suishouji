@@ -7,35 +7,57 @@
 <meta name="description" content="随手记，一个记录日常、分享照片与心情的小角落。看看风景，聊聊生活，用文字和图片收藏每一个普通而珍贵的瞬间。">
 <meta name="theme-color" content="#236451">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2718%27 fill=%27%23236451%27/%3E%3Ctext x=%2732%27 y=%2745%27 text-anchor=%27middle%27 font-size=%2742%27 fill=%27white%27%3E记%3C/text%3E%3C/svg%3E">
-
+<link rel="preload" as="image" href="/assets/lake.jpg">
 <link rel="stylesheet" href="/style.css?v=20261029-compact-wall">
 <link rel="stylesheet" href="/appearance.css?v=20261027-appearance-1">
 <script src="/appearance.js?v=20261027-appearance-1"></script>
 <link rel="stylesheet" href="/user-auth.css?v=20261028-user">
-<link rel="stylesheet" href="/post.css?v=20261029-sharing">
 <link rel="stylesheet" href="/mobile.css?v=20261029-compact-wall">
+<link rel="stylesheet" href="/post.css?v=20261029-reader">
+<link rel="stylesheet" href="/reader.css?v=20261029-reader">
 </head>
-<body class="post-page">
-<a class="skip-link" href="#postContent">跳到帖子正文</a>
-<header class="header"><div class="header-top"><a class="brand" href="/" aria-label="随手记首页"><span class="brand-icon">记</span><span class="brand-name">随手记<small>每个故事，都有自己的角落</small></span></a><div class="header-actions"><button class="btn-ghost" id="btnAppearance" aria-haspopup="dialog" aria-controls="appearanceDialog">◐ 主题</button><button class="btn-ghost" id="btnAccount" aria-haspopup="dialog">登录 / 注册</button></div></div></header>
-<main class="post-layout" id="postContent">
-<nav class="post-breadcrumb" aria-label="位置"><a href="/">← 返回弹幕墙</a><span>一条随手记</span></nav>
-<p id="postState" class="post-state" role="status">正在打开这条分享…</p>
-<article id="postArticle" class="post-sheet" hidden>
- <div class="detail-header"><span class="card-theme-badge" id="postTheme"></span><span id="postAuthor" class="detail-name"></span><time id="postDate" class="detail-time"></time></div>
- <h1 id="postTitle"></h1><p class="post-topic" id="postTopic" hidden></p>
- <div id="postBody" class="post-body"></div><div id="postMedia" class="post-media"></div>
- <div class="post-actions"><button class="heart-btn" id="postHeart" type="button">♡ 点赞 <span id="postHearts">0</span></button><button class="post-share" id="postShare" type="button" aria-haspopup="dialog" aria-controls="shareDialog">分享帖子 ↗</button></div>
- <div id="postShareFallback" hidden><label for="postShareUrl">帖子链接</label><input id="postShareUrl" readonly aria-label="帖子链接"></div>
- <section class="post-comments" aria-labelledby="commentsTitle"><h2 id="commentsTitle">聊聊这条分享 <span id="postCommentCount"></span></h2><div id="postComments" aria-live="polite"></div>
- <form class="comment-form" id="postCommentForm"><div class="comment-reply-banner" id="commentReplyBanner" hidden><span id="commentReplyLabel" role="status"></span><button type="button" id="commentReplyCancel">取消回复</button></div><label for="commentName">评论账号</label><input id="commentName" type="text" readonly placeholder="登录后显示账号"><label for="postCommentText" id="commentTextLabel">你的评论</label><textarea id="postCommentText" maxlength="200" required placeholder="友善交流，说说你的想法…"></textarea><div class="post-comment-bottom"><span>200 字以内 · 登录后可评论和回复</span><button type="submit" class="btn-post" id="postCommentSubmit">发表评论 →</button></div></form>
- </section>
-</article>
-<noscript><p class="post-state">请启用 JavaScript 阅读帖子内容，或<a href="/">返回首页</a>。</p></noscript>
-<a class="post-return" href="/">回到弹幕墙，看看其他故事 →</a>
-</main>
-<footer class="post-footer">随手记 · 认真生活，随手记录。</footer>
-<dialog class="share-dialog" id="shareDialog" aria-labelledby="shareTitle"><div class="share-heading"><div><p class="share-kicker">PASS A MOMENT ON</p><h2 id="shareTitle">分享给朋友</h2></div><button type="button" id="shareClose" aria-label="关闭分享">×</button></div><div class="share-preview"><img id="shareImage" alt="分享封面"><div><strong id="sharePostTitle"></strong><p id="shareDescription"></p><small>随手记 · suishouji.online</small></div></div><div class="share-options"><a id="shareQQ" target="_blank" rel="noopener noreferrer"><span class="share-icon qq-icon">QQ</span>QQ 分享</a><button id="shareWechat" type="button"><span class="share-icon wechat-icon">微</span>微信好友</button><button id="shareNative" type="button" hidden><span class="share-icon">↗</span>系统分享</button><button id="shareCopy" type="button"><span class="share-icon">⌁</span>复制链接</button></div><p class="share-guide" id="shareGuide" role="status">选择分享方式，由你选择朋友并确认发送。</p><p class="share-note">上方为链接预览，聊天中的实际展示以分享平台为准。</p></dialog>
+<body>
+
+<!-- 顶栏 -->
+<a class="skip-link" href="#shares">跳到最新分享</a>
+<header class="header">
+  <div class="header-top">
+    <a class="brand" href="/" aria-label="随手记首页"><span class="brand-icon">记</span><span class="brand-name">随手记<small>把生活，慢慢记下来</small></span></a><nav class="main-nav" aria-label="主导航"><a href="#selected">发现灵感</a><a href="#shares">大家的日常</a></nav>
+    <div class="header-actions">
+      <button class="btn-ghost" id="btnAppearance" aria-haspopup="dialog" aria-controls="appearanceDialog">◐ 主题</button>
+      <button class="btn-ghost" id="btnAccount" aria-haspopup="dialog">登录 / 注册</button>
+      <button class="btn-ghost" id="btnHot">🔥 热门</button>
+      <button class="btn-ghost" id="btnCheckin">📅 签到</button>
+      <button class="btn-post" id="btnOpenPost">✏️ 写一条</button>
+    </div>
+  </div>
+  
+</header>
+
+<main>
+<section id="wall" class="wall-stage" aria-labelledby="wallTitle">
+  <div class="danmaku-area" id="danmakuArea" aria-label="实时帖子弹幕，点击任意弹幕打开帖子"><div class="danmaku-bg show" id="danmakuBg" style="background-image:url('/assets/lake.jpg')"></div><div class="danmaku-bg-mask"></div></div>
+  <div class="wall-intro"><div><p class="eyebrow">SUISHOUJI / LIVE MOMENTS</p><h1 id="wallTitle"><span class="live-dot"></span>让每一种心情，自由飘过。</h1></div><p class="wall-help">每条弹幕，都是一个故事 · 悬停单条暂停，点击进入帖子</p></div>
+  <div class="wall-toolbar"><p class="wall-status" id="wallStatus" role="status">正在加载大家的分享…</p><div class="wall-actions"><button id="toggleDanmaku" class="text-button" aria-pressed="false">Ⅱ 暂停弹幕</button><button class="btn-post" id="wallPost">＋ 发一条弹幕</button></div><a class="wall-browse" href="#shares">往下看帖子 <span aria-hidden="true">↓</span></a></div>
+</section>
+<!-- 每日话题 -->
+<div class="topic-banner" id="topicBanner">
+  <span class="topic-label">今日话题</span>
+  <span class="topic-text" id="topicText">加载中…</span>
+  <button class="topic-join" id="btnJoinTopic">参与 →</button>
+</div>
+
+<section class="selected-section page-width" id="selected" aria-labelledby="selectedTitle"><div class="section-heading"><div><p class="eyebrow">THE EDITOR'S PICKS</p><h2 id="selectedTitle">给日常一点灵感<span class="tiny-spark">✳</span></h2></div><p>四篇图文，陪你慢下来。</p></div><div class="editorial-grid"><button class="editorial-card" data-article="0" aria-haspopup="dialog"><div class="editorial-photo"><img src="/assets/lake.jpg" alt="木船前方的翡翠色湖泊与群山" loading="lazy" width="800" height="600"><span class="editorial-tag">风景手记</span><span class="photo-arrow" aria-hidden="true">↗</span></div><div class="editorial-copy"><span class="editorial-number">01 / 编辑精选</span><h3>把脚步放慢，把风景装进口袋</h3><p>山有回声，水有倒影。偶尔停下来，也是一种向前。</p><span class="read-link">阅读手记 <span aria-hidden="true">→</span></span></div></button><button class="editorial-card" data-article="1" aria-haspopup="dialog"><div class="editorial-photo"><img src="/assets/coffee.jpg" alt="桌面上盛着拉花咖啡的杯子" loading="lazy" width="800" height="600"><span class="editorial-tag">日常灵感</span><span class="photo-arrow" aria-hidden="true">↗</span></div><div class="editorial-copy"><span class="editorial-number">02 / 编辑精选</span><h3>一杯咖啡的时间，留给自己</h3><p>不用把每一分钟都填满，发一会儿呆也很好。</p><span class="read-link">阅读手记 <span aria-hidden="true">→</span></span></div></button><button class="editorial-card" data-article="2" aria-haspopup="dialog"><div class="editorial-photo"><img src="/assets/plants.jpg" alt="花盆、园艺工具与绿色植物" loading="lazy" width="800" height="600"><span class="editorial-tag">生活小事</span><span class="photo-arrow" aria-hidden="true">↗</span></div><div class="editorial-copy"><span class="editorial-number">03 / 编辑精选</span><h3>在一抹绿色里，找到生活的节奏</h3><p>新叶慢慢长，日子也可以慢慢过。</p><span class="read-link">阅读手记 <span aria-hidden="true">→</span></span></div></button><button class="editorial-card" data-article="3" aria-haspopup="dialog"><div class="editorial-photo"><img src="/assets/travel.jpg" alt="山湖边的木屋与远山倒影" loading="lazy" width="800" height="600"><span class="editorial-tag">远方来信</span><span class="photo-arrow" aria-hidden="true">↗</span></div><div class="editorial-copy"><span class="editorial-number">04 / 编辑精选</span><h3>下一次出发，给自己留一点空白</h3><p>少排一个行程，多留一个偶遇的可能。</p><span class="read-link">阅读手记 <span aria-hidden="true">→</span></span></div></button></div></section>
+
+<!-- 瀑布流 -->
+<section class="waterfall-section" id="shares" aria-labelledby="waterfallTitle"><div class="section-heading"><div><p class="eyebrow">EVERYDAY STORIES</p><h2>看看大家的日常</h2></div><p>普通的每一天，也有闪光的瞬间。</p></div><nav class="theme-bar" id="themeBar" aria-label="按主题筛选"></nav>
+  <div class="waterfall-title" id="waterfallTitle">最新分享</div>
+  <div class="waterfall-grid" id="waterfallGrid"></div>
+  <button class="load-more" id="btnLoadMore">再翻一页</button>
+</section>
+
+</main><footer class="site-footer page-width"><div><span class="footer-brand">随手记</span><span>认真生活，随手记录。</span></div><p>编辑精选为本站整理的灵感文章 · 配图来自 Unsplash<br>用户分享由发布者提供，请友善交流并尊重原创。</p><a href="/admin">站主管理</a><a href="#" aria-label="回到顶部">回到顶部 ↑</a></footer>
+<dialog id="articleDialog" class="article-dialog" aria-labelledby="articleTitle"><button class="article-close" aria-label="关闭图文">×</button><img id="articleImage" alt=""><div class="article-body"><p class="eyebrow" id="articleTag"></p><h2 id="articleTitle"></h2><p class="article-intro" id="articleIntro"></p><div id="articleContent"></div><p class="article-credit">编辑精选 · 灵感文章 / 配图：Unsplash</p><button class="btn-post" id="articlePost">记录我的这一刻 →</button></div></dialog>
 <dialog id="appearanceDialog" class="appearance-dialog" aria-labelledby="appearanceTitle" aria-describedby="appearanceDescription">
   <div class="appearance-heading"><div><p class="appearance-kicker">MAKE IT YOUR MOMENT</p><h2 id="appearanceTitle">换一种心情，看世界</h2></div><button class="appearance-close" data-appearance-close aria-label="关闭主题设置">×</button></div>
   <p id="appearanceDescription" class="appearance-description">选择喜欢的视觉主题。手动选择后将固定显示，随时可以开启自动变化。</p>
@@ -53,8 +75,73 @@
   <p class="appearance-state" id="appearanceState" role="status"></p><p class="appearance-saved" id="appearanceSaved">选择会自动保存在当前浏览器</p>
 </dialog>
 <dialog id="accountDialog" class="account-dialog" aria-labelledby="accountTitle"><button id="accountClose" class="account-close" aria-label="关闭账号窗口">×</button><p class="account-kicker">SUISHOUJI / YOUR ACCOUNT</p><h2 id="accountTitle">让每一条分享，都有来处。</h2><p class="account-description">浏览无需登录，发布和评论需要账号。</p><div id="accountSignedOut"><div class="account-tabs"><button id="accountLoginTab" aria-pressed="true">登录</button><button id="accountRegisterTab" aria-pressed="false">注册</button></div><form id="accountForm"><label for="accountUsername">用户名</label><input id="accountUsername" autocomplete="username" required minlength="3" maxlength="20" pattern="[a-zA-Z0-9_]{3,20}" placeholder="3–20 位字母、数字或下划线"><label for="accountPassword">密码</label><input id="accountPassword" type="password" autocomplete="current-password" required minlength="6" maxlength="128" placeholder="输入密码"><div id="accountConfirmWrap" hidden><label for="accountConfirm">再次输入密码</label><input id="accountConfirm" type="password" autocomplete="new-password" maxlength="12"><label class="account-consent"><input id="accountAccept" type="checkbox"><span>我了解：内容会关联固定账号；站点记录注册 IP 和近30天登录记录，仅供站主管理与处理违规使用。</span></label><p class="account-footnote">不绑定邮箱，不支持邮箱找回，请妥善保存密码。</p></div><p class="account-error" id="accountError" role="alert"></p><button id="accountSubmit" class="account-primary" type="submit">登录 →</button></form></div><div id="accountSignedIn" hidden><p id="accountIdentity" class="account-identity"></p><p class="account-description">分享使用这个账号名，不能填写他人的账号。</p><form id="accountPasswordForm"><label for="accountCurrentPassword">当前密码</label><input id="accountCurrentPassword" type="password" autocomplete="current-password" required minlength="6" maxlength="128"><label for="accountNewPassword">新密码</label><input id="accountNewPassword" type="password" autocomplete="new-password" required minlength="6" maxlength="12" placeholder="6–12 位新密码"><p id="accountPasswordError" class="account-error" role="alert"></p><button class="account-primary" type="submit">修改密码</button></form><button id="accountLogout" class="account-logout">退出登录</button></div></dialog>
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="/user-auth.js?v=20261028-post"></script><script src="/post.js?v=20261029-sharing"></script>
-<nav class="mobile-nav" id="mobileNav" aria-label="手机导航"><a href="/">← 弹幕墙</a><a href="#commentsTitle">💬 评论</a><button type="button" data-mobile-share>↗ 分享</button></nav>
-<script src="/mobile.js?v=20261029-mobile"></script>
-</body></html>
+<!-- 发布弹窗 -->
+<div class="modal-mask" id="postModal">
+  <div class="modal-box">
+    <button class="modal-close" data-close="postModal">×</button>
+    <h3>写一条碎语</h3>
+    <form class="post-form" id="postForm">
+      <label>说点什么 <span style="font-weight:400">（500字以内）</span></label>
+      <textarea aria-label="分享内容" id="postText" maxlength="500" placeholder="此刻的心情、今天的见闻、想说又不好意思说的话..."></textarea>
+      <div class="char-count"><span id="charCount">0</span>/500</div>
+
+      <label>发布账号</label>
+      <input type="text" aria-label="发布昵称" id="postName" readonly placeholder="登录后显示账号">
+
+      <label>选择主题</label>
+      <div class="theme-picker" id="themePicker"></div>
+
+      <div class="topic-hint" id="topicHint" style="display:none">
+        📌 正在参与今日话题：<b id="topicHintText"></b>
+        <button type="button" class="topic-cancel" id="btnCancelTopic">取消</button>
+      </div>
+
+      <label>图片/视频 <span style="font-weight:400">（60MB以内，可选）</span></label>
+      <div class="file-area" id="fileArea">
+        📎 点击选择文件（支持拍照/相册）
+        <input type="file" id="postFile" accept="image/*,video/*">
+      </div>
+      <img class="file-preview" id="filePreview" style="display:none">
+
+      <button type="submit" class="submit-btn" id="btnSubmit">发布 🚀</button>
+    </form>
+  </div>
+</div>
+
+<!-- 热门弹窗 -->
+<div class="modal-mask" id="hotModal">
+  <div class="modal-box">
+    <button class="modal-close" data-close="hotModal">×</button>
+    <h3>🔥 本周热门 Top 10</h3>
+    <div id="hotList" class="hot-list"></div>
+  </div>
+</div>
+
+<aside id="postReader" class="reader-panel" aria-label="弹幕展开内容" hidden><div class="reader-bar"><span>从这条弹幕展开</span><div><button type="button" id="readerExpand" aria-expanded="false">展开阅读</button><button type="button" data-reader-close aria-label="收起帖子">×</button></div></div><div class="post-layout" id="postContent">
+
+<p id="postState" class="post-state" role="status">正在打开这条分享…</p>
+<article id="postArticle" class="post-sheet" hidden>
+ <div class="detail-header"><span class="card-theme-badge" id="postTheme"></span><span id="postAuthor" class="detail-name"></span><time id="postDate" class="detail-time"></time></div>
+ <h1 id="postTitle"></h1><p class="post-topic" id="postTopic" hidden></p>
+ <div id="postMedia" class="post-media"></div><div id="postBody" class="post-body"></div>
+ <div class="post-actions"><button class="heart-btn" id="postHeart" type="button">♡ 点赞 <span id="postHearts">0</span></button><button class="post-share" id="postShare" type="button" aria-haspopup="dialog" aria-controls="shareDialog">分享帖子 ↗</button></div>
+ <div id="postShareFallback" hidden><label for="postShareUrl">帖子链接</label><input id="postShareUrl" readonly aria-label="帖子链接"></div>
+ <section class="post-comments" aria-labelledby="commentsTitle"><h2 id="commentsTitle">聊聊这条分享 <span id="postCommentCount"></span></h2><div id="postComments" aria-live="polite"></div>
+ <form class="comment-form" id="postCommentForm"><div class="comment-reply-banner" id="commentReplyBanner" hidden><span id="commentReplyLabel" role="status"></span><button type="button" id="commentReplyCancel">取消回复</button></div><label for="commentName">评论账号</label><input id="commentName" type="text" readonly placeholder="登录后显示账号"><label for="postCommentText" id="commentTextLabel">你的评论</label><textarea id="postCommentText" maxlength="200" required placeholder="友善交流，说说你的想法…"></textarea><div class="post-comment-bottom"><span>200 字以内 · 登录后可评论和回复</span><button type="submit" class="btn-post" id="postCommentSubmit">发表评论 →</button></div></form>
+ </section>
+</article>
+<noscript><p class="post-state">请启用 JavaScript 阅读帖子内容，或<a href="/">返回首页</a>。</p></noscript>
+<button type="button" class="reader-return" data-reader-close>收起内容，回到弹幕墙 ↑</button>
+</div></aside>
+<dialog class="share-dialog" id="shareDialog" aria-labelledby="shareTitle"><div class="share-heading"><div><p class="share-kicker">PASS A MOMENT ON</p><h2 id="shareTitle">分享给朋友</h2></div><button type="button" id="shareClose" aria-label="关闭分享">×</button></div><div class="share-preview"><img id="shareImage" alt="分享封面"><div><strong id="sharePostTitle"></strong><p id="shareDescription"></p><small>随手记 · suishouji.online</small></div></div><div class="share-options"><a id="shareQQ" target="_blank" rel="noopener noreferrer"><span class="share-icon qq-icon">QQ</span>QQ 分享</a><button id="shareWechat" type="button"><span class="share-icon wechat-icon">微</span>微信好友</button><button id="shareNative" type="button" hidden><span class="share-icon">↗</span>系统分享</button><button id="shareCopy" type="button"><span class="share-icon">⌁</span>复制链接</button></div><p class="share-guide" id="shareGuide" role="status">选择分享方式，由你选择朋友并确认发送。</p><p class="share-note">上方为链接预览，聊天中的实际展示以分享平台为准。</p></dialog>
+<div class="toast" role="status" aria-live="polite" id="toast"></div>
+
+<script src="/user-auth.js?v=20261028-user"></script>
+<script src="/app.js?v=20261029-reader"></script>
+<script src="/wall.js?v=20261029-reader"></script>
+<script src="/enhance.js?v=20261019-wall-4"></script>
+<nav class="mobile-nav" id="mobileNav" aria-label="手机导航"><a href="#wall" aria-current="location">◌ 弹幕墙</a><a href="#shares">▤ 看帖子</a><button type="button" data-mobile-compose>＋ 写一条</button></nav>
+<script src="/post.js?v=20261029-reader"></script>
+<script src="/mobile.js?v=20261029-reader"></script>
+</body>
+</html>

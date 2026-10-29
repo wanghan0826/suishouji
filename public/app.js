@@ -415,7 +415,7 @@ function setupHot() {
 
 /* ---------- 详情弹窗 + 评论 ---------- */
 function showDetail(post) {
-  location.assign('/post/' + post.id);
+  if(window.SJOpenPost)window.SJOpenPost(post.id);else location.assign('/post/' + post.id);
 }
 
 async function loadComments(postId) {
@@ -560,7 +560,6 @@ initDanmakuTracks();
 buildThemeBar();
 setupPostForm();
 setupModals();
-setupCommentForm();
 setupTopic();
 setupCheckin();
 setupHot();
