@@ -1,14 +1,14 @@
 /* Visitor-local appearance preferences; independent of post categories. */
 (() => {
   const key='suishouji.appearance.v1';
-  const themes=['night','forest','sunset','paper'];
-  const names={night:'静谧夜色',forest:'林间微光',sunset:'暖橙日落',paper:'晴日纸白'};
-  const colors={night:'#101e26',forest:'#142e27',sunset:'#3c252d',paper:'#f0ede3'};
-  let preferences={theme:'night',automatic:false,interval:60,slideshow:false};
+  const themes=['paper','mint','sky','rose','sand','night','forest','sunset'];
+  const names={night:'静谧夜色',forest:'林间微光',sunset:'暖橙日落',paper:'晴日纸白',mint:'薄荷清晨',sky:'晴空浅蓝',rose:'樱花浅粉',sand:'奶杏暖阳'};
+  const colors={night:'#101e26',forest:'#142e27',sunset:'#3c252d',paper:'#f0ede3',mint:'#e5f4ec',sky:'#e8f2fb',rose:'#f9eaf0',sand:'#f7eedf'};
+  let preferences={theme:'paper',automatic:false,interval:60,slideshow:false};
   try {
     const saved=JSON.parse(localStorage.getItem(key));
     if(saved&&typeof saved==='object')preferences={
-      theme:themes.includes(saved.theme)?saved.theme:'night',
+      theme:themes.includes(saved.theme)?saved.theme:'paper',
       automatic:saved.automatic===true,
       interval:[30,60,300].includes(saved.interval)?saved.interval:60,
       slideshow:saved.slideshow===true

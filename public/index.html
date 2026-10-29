@@ -9,12 +9,12 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2718%27 fill=%27%23236451%27/%3E%3Ctext x=%2732%27 y=%2745%27 text-anchor=%27middle%27 font-size=%2742%27 fill=%27white%27%3E记%3C/text%3E%3C/svg%3E">
 <link rel="preload" as="image" href="/assets/lake.jpg">
 <link rel="stylesheet" href="/style.css?v=20261029-compact-wall">
-<link rel="stylesheet" href="/appearance.css?v=20261027-appearance-1">
-<script src="/appearance.js?v=20261027-appearance-1"></script>
+<link rel="stylesheet" href="/appearance.css?v=20261029-light-full">
+<script src="/appearance.js?v=20261029-light-full"></script>
 <link rel="stylesheet" href="/user-auth.css?v=20261028-user">
 <link rel="stylesheet" href="/mobile.css?v=20261029-compact-wall">
 <link rel="stylesheet" href="/post.css?v=20261029-reader">
-<link rel="stylesheet" href="/reader.css?v=20261029-reader">
+<link rel="stylesheet" href="/reader.css?v=20261029-light-full">
 </head>
 <body>
 
@@ -62,13 +62,18 @@
   <div class="appearance-heading"><div><p class="appearance-kicker">MAKE IT YOUR MOMENT</p><h2 id="appearanceTitle">换一种心情，看世界</h2></div><button class="appearance-close" data-appearance-close aria-label="关闭主题设置">×</button></div>
   <p id="appearanceDescription" class="appearance-description">选择喜欢的视觉主题。手动选择后将固定显示，随时可以开启自动变化。</p>
   <div class="appearance-choices" role="group" aria-label="选择视觉主题">
-    <button class="appearance-choice" data-appearance-choice="night" aria-pressed="true"><span class="appearance-preview" style="--swatch:#101e26;--swatch-pill:#7faaa4" aria-hidden="true"><i></i><i></i></span><strong>静谧夜色</strong></button>
+
+    <button class="appearance-choice" data-appearance-choice="paper" aria-pressed="true"><span class="appearance-preview" style="--swatch:#f0ede3;--swatch-pill:#8caa85" aria-hidden="true"><i></i><i></i></span><strong>晴日纸白</strong></button>
+    <button class="appearance-choice" data-appearance-choice="mint" aria-pressed="false"><span class="appearance-preview" style="--swatch:#e5f4ec;--swatch-pill:#cce2d5" aria-hidden="true"><i></i><i></i></span><strong>薄荷清晨</strong></button>
+    <button class="appearance-choice" data-appearance-choice="sky" aria-pressed="false"><span class="appearance-preview" style="--swatch:#e8f2fb;--swatch-pill:#cddfea" aria-hidden="true"><i></i><i></i></span><strong>晴空浅蓝</strong></button>
+    <button class="appearance-choice" data-appearance-choice="rose" aria-pressed="false"><span class="appearance-preview" style="--swatch:#f9eaf0;--swatch-pill:#ebd1dc" aria-hidden="true"><i></i><i></i></span><strong>樱花浅粉</strong></button>
+    <button class="appearance-choice" data-appearance-choice="sand" aria-pressed="false"><span class="appearance-preview" style="--swatch:#f7eedf;--swatch-pill:#e6d6bd" aria-hidden="true"><i></i><i></i></span><strong>奶杏暖阳</strong></button>
+    <button class="appearance-choice" data-appearance-choice="night" aria-pressed="false"><span class="appearance-preview" style="--swatch:#101e26;--swatch-pill:#7faaa4" aria-hidden="true"><i></i><i></i></span><strong>静谧夜色</strong></button>
     <button class="appearance-choice" data-appearance-choice="forest" aria-pressed="false"><span class="appearance-preview" style="--swatch:#142e27;--swatch-pill:#b1c98a" aria-hidden="true"><i></i><i></i></span><strong>林间微光</strong></button>
     <button class="appearance-choice" data-appearance-choice="sunset" aria-pressed="false"><span class="appearance-preview" style="--swatch:#3c252d;--swatch-pill:#d9a580" aria-hidden="true"><i></i><i></i></span><strong>暖橙日落</strong></button>
-    <button class="appearance-choice" data-appearance-choice="paper" aria-pressed="false"><span class="appearance-preview" style="--swatch:#f0ede3;--swatch-pill:#8caa85" aria-hidden="true"><i></i><i></i></span><strong>晴日纸白</strong></button>
   </div>
   <div class="appearance-options">
-    <label class="appearance-option"><span>自动切换主题<small>按顺序轮换四种风格，关闭后固定当前主题</small></span><input id="appearanceAutomatic" type="checkbox"></label>
+    <label class="appearance-option"><span>自动切换主题<small>按顺序轮换全部风格，关闭后固定当前主题</small></span><input id="appearanceAutomatic" type="checkbox"></label>
     <label class="appearance-interval" for="appearanceInterval">切换间隔<select id="appearanceInterval" aria-label="切换间隔" disabled><option value="30">30 秒</option><option value="60" selected>1 分钟</option><option value="300">5 分钟</option></select></label>
     <label class="appearance-option"><span>背景图片轮播<small>每 12 秒更换一张帖子配图，关闭后固定当前图片</small></span><input id="appearanceSlideshow" type="checkbox"></label>
   </div>
