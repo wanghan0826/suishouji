@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /* 随手记 · 弹幕分享站：零依赖 Node 后端（SQLite + 媒体上传 + 评论 + 签到 + 话题 + 静态托管） */
 import http from 'node:http';
+import {createSocialInbox} from './scripts/social-inbox.mjs';
 import {createSpaces} from './scripts/spaces.mjs';
 import {ensureDiscussions,discussionText,readDiscussions} from './scripts/discussions.mjs';
 import {createAnalytics} from './scripts/analytics.mjs';
@@ -353,6 +354,7 @@ const admin = createAdminService({ db, dataDir: DATA, publicDir: PUBLIC, origin:
 
 ensureDiscussions(db);
 const spaces=createSpaces({db,users});
+const socialInbox=createSocialInbox({db,users});
 const analytics=createAnalytics({db,origin:SITE_ORIGIN,localHttp});
 /* ---------- 服务 ---------- */
 async function handler(req, res) {
@@ -362,6 +364,7 @@ async function handler(req, res) {
   if (await analytics.handle(req,res)) return;
   if (await users.handle(req, res)) return;
   if (await spaces.handle(req,res)) return;
+  if (await socialInbox.handle(req,res)) return;
   if (!users.authorizeWrite(req, res)) return;
   if (admin.handlePublic(req, res)) return;
   const url = new URL(req.url, 'http://x');

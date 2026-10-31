@@ -60,6 +60,7 @@
     const thread=document.createElement('div');thread.className='comment-thread';thread.append(commentElement(c));const replies=document.createElement('div');replies.className='comment-replies';thread.append(replies);threads.set(c.id,replies);list.append(thread);
    }
    for(const c of data.comments.filter(c=>c.thread_id)){const parent=threads.get(c.thread_id);if(parent)parent.append(commentElement(c));}
+   if(/^#comment-\d+$/.test(location.hash)){const target=document.getElementById(location.hash.slice(1));if(target){target.scrollIntoView({block:'center',behavior:'instant'});target.tabIndex=-1;target.focus({preventScroll:true});}}
   }catch(error){if(requested===id)list.textContent=error.status===404?'帖子已下架，无法查看评论。':'评论暂时无法加载，请刷新重试。';}
  }
  async function load(nextId,update=true){

@@ -5,6 +5,7 @@
   $('btnAccount').textContent=state.user?state.user.username:'登录 / 注册';$('btnAccount').title=state.user?'账号：'+state.user.username:'登录或注册';
   $('accountSignedOut').hidden=!!state.user;$('accountSignedIn').hidden=!state.user;
   $('accountIdentity').textContent=state.user?state.user.username+' · 账号 #'+state.user.id:'';
+  document.dispatchEvent(new Event('sj:auth-change'));
   for(const id of ['postName','commentName'])if($(id))$(id).value=state.user?.username||'';
  }
  function mode(value){register=value;$('accountLoginTab').setAttribute('aria-pressed',String(!value));$('accountRegisterTab').setAttribute('aria-pressed',String(value));$('accountConfirmWrap').hidden=!value;$('accountConfirm').required=value;$('accountAccept').required=value;$('accountSubmit').textContent=value?'注册并登录 →':'登录 →';$('accountPassword').autocomplete=value?'new-password':'current-password';$('accountPassword').maxLength=value?12:128;$('accountPassword').placeholder=value?'6–12 位密码':'输入密码';$('accountError').textContent='';$('accountPassword').value='';$('accountConfirm').value='';}
