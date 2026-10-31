@@ -30,6 +30,7 @@ jobs:
           node --check public/conversation-prompts.js
           node --check public/space-wall.js
           node --check public/space.js
+          node --check public/space-invite.js
           node --test tests/*.test.mjs
       - name: Prepare static asset cache versions
         env:
