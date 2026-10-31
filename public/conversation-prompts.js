@@ -1,0 +1,6 @@
+(() => {
+ const choices=[{title:'今天有什么小事让你开心了一下？',theme:'daily',label:'日常小事'},{title:'最近哪款游戏让你想拉朋友一起玩？',theme:'game',label:'一起开黑'},{title:'最近学校里有什么值得分享的小发现？',theme:'campus',label:'校园发现'}];
+ let daily;
+ const today=()=>daily??=(async()=>{try{const r=await fetch('/api/topic',{cache:'no-store'});if(!r.ok)return null;const d=await r.json();if(typeof d.topic!=='string'||!d.topic.trim())return null;let title=d.topic.trim().replace(/\s+/g,' ').slice(0,59);if(!/[？?]$/.test(title))title+='？';return {title,theme:'daily',label:'今日话题'};}catch{return null;}})();
+ window.SJPrompts={mount(container,onChoose){const buttons=document.createElement('div');buttons.className='conversation-prompt-choices';const status=document.createElement('p');status.className='conversation-prompt-status';status.setAttribute('role','status');container.append(buttons,status);function add(choice,first=false){const b=document.createElement('button');b.type='button';b.textContent=choice.label;b.title=choice.title;b.onclick=async()=>{status.textContent='';try{const message=await onChoose(choice);status.textContent=message||'';}catch{status.textContent='暂时无法填入话题，请稍后重试。';}};if(first)buttons.prepend(b);else buttons.append(b);}choices.forEach(x=>add(x));today().then(choice=>{if(choice)add(choice,true);});return {clear(){status.textContent='';}};}};
+})();
