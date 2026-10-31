@@ -26,5 +26,5 @@
  $('spacePrev').onclick=()=>{if(page>1){page--;load();}};$('spaceNext').onclick=()=>{if(page<pages){page++;load();}};$('spaceLogin').onclick=()=>SJAuth.open();$('spaceGateLogin').onclick=()=>SJAuth.open();
  $('inviteSpace').onclick=async()=>{const text='来随手记找我：'+location.origin+'/u/'+profile.username+'?from=invite\n把日常变成弹幕，给朋友留一个会回应的小空间。'+(profile.visibility==='mutual'?'注册后先关注我，等我回关，我们就能一起留弹。':profile.visibility==='followers'?'注册并关注我，就能进入空间留言。':'我的空间公开可看，登录后可以给我留一句弹幕。');try{await navigator.clipboard.writeText(text);$('inviteSpaceStatus').textContent='邀请文案已复制，可以发给你想一起留弹的朋友。';}catch{$('inviteSpaceStatus').textContent=text;}};
  $('shareSpace').onclick=async()=>{const url=location.origin+'/u/'+profile.username;try{await navigator.clipboard.writeText(url);$('spaceState').textContent='空间链接已复制。朋友访问时仍需满足你的权限设置。';}catch{$('spaceState').textContent='空间链接：'+url;}};
- $('accountDialog').addEventListener('close',refresh);refresh();
+ let lastAuthId=SJAuth.user?.id;document.addEventListener('sj:auth-change',()=>{if(lastAuthId!==SJAuth.user?.id){lastAuthId=SJAuth.user?.id;refresh();}});document.addEventListener('sj:relationships-change',refresh);$('accountDialog').addEventListener('close',refresh);refresh();
 })();

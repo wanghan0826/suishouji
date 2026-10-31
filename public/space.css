@@ -5,3 +5,7 @@
 
 /* The space wall follows the same light/dark palette as the home wall. */
 .space-wall-stage{background:radial-gradient(ellipse at 22% 20%,color-mix(in srgb,var(--wall-accent) 9%,transparent),transparent 65%),radial-gradient(ellipse at 80% 80%,color-mix(in srgb,var(--wall-accent) 6%,transparent),transparent 60%),var(--wall)}.space-bullet{background:var(--wall-pill);color:var(--wall-text);border-color:var(--wall-border)}.space-bullet[data-kind=message]{background:var(--wall-pill-alt)}.space-bullet-kind,.space-bullet small,.space-wall-empty,.space-wall-watermark{color:var(--wall-muted)}.space-bullet:hover,.space-bullet:focus-visible{outline-color:var(--wall-accent)}
+
+.space-reply-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 20px 0;color:var(--accent);font-size:12px;line-height:1.8}.space-reply-quote{border-left:3px solid var(--accent);margin:20px 0;padding:12px 15px;background:var(--surface2);color:var(--text2);font-size:13px;line-height:1.9;white-space:pre-wrap;overflow-wrap:anywhere}.space-bullet-dialog [hidden]{display:none!important}
+
+.space-bullet-dialog .space-bullet-detail-text{font-size:16px;line-height:1.95}
