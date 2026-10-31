@@ -9,3 +9,5 @@
 .space-reply-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 20px 0;color:var(--accent);font-size:12px;line-height:1.8}.space-reply-quote{border-left:3px solid var(--accent);margin:20px 0;padding:12px 15px;background:var(--surface2);color:var(--text2);font-size:13px;line-height:1.9;white-space:pre-wrap;overflow-wrap:anywhere}.space-bullet-dialog [hidden]{display:none!important}
 
 .space-bullet-dialog .space-bullet-detail-text{font-size:16px;line-height:1.95}
+
+.space-wall.is-expanded{top:var(--space-visible-top,0px);bottom:auto;height:var(--space-visible-height,100dvh);overflow-y:auto;overscroll-behavior:contain}.space-wall.is-expanded .space-wall-compose{flex-shrink:0}.space-wall.is-expanded[data-compact-view=true] .space-wall-stage{min-height:60px}.space-wall.is-expanded[data-compact-view=true] .space-wall-kicker,.space-wall.is-expanded[data-compact-view=true] #spaceWallCount{display:none}.space-wall.is-expanded[data-compact-view=true] .space-wall-heading{padding-top:12px;padding-bottom:8px}.space-wall.is-expanded[data-compact-view=true] .space-wall-note{font-size:10px;margin-bottom:8px}
