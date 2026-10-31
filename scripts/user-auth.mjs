@@ -63,5 +63,5 @@ export function createUserAuth({db,origin,localHttp=false,trustProxy=false}){
  }
  function authorizeWrite(req,res){if(req.method!=='POST'||!/^\/api\/(?:posts(?:\/\d+\/(?:comments|heart))?|checkin)$/.test(new URL(req.url,'http://internal').pathname))return true;
   try{req.siteUser=requireUser(req);req.accountIp=ip(req);return true;}catch(e){send(res,e.status||500,{error:e.message});return false;}}
- return {handle,authorizeWrite,ip};
+ return {handle,authorizeWrite,ip,requireUser,currentUser(req){const u=encrypted(req)?session(req):null;return u&&!u.disabled?u:null;}};
 }

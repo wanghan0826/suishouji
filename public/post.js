@@ -42,7 +42,7 @@
  function commentElement(c){
   const item=document.createElement('article');item.className='post-comment';item.id='comment-'+c.id;
   const meta=document.createElement('div');meta.className='post-comment-meta';
-  const name=document.createElement('strong');name.textContent=c.name||'匿名小伙伴';
+  const name=document.createElement(/^[a-z0-9_]{3,20}$/i.test(c.name)?'a':'strong');name.textContent=c.name||'匿名小伙伴';if(name.tagName==='A')name.href='/u/'+encodeURIComponent(c.name);
   const time=document.createElement('time');time.dateTime=new Date(c.created_at).toISOString();time.textContent=date(c.created_at);meta.append(name,time);
   const text=document.createElement('p');text.textContent=c.text;item.append(meta);
   if(c.parent_id){const target=document.createElement(c.reply_to_name?'a':'span');target.className='comment-reply-target';target.textContent=c.reply_to_name?'回复 @'+c.reply_to_name:'回复的评论已下架';if(c.reply_to_name)target.href='#comment-'+c.parent_id;item.append(target);}
@@ -75,7 +75,7 @@
    const lines=post.text.split('\n'),heading=lines.length>1&&lines[0].length<=90;
    const title=heading?lines.shift().replace(/^【|】$/g,''):(post.name||'小伙伴')+'的分享';
    document.title=title+' · 随手记';document.querySelector('meta[name="description"]').content=post.text.slice(0,150);
-   $('postTitle').textContent=title;$('postTheme').textContent=categories[post.theme]||'分享';$('postTheme').style.background='var(--accent)';$('postAuthor').textContent=post.name||'匿名小伙伴';$('postDate').textContent=date(post.created_at);$('postDate').dateTime=new Date(post.created_at).toISOString();$('postHearts').textContent=post.hearts;
+   $('postTitle').textContent=title;$('postTheme').textContent=categories[post.theme]||'分享';$('postTheme').style.background='var(--accent)';$('postAuthor').textContent=post.name||'匿名小伙伴';$('postAuthor').href='/u/'+encodeURIComponent(post.name);$('postDate').textContent=date(post.created_at);$('postDate').dateTime=new Date(post.created_at).toISOString();$('postHearts').textContent=post.hearts;
    richText($('postBody'),heading?lines.join('\n'):post.text);
    if(post.topic){$('postTopic').hidden=false;$('postTopic').textContent='参与话题 · '+post.topic;}
    if(post.media){

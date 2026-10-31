@@ -1,6 +1,20 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs/promises';import os from 'node:os';import path from 'node:path';import net from 'node:net';import {spawn} from 'node:child_process';import {setTimeout as delay} from 'node:timers/promises';import {DatabaseSync} from 'node:sqlite';import {createAccount} from '../admin-service.mjs';
 const password='User_pw_42',adminPassword='Isolated-test-admin-password-42';
 
+test('personal spaces enforce follower and mutual access at the API, revoke access immediately, and keep updates off public feeds',async t=>{
+ const f=await fixture(t),owner=await f.register('space_owner'),fan=await f.register('space_fan'),stranger=await f.register('space_other');const base='/api/spaces/space_owner';
+ assert.equal((await f.call(base)).data.canAccess,false);assert.equal((await f.call(base+'/updates')).status,401);assert.equal((await f.call(base+'/members',{session:stranger})).status,403);
+ const secret='only-space-private-message';assert.equal((await f.call(base+'/updates',{method:'POST',session:owner,body:{text:secret}})).status,200);assert.equal((await f.call(base+'/updates',{session:stranger})).status,403);assert.ok(!JSON.stringify((await f.call('/api/posts')).data).includes(secret));assert.ok(!JSON.stringify((await f.call('/api/discussions')).data).includes(secret));
+ assert.equal((await f.call(base+'/follow',{method:'POST',session:fan,body:{},csrfOverride:'bad'})).status,403);assert.equal((await f.call(base+'/follow',{method:'POST',session:fan,body:{},originOverride:'https://evil.example'})).status,403);
+ assert.equal((await f.call(base+'/follow',{method:'POST',session:owner,body:{}})).status,400);assert.equal((await f.call(base+'/follow',{method:'POST',session:fan,body:{}})).status,200);assert.equal((await f.call(base+'/updates',{session:fan})).data.items[0].text,secret);
+ const settings={title:'我的空间',bio:'只给朋友的简介',visibility:'mutual',color:'mint'};assert.equal((await f.call(base+'/profile',{method:'POST',session:stranger,body:settings})).status,403);assert.equal((await f.call(base+'/profile',{method:'POST',session:owner,body:settings})).status,200);assert.equal((await f.call(base+'/updates',{session:fan})).status,403);assert.equal((await f.call(base,{session:fan})).data.bio,'');
+ await f.call('/api/spaces/space_fan/follow',{method:'POST',session:owner,body:{}});assert.equal((await f.call(base,{session:fan})).data.mutual,true);const updates=(await f.call(base+'/updates',{session:fan})).data;assert.equal(updates.items[0].text,secret);assert.equal((await f.call(base+'/updates/'+updates.items[0].id,{method:'POST',session:fan,body:{}})).status,403);
+ await f.call(base+'/unfollow',{method:'POST',session:fan,body:{}});assert.equal((await f.call(base+'/updates',{session:fan})).status,403);
+ const admin=await f.admin();assert.equal((await f.call('/api/admin/space-updates')).status,401);assert.equal((await f.call('/api/admin/space-updates',{session:admin})).data.items.length,1);await f.call('/api/admin/space-updates/'+updates.items[0].id+'/archive',{method:'POST',session:admin,body:{}});assert.equal((await f.call(base+'/updates',{session:owner})).data.total,0);
+ await f.call(base+'/profile',{method:'POST',session:owner,body:{...settings,visibility:'public'}});assert.equal((await f.call(base)).data.canAccess,true);assert.equal((await f.call(base+'/updates')).status,200);
+ assert.ok(!JSON.stringify((await f.call(base)).data).includes('registration_ip'));assert.equal((await f.call('/space')).status,200);assert.equal((await f.call('/u/space_owner')).status,200);
+});
+
 test('discussion creation binds the real account and moderation controls plaza and wall together',async t=>{
  const f=await fixture(t),form=new FormData();form.set('discussion','1');form.set('discussionTitle','一起聊游戏');form.set('text','你最近在玩什么？');form.set('theme','game');form.set('name','fake_author');
  assert.equal((await f.call('/api/posts',{method:'POST',body:form})).status,401);

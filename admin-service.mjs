@@ -1,3 +1,4 @@
+import {ensureSpaces} from './scripts/spaces.mjs';
 import {ensureAnalytics,readAnalytics} from './scripts/analytics.mjs';
 import {ensureUserSchema} from './scripts/user-auth.mjs';
 import {ensureCommentThreads,readPublicComments,publicCommentVisible} from './scripts/comment-threads.mjs';
@@ -23,6 +24,7 @@ function failure(status,message){return Object.assign(Error(message),{status});}
 export function createAdminService({db,dataDir,publicDir,origin='https://example.com',allowLocalHttp=false,trustProxy=false,automaticTopic,sessionMs=8*3600000}){
   if(!db||!dataDir||!publicDir||typeof automaticTopic!=='function')throw Error('Missing admin service configuration');
   ensureUserSchema(db);
+  ensureSpaces(db);
   ensureAnalytics(db);
   ensureCommentThreads(db);
   const expectedOrigin=new URL(origin).origin;
@@ -84,6 +86,9 @@ export function createAdminService({db,dataDir,publicDir,origin='https://example
       const s=session(req);if(!s)throw failure(401,'登录已失效，请重新登录');
       if(!['GET','HEAD'].includes(req.method)){mutationOrigin(req);if(!constant(req.headers['x-csrf-token']||'',s.csrf))throw failure(403,'页面凭据已失效，请刷新重试');}
       if(p==='/api/admin/logout'&&req.method==='POST'){db.prepare('DELETE FROM admin_sessions WHERE token_hash=?').run(s.token_hash);audit(s.username,'logout','session');json(res,200,{ok:true},{'Set-Cookie':cookie('',0)});return true;}
+      if(p==='/api/admin/space-updates'&&req.method==='GET'){json(res,200,{items:db.prepare('SELECT s.id,s.text,s.created_at,s.hidden,u.username FROM space_updates s JOIN site_users u ON u.id=s.user_id ORDER BY s.id DESC LIMIT 30').all()});return true;}
+      const spaceAction=/^\/api\/admin\/space-updates\/(\d+)\/(archive|restore)$/.exec(p);
+      if(spaceAction&&req.method==='POST'){const id=checkId(spaceAction[1]);const r=db.prepare('UPDATE space_updates SET hidden=? WHERE id=?').run(spaceAction[2]==='archive'?1:0,id);if(!r.changes)throw failure(404,'动态不存在');audit(s.username,'space_'+spaceAction[2],id);json(res,200,{ok:true});return true;}
       if(p==='/api/admin/analytics'&&req.method==='GET'){json(res,200,readAnalytics(db));return true;}
       if(p==='/api/admin/overview'&&req.method==='GET'){
         const start=Date.parse(chinaDate()+'T00:00:00+08:00');
