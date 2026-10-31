@@ -87,6 +87,9 @@ export function createAdminService({db,dataDir,publicDir,origin='https://example
       if(!['GET','HEAD'].includes(req.method)){mutationOrigin(req);if(!constant(req.headers['x-csrf-token']||'',s.csrf))throw failure(403,'页面凭据已失效，请刷新重试');}
       if(p==='/api/admin/logout'&&req.method==='POST'){db.prepare('DELETE FROM admin_sessions WHERE token_hash=?').run(s.token_hash);audit(s.username,'logout','session');json(res,200,{ok:true},{'Set-Cookie':cookie('',0)});return true;}
       if(p==='/api/admin/space-updates'&&req.method==='GET'){json(res,200,{items:db.prepare('SELECT s.id,s.text,s.created_at,s.hidden,u.username FROM space_updates s JOIN site_users u ON u.id=s.user_id ORDER BY s.id DESC LIMIT 30').all()});return true;}
+      if(p==='/api/admin/space-danmaku'&&req.method==='GET'){json(res,200,{items:db.prepare('SELECT d.id,d.text,d.created_at,d.hidden,a.username,o.username space_owner FROM space_danmaku d JOIN site_users a ON a.id=d.author_id JOIN site_users o ON o.id=d.user_id ORDER BY d.id DESC LIMIT 30').all()});return true;}
+      const danmakuAction=/^\/api\/admin\/space-danmaku\/(\d+)\/(archive|restore)$/.exec(p);
+      if(danmakuAction&&req.method==='POST'){const id=checkId(danmakuAction[1]);const r=db.prepare('UPDATE space_danmaku SET hidden=? WHERE id=?').run(danmakuAction[2]==='archive'?1:0,id);if(!r.changes)throw failure(404,'弹幕不存在');audit(s.username,'space_danmaku_'+danmakuAction[2],id);json(res,200,{ok:true});return true;}
       const spaceAction=/^\/api\/admin\/space-updates\/(\d+)\/(archive|restore)$/.exec(p);
       if(spaceAction&&req.method==='POST'){const id=checkId(spaceAction[1]);const r=db.prepare('UPDATE space_updates SET hidden=? WHERE id=?').run(spaceAction[2]==='archive'?1:0,id);if(!r.changes)throw failure(404,'动态不存在');audit(s.username,'space_'+spaceAction[2],id);json(res,200,{ok:true});return true;}
       if(p==='/api/admin/analytics'&&req.method==='GET'){json(res,200,readAnalytics(db));return true;}

@@ -16,6 +16,33 @@ test('personal spaces enforce follower and mutual access at the API, revoke acce
  assert.ok(!JSON.stringify((await f.call(base)).data).includes('registration_ip'));assert.equal((await f.call('/space')).status,200);assert.equal((await f.call('/u/space_owner')).status,200);
 });
 
+test('space danmaku binds real authors, follows space privacy, and supports owner and admin moderation',async t=>{
+ const f=await fixture(t),owner=await f.register('wall_owner'),fan=await f.register('wall_friend'),other=await f.register('wall_other'),base='/api/spaces/wall_owner';
+ assert.equal((await f.call(base+'/danmaku')).status,401);
+ await f.call(base+'/follow',{method:'POST',session:fan,body:{}});
+ assert.equal((await f.call(base+'/danmaku',{session:fan})).status,403);
+ assert.equal((await f.call(base+'/danmaku',{method:'POST',session:fan,body:{text:'not mutual'}})).status,403);
+ await f.call('/api/spaces/wall_friend/follow',{method:'POST',session:owner,body:{}});
+ assert.equal((await f.call(base+'/danmaku',{method:'POST',session:fan,body:{text:'hello'},csrfOverride:'wrong'})).status,403);
+ assert.equal((await f.call(base+'/danmaku',{method:'POST',session:fan,body:{text:'hello'},originOverride:'https://evil.example'})).status,403);
+ for(const text of ['', 'a'.repeat(81)])assert.equal((await f.call(base+'/danmaku',{method:'POST',session:fan,body:{text}})).status,400);
+ const secret='private-friend-danmaku',sent=await f.call(base+'/danmaku',{method:'POST',session:fan,body:{text:secret,username:'fake_author',user_id:owner.user.id}});assert.equal(sent.status,200);
+ assert.equal((await f.call(base+'/danmaku',{method:'POST',session:fan,body:{text:'too fast'}})).status,429);
+ await f.call(base+'/updates',{method:'POST',session:owner,body:{text:'private-owner-update'}});
+ let items=(await f.call(base+'/danmaku',{session:fan})).data.items;assert.equal(items.length,2);assert.equal(items.find(x=>x.kind==='message').username,'wall_friend');assert.equal(items.find(x=>x.kind==='message').canHide,true);assert.equal(items.find(x=>x.kind==='update').canHide,false);
+ assert.ok(!JSON.stringify(items).includes('author_id'));assert.ok(!JSON.stringify((await f.call('/api/posts')).data).includes(secret));assert.ok(!JSON.stringify((await f.call('/api/discussions')).data).includes(secret));
+ assert.equal((await f.call(base+'/danmaku/'+sent.data.id,{method:'POST',session:other,body:{}})).status,403);
+ const admin=await f.admin();assert.equal((await f.call('/api/admin/space-danmaku')).status,401);assert.equal((await f.call('/api/admin/space-danmaku',{session:admin})).data.items[0].space_owner,'wall_owner');
+ await f.call('/api/admin/space-danmaku/'+sent.data.id+'/archive',{method:'POST',session:admin,body:{}});assert.equal((await f.call(base+'/danmaku',{session:fan})).data.items.length,1);
+ await f.call('/api/admin/space-danmaku/'+sent.data.id+'/restore',{method:'POST',session:admin,body:{}});assert.equal((await f.call(base+'/danmaku',{session:fan})).data.items.length,2);
+ f.db.prepare('UPDATE site_users SET disabled=1 WHERE username=?').run('wall_friend');assert.equal((await f.call(base+'/danmaku',{session:owner})).data.items.length,1);f.db.prepare('UPDATE site_users SET disabled=0 WHERE username=?').run('wall_friend');
+ await f.call(base+'/unfollow',{method:'POST',session:fan,body:{}});assert.equal((await f.call(base+'/danmaku',{session:fan})).status,403);assert.equal((await f.call(base+'/danmaku',{method:'POST',session:fan,body:{text:'lost permission'}})).status,403);
+ assert.equal((await f.call(base+'/danmaku/'+sent.data.id,{method:'POST',session:fan,body:{}})).status,200);assert.equal((await f.call(base+'/danmaku',{session:owner})).data.items.length,1);
+ const own=await f.call(base+'/danmaku',{method:'POST',session:owner,body:{text:'owner note'}});assert.equal(own.status,200);assert.equal((await f.call(base+'/danmaku/'+own.data.id,{method:'POST',session:owner,body:{}})).status,200);
+ await f.call('/api/admin/space-danmaku/'+sent.data.id+'/restore',{method:'POST',session:admin,body:{}});assert.equal((await f.call(base+'/danmaku/'+sent.data.id,{method:'POST',session:owner,body:{}})).status,200);
+ await f.call(base+'/profile',{method:'POST',session:owner,body:{title:'',bio:'',visibility:'public',color:'mint'}});assert.equal((await f.call(base+'/danmaku')).status,200);assert.equal((await f.call(base+'/danmaku',{method:'POST',body:{text:'anonymous'}})).status,401);
+});
+
 test('discussion creation binds the real account and moderation controls plaza and wall together',async t=>{
  const f=await fixture(t),form=new FormData();form.set('discussion','1');form.set('discussionTitle','一起聊游戏');form.set('text','你最近在玩什么？');form.set('theme','game');form.set('name','fake_author');
  assert.equal((await f.call('/api/posts',{method:'POST',body:form})).status,401);
