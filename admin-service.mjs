@@ -1,3 +1,4 @@
+import {ensureAnalytics,readAnalytics} from './scripts/analytics.mjs';
 import {ensureUserSchema} from './scripts/user-auth.mjs';
 import {ensureCommentThreads,readPublicComments,publicCommentVisible} from './scripts/comment-threads.mjs';
 import crypto from 'node:crypto';
@@ -22,6 +23,7 @@ function failure(status,message){return Object.assign(Error(message),{status});}
 export function createAdminService({db,dataDir,publicDir,origin='https://example.com',allowLocalHttp=false,trustProxy=false,automaticTopic,sessionMs=8*3600000}){
   if(!db||!dataDir||!publicDir||typeof automaticTopic!=='function')throw Error('Missing admin service configuration');
   ensureUserSchema(db);
+  ensureAnalytics(db);
   ensureCommentThreads(db);
   const expectedOrigin=new URL(origin).origin;
   if(new URL(expectedOrigin).protocol!=='https:'&&!allowLocalHttp)throw Error('Admin origin must use HTTPS');
@@ -82,6 +84,7 @@ export function createAdminService({db,dataDir,publicDir,origin='https://example
       const s=session(req);if(!s)throw failure(401,'登录已失效，请重新登录');
       if(!['GET','HEAD'].includes(req.method)){mutationOrigin(req);if(!constant(req.headers['x-csrf-token']||'',s.csrf))throw failure(403,'页面凭据已失效，请刷新重试');}
       if(p==='/api/admin/logout'&&req.method==='POST'){db.prepare('DELETE FROM admin_sessions WHERE token_hash=?').run(s.token_hash);audit(s.username,'logout','session');json(res,200,{ok:true},{'Set-Cookie':cookie('',0)});return true;}
+      if(p==='/api/admin/analytics'&&req.method==='GET'){json(res,200,readAnalytics(db));return true;}
       if(p==='/api/admin/overview'&&req.method==='GET'){
         const start=Date.parse(chinaDate()+'T00:00:00+08:00');
         const scalar=(q,...args)=>Number(db.prepare(q).get(...args).n);

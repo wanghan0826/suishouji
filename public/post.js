@@ -6,7 +6,7 @@
  function stopMedia(){for(const video of $('postMedia').querySelectorAll('video'))video.pause();}
  function closeReader(update=true){
   loadVersion++;stopMedia();id=null;post=null;$('postReader').hidden=true;document.body.classList.remove('has-open-post','reader-expanded');$('readerExpand').textContent='展开阅读';$('readerExpand').setAttribute('aria-expanded','false');
-  document.title='随手记 · 满屏都是你的心情';if(update)history.pushState(null,'','/');announce();
+  window.SJTrack?.('view','/');document.title='随手记 · 满屏都是你的心情';if(update)history.pushState(null,'','/');announce();
  }
  const date=ts=>new Date(ts).toLocaleString('zh-CN',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
  function notify(text){$('toast').textContent=text;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),3000);}
@@ -70,7 +70,7 @@
   $('postReader').hidden=false;document.body.classList.add('has-open-post');document.body.classList.remove('reader-expanded');$('readerExpand').textContent='展开阅读';$('readerExpand').setAttribute('aria-expanded','false');
   if(update)history.pushState({sjPost:id},'','/post/'+id);window.scrollTo({top:0,behavior:'instant'});$('postContent').scrollTop=0;announce();
   try{
-   const data=await request('/api/posts/'+id);if(version!==loadVersion)return;post=data.post;
+   const data=await request('/api/posts/'+id);if(version!==loadVersion)return;post=data.post;window.SJTrack?.('view','/post/'+id);
    const lines=post.text.split('\n'),heading=lines.length>1&&lines[0].length<=90;
    const title=heading?lines.shift().replace(/^【|】$/g,''):(post.name||'小伙伴')+'的分享';
    document.title=title+' · 随手记';document.querySelector('meta[name="description"]').content=post.text.slice(0,150);
@@ -105,11 +105,12 @@
  }
  const shareData=()=>({title:document.title,text:post.text.replace(/https?:\/\/\S+/g,'').replace(/\s+/g,' ').slice(0,100),url:location.origin+'/post/'+id});
  $('postShare').addEventListener('click',()=>{
-  if(!post)return;const data=shareData(),image=location.origin+(post.media&&post.media_type==='image'?'/uploads/'+encodeURIComponent(post.media):'/assets/lake.jpg');
+  if(!post)return;window.SJTrack?.('share','/post/'+id);const data=shareData(),image=location.origin+(post.media&&post.media_type==='image'?'/uploads/'+encodeURIComponent(post.media):'/assets/lake.jpg');
   $('sharePostTitle').textContent=data.title;$('shareDescription').textContent=data.text;$('shareImage').src=image;
   $('shareQQ').href='https://connect.qq.com/widget/shareqq/index.html?'+new URLSearchParams({url:data.url,title:data.title,summary:data.text,pics:image,site:'随手记'});
   $('shareNative').hidden=typeof navigator.share!=='function';$('shareGuide').textContent='选择分享方式，由你选择朋友并确认发送。';$('shareDialog').showModal();
  });
+ $('shareCard').addEventListener('click',()=>{if(post)window.SJCard.open(post,$('postTitle').textContent);});
  $('shareClose').addEventListener('click',()=>$('shareDialog').close());
  $('shareCopy').addEventListener('click',copyLink);
  $('shareWechat').addEventListener('click',async()=>{const copied=await copyLink();$('shareGuide').textContent=/MicroMessenger/i.test(navigator.userAgent)?'在微信右上角点击「···」→「发送给朋友」或「分享到朋友圈」。':copied?'链接已复制。打开微信，粘贴给好友；也可先在微信中打开，再用右上角「···」转发。':'请复制帖子链接，打开微信粘贴给好友。';});

@@ -138,7 +138,7 @@
 <noscript><p class="post-state">请启用 JavaScript 阅读帖子内容，或<a href="/">返回首页</a>。</p></noscript>
 <button type="button" class="reader-return" data-reader-close>收起内容，回到弹幕墙 ↑</button>
 </div></aside>
-<dialog class="share-dialog" id="shareDialog" aria-labelledby="shareTitle"><div class="share-heading"><div><p class="share-kicker">PASS A MOMENT ON</p><h2 id="shareTitle">分享给朋友</h2></div><button type="button" id="shareClose" aria-label="关闭分享">×</button></div><div class="share-preview"><img id="shareImage" alt="分享封面"><div><strong id="sharePostTitle"></strong><p id="shareDescription"></p><small>随手记 · suishouji.online</small></div></div><div class="share-options"><a id="shareQQ" target="_blank" rel="noopener noreferrer"><span class="share-icon qq-icon">QQ</span>QQ 分享</a><button id="shareWechat" type="button"><span class="share-icon wechat-icon">微</span>微信好友</button><button id="shareNative" type="button" hidden><span class="share-icon">↗</span>系统分享</button><button id="shareCopy" type="button"><span class="share-icon">⌁</span>复制链接</button></div><p class="share-guide" id="shareGuide" role="status">选择分享方式，由你选择朋友并确认发送。</p><p class="share-note">上方为链接预览，聊天中的实际展示以分享平台为准。</p></dialog>
+<dialog class="share-dialog" id="shareDialog" aria-labelledby="shareTitle"><div class="share-heading"><div><p class="share-kicker">PASS A MOMENT ON</p><h2 id="shareTitle">分享给朋友</h2></div><button type="button" id="shareClose" aria-label="关闭分享">×</button></div><div class="share-preview"><img id="shareImage" alt="分享封面"><div><strong id="sharePostTitle"></strong><p id="shareDescription"></p><small>随手记 · suishouji.online</small></div></div><div class="share-options"><a id="shareQQ" target="_blank" rel="noopener noreferrer"><span class="share-icon qq-icon">QQ</span>QQ 分享</a><button id="shareWechat" type="button"><span class="share-icon wechat-icon">微</span>微信好友</button><button id="shareNative" type="button" hidden><span class="share-icon">↗</span>系统分享</button><button id="shareCard" type="button"><span class="share-icon">✦</span>制作心情卡</button><button id="shareCopy" type="button"><span class="share-icon">⌁</span>复制链接</button></div><p class="share-guide" id="shareGuide" role="status">选择分享方式，由你选择朋友并确认发送。</p><section id="cardPanel" hidden><h3>把这一刻，做成你的心情卡</h3><div class="card-colors" role="group" aria-label="心情卡配色"><button type="button" data-card-color="mint" aria-pressed="true">薄荷绿</button><button type="button" data-card-color="sky" aria-pressed="false">晴空蓝</button><button type="button" data-card-color="rose" aria-pressed="false">樱花粉</button></div><img id="cardPreview" alt="弹幕心情分享卡，含原帖二维码"><p id="cardStatus" role="status"></p><div class="card-actions"><a id="cardDownload" hidden>保存图片 ↓</a><button type="button" id="cardFileShare" hidden>分享图片 ↗</button></div></section><p class="share-note">上方为链接预览，聊天中的实际展示以分享平台为准。</p></dialog>
 <div class="toast" role="status" aria-live="polite" id="toast"></div>
 
 <script src="/user-auth.js?v=20261028-user"></script>
@@ -146,7 +146,10 @@
 <script src="/wall.js?v=20261029-reader"></script>
 <script src="/enhance.js?v=20261019-wall-4"></script>
 <nav class="mobile-nav" id="mobileNav" aria-label="手机导航"><a href="#wall" aria-current="location">◌ 弹幕墙</a><a href="#shares">▤ 看帖子</a><button type="button" data-mobile-compose>＋ 写一条</button></nav>
+<script src="/analytics.js"></script>
 <script src="/post.js?v=20261029-reader"></script>
 <script src="/mobile.js?v=20261029-reader"></script>
+<script src="/vendor/qrcode.js"></script>
+<script src="/share-card.js"></script>
 </body>
 </html>

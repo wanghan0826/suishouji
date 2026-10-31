@@ -35,8 +35,15 @@
     for(const [key,stat] of [['statPosts','posts'],['statComments','comments'],['statImages','images'],['statToday','todayPosts']])$(key).textContent=data[stat];
     $('todayDate').textContent=data.topic.date;$('todayTopic').textContent=data.topic.topic;$('archiveCount').textContent='回收站：'+data.archived+' 项';
     $('recentPosts').replaceChildren(...(data.recent.length?data.recent.map(recentItem):[node('p','empty-state','还没有分享')]));
+    loadTraffic();
     const actions={login:'登录管理端',logout:'退出管理端',archive:'移入回收站',restore:'恢复内容',topic_set:'设置每日话题',topic_auto:'恢复自动话题'};
     $('auditList').replaceChildren(...(data.audit.length?data.audit.map(a=>{const row=node('div','audit-row');row.append(node('span','',(actions[a.action]||a.action)+(a.target==='session'?'':' · '+a.target)),node('time','',fmt(a.created_at)));return row;}):[node('p','empty-state','还没有管理操作')]));
+  }
+  async function loadTraffic(){
+    try{const data=await api('analytics');$('trafficError').textContent='';for(const [key,id]of [['views','trafficViews'],['visitors','trafficVisitors'],['shares','trafficShares'],['cards','trafficCards']])$(id).textContent=data.today[key];
+    $('trafficDays').replaceChildren(...data.days.map(d=>{const row=node('tr');for(const key of ['day','views','visitors','shares','cards'])row.append(node('td','',d[key]));return row;}));
+    $('trafficTop').replaceChildren(...(data.top.length?data.top.map(p=>{const a=node('a','traffic-post',p.text.split('\n')[0].slice(0,65)+' · '+p.views+' 次阅读');a.href='/post/'+p.id;a.target='_blank';a.rel='noopener';return a;}):[node('p','empty-state','还没有访问记录，分享一条帖子邀请朋友来看看吧。')]));
+    }catch(e){$('trafficError').textContent='访问统计暂时无法加载：'+e.message;}
   }
   function contentItem(post){
     const item=node('article','content-item');if(view==='posts')item.append(mediaElement(post));

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /* 随手记 · 弹幕分享站：零依赖 Node 后端（SQLite + 媒体上传 + 评论 + 签到 + 话题 + 静态托管） */
 import http from 'node:http';
+import {createAnalytics} from './scripts/analytics.mjs';
 import { createAdminService } from './admin-service.mjs';
 import {createUserAuth} from './scripts/user-auth.mjs';
 import {findReplyTarget,readPublicComments} from './scripts/comment-threads.mjs';
@@ -346,10 +347,13 @@ async function api(req, res, url) {
 const users = createUserAuth({db,origin:SITE_ORIGIN,localHttp,trustProxy:TRUST_PROXY});
 const admin = createAdminService({ db, dataDir: DATA, publicDir: PUBLIC, origin: SITE_ORIGIN, allowLocalHttp: localHttp, trustProxy: TRUST_PROXY, automaticTopic: todayTopic });
 
+const analytics=createAnalytics({db,origin:SITE_ORIGIN,localHttp});
 /* ---------- 服务 ---------- */
 async function handler(req, res) {
   try {
   if (await admin.handle(req, res)) return;
+  if(new URL(req.url,'http://local').pathname==='/api/visit'&&limited('visit:'+clientIp(req),120,60000))return send(res,429,{error:'请求过多'});
+  if (await analytics.handle(req,res)) return;
   if (await users.handle(req, res)) return;
   if (!users.authorizeWrite(req, res)) return;
   if (admin.handlePublic(req, res)) return;
