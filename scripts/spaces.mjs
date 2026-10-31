@@ -1,3 +1,4 @@
+import {recordSocialActivity} from './social-metrics.mjs';
 import {recordInvitationMutual,recordInvitationNote} from './invitations.mjs';
 export const DEFAULT_SPACE_VISIBILITY='mutual';
 export function ensureSpaces(db){db.exec(`CREATE TABLE IF NOT EXISTS user_spaces(user_id INTEGER PRIMARY KEY,title TEXT NOT NULL DEFAULT '',bio TEXT NOT NULL DEFAULT '',visibility TEXT NOT NULL DEFAULT '${DEFAULT_SPACE_VISIBILITY}',color TEXT NOT NULL DEFAULT 'mint');
@@ -39,12 +40,12 @@ export function createSpaces({db,users}){
     if(!canAccess)throw fail(403,'获得空间访问权限后才能留言');
     if(typeof input.text!=='string'||!input.text.trim()||input.text.trim().length>80)throw fail(400,'请填写1–80字的弹幕');
     const last=db.prepare('SELECT created_at FROM space_danmaku WHERE user_id=? AND author_id=? ORDER BY id DESC LIMIT 1').get(id,user.id);if(last&&Date.now()-last.created_at<10000)throw fail(429,'让弹幕飞一会儿，10秒后再发一条');
-    const result=db.prepare('INSERT INTO space_danmaku(user_id,author_id,text,created_at) VALUES(?,?,?,?)').run(id,user.id,input.text.trim(),Date.now());recordInvitationNote(db,id,user.id);return send(200,{ok:true,id:Number(result.lastInsertRowid)});
+    const result=db.prepare('INSERT INTO space_danmaku(user_id,author_id,text,created_at) VALUES(?,?,?,?)').run(id,user.id,input.text.trim(),Date.now());recordInvitationNote(db,id,user.id);recordSocialActivity(db,user.id,'note');return send(200,{ok:true,id:Number(result.lastInsertRowid)});
    }
    if(!isOwner)throw fail(403,'只能管理自己的空间');
    if(action==='profile'){if(typeof input.title!=='string'||input.title.length>40||typeof input.bio!=='string'||input.bio.length>140||!['public','followers','mutual'].includes(input.visibility)||!['mint','sky','rose','sand'].includes(input.color))throw fail(400,'空间设置格式无效');db.prepare('INSERT INTO user_spaces VALUES(?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET title=excluded.title,bio=excluded.bio,visibility=excluded.visibility,color=excluded.color').run(id,input.title.trim(),input.bio.trim(),input.visibility,input.color);return send(200,{ok:true});}
    if(action==='updates'&&match[3]){const r=db.prepare('UPDATE space_updates SET hidden=1 WHERE id=? AND user_id=?').run(Number(match[3]),id);if(!r.changes)throw fail(404,'动态不存在');return send(200,{ok:true});}
-   if(action==='updates'){if(typeof input.text!=='string'||!input.text.trim()||input.text.trim().length>500)throw fail(400,'请填写1–500字的动态');const r=db.prepare('INSERT INTO space_updates(user_id,text,created_at) VALUES(?,?,?)').run(id,input.text.trim(),Date.now());return send(200,{ok:true,id:Number(r.lastInsertRowid)});}
+   if(action==='updates'){if(typeof input.text!=='string'||!input.text.trim()||input.text.trim().length>500)throw fail(400,'请填写1–500字的动态');const r=db.prepare('INSERT INTO space_updates(user_id,text,created_at) VALUES(?,?,?)').run(id,input.text.trim(),Date.now());recordSocialActivity(db,id,'update');return send(200,{ok:true,id:Number(r.lastInsertRowid)});}
    throw fail(404,'接口不存在');
   }catch(e){return send(e.status||500,{error:e.status?e.message:'空间暂时无法访问，请稍后再试'});}
  }};

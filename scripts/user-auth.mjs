@@ -1,3 +1,4 @@
+import {ensureSocialMetrics} from './social-metrics.mjs';
 import {ensureInvitationSchema,claimInvitation} from './invitations.mjs';
 import crypto from 'node:crypto';import {promisify} from 'node:util';
 const scrypt=promisify(crypto.scrypt),digest=s=>crypto.createHash('sha256').update(s).digest('hex');
@@ -11,7 +12,7 @@ export function ensureUserSchema(db){
  for(const table of ['posts','comments'])if(db.prepare("SELECT 1 FROM sqlite_master WHERE name=?").get(table)&&!db.prepare('PRAGMA table_info('+table+')').all().some(x=>x.name==='user_id'))db.exec('ALTER TABLE '+table+' ADD COLUMN user_id INTEGER');
 }
 export function createUserAuth({db,origin,localHttp=false,trustProxy=false}){
- ensureUserSchema(db);ensureInvitationSchema(db);
+ ensureUserSchema(db);ensureInvitationSchema(db);ensureSocialMetrics(db);
  const cookieName=localHttp?'sj_user_local':'__Host-sj_user',age=7*86400;
  let busy=0,lastClean=0;const buckets=new Map();
  const headers={'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'};

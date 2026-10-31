@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 /* 随手记 · 弹幕分享站：零依赖 Node 后端（SQLite + 媒体上传 + 评论 + 签到 + 话题 + 静态托管） */
 import http from 'node:http';
+import {createFriendFeed} from './scripts/friend-feed.mjs';
+import {recordSocialActivity} from './scripts/social-metrics.mjs';
 import {createInvitationTracking} from './scripts/invitations.mjs';
 import {createSocialInbox} from './scripts/social-inbox.mjs';
 import {createSpaces} from './scripts/spaces.mjs';
@@ -268,6 +270,7 @@ async function api(req, res, url) {
       'INSERT INTO posts(text,name,theme,media,media_type,ip,topic,created_at,user_id) VALUES(?,?,?,?,?,?,?,?,?)'
     ).run(text, name, theme, media, mediaType, ip, topic, now, req.siteUser.id);
     if(discussion)db.prepare('INSERT INTO discussion_posts(post_id) VALUES(?)').run(r.lastInsertRowid);
+    recordSocialActivity(db,req.siteUser.id,'post');
     const post = db.prepare(`SELECT ${POST_FIELDS} FROM posts WHERE id=?`).get(r.lastInsertRowid);
     return send(res, 200, { post });
   }
@@ -313,6 +316,7 @@ async function api(req, res, url) {
       'INSERT INTO comments(post_id,text,name,ip,created_at,user_id,parent_id,thread_id) VALUES(?,?,?,?,?,?,?,?)'
     ).run(postId, text, name, ip, now, req.siteUser.id, parentId, threadId);
     const comment = db.prepare('SELECT id,text,name,created_at,parent_id,thread_id FROM comments WHERE id=?').get(r.lastInsertRowid);
+    recordSocialActivity(db,req.siteUser.id,'comment');
     comment.reply_to_name = target?.name || null;
     return send(res, 200, { comment });
   }
@@ -356,6 +360,7 @@ const admin = createAdminService({ db, dataDir: DATA, publicDir: PUBLIC, origin:
 ensureDiscussions(db);
 const spaces=createSpaces({db,users});
 const invitations=createInvitationTracking({db,users,origin:SITE_ORIGIN,localHttp});
+const friends=createFriendFeed({db,users});
 const socialInbox=createSocialInbox({db,users});
 const analytics=createAnalytics({db,origin:SITE_ORIGIN,localHttp});
 /* ---------- 服务 ---------- */
@@ -369,10 +374,12 @@ async function handler(req, res) {
   if (await users.handle(req, res)) return;
   if (await spaces.handle(req,res)) return;
   if (await socialInbox.handle(req,res)) return;
+  if(friends.handle(req,res))return;
   if (!users.authorizeWrite(req, res)) return;
   if (admin.handlePublic(req, res)) return;
   const url = new URL(req.url, 'http://x');
   if(req.method==='GET'&&url.pathname==='/api/discussions'){try{return send(res,200,readDiscussions(db,url));}catch{return send(res,400,{error:'筛选条件无效'});}}
+  if(['/friends','/friends/'].includes(url.pathname)&&['GET','HEAD'].includes(req.method))return serveFile(res,path.join(PUBLIC,'friends.html'));
   if(['/plaza','/plaza/'].includes(url.pathname)&&['GET','HEAD'].includes(req.method))return serveFile(res,path.join(PUBLIC,'plaza.html'));
   if (url.pathname.startsWith('/api/')) return api(req, res, url).catch(e => send(res, 500, { error: String(e.message || e) }));
   if (url.pathname.startsWith('/uploads/')) {
