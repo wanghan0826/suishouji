@@ -10,11 +10,11 @@
  }
  const date=ts=>new Date(ts).toLocaleString('zh-CN',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
  function notify(text){$('toast').textContent=text;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),3000);}
- async function request(route,body){
+ async function request(route,body,authUI){
   const options={credentials:'same-origin',cache:'no-store'};
-  if(body!==undefined){await window.SJAuth.ready;if(!window.SJAuth.user){window.SJAuth.open();throw Error('请先登录，再继续操作');}Object.assign(options,{method:'POST',headers:{'Content-Type':'application/json','X-SJ-CSRF':window.SJAuth.csrf},body:JSON.stringify(body)});}
+  if(body!==undefined){await window.SJAuth.ready;if(!window.SJAuth.user){window.SJAuth.open(authUI);const error=Error('请先登录，再继续操作');error.status=401;throw error;}Object.assign(options,{method:'POST',headers:{'Content-Type':'application/json','X-SJ-CSRF':window.SJAuth.csrf},body:JSON.stringify(body)});}
   const response=await fetch(route,options),data=await response.json();
-  if(!response.ok){if(response.status===401)window.SJAuth.open();const error=Error(data.error||'暂时无法完成操作');error.status=response.status;throw error;}return data;
+  if(!response.ok){if(response.status===401){await window.SJAuth.refresh();window.SJAuth.open(authUI);}const error=Error(data.error||'暂时无法完成操作');error.status=response.status;throw error;}return data;
  }
  // Create links as DOM nodes, keeping user text out of HTML and URL attributes.
  function richText(element,text){
@@ -35,10 +35,11 @@
   $('postCommentText').placeholder=comment?'回复 @'+(comment.name||'匿名小伙伴')+'…':'友善交流，说说你的想法…';
  }
  async function chooseReply(comment){
-  await window.SJAuth.ready;setReply(comment);
-  if(!window.SJAuth.user){window.SJAuth.open();return;}
+  await window.SJAuth.ready;setReply(comment);const target=id;
+  if(!window.SJAuth.user){window.SJAuth.open({resume:()=>resumeComment(target,comment),purpose:'登录后继续回复 @'+(comment.name||'这位朋友')+'，回复仍需你确认发布。'});return;}
   $('postCommentText').focus({preventScroll:true});$('postCommentForm').scrollIntoView({block:'center',behavior:'instant'});
  }
+ async function resumeComment(target,reply){if(id!==target||!post)return;if(reply){if(replyTo?.id!==reply.id)return;try{const visibleComments=await comments();if(id!==target)return;if(!visibleComments){notify('已登录，评论暂时无法确认，请稍后重试。');return;}const visible=visibleComments.find(c=>c.id===reply.id);if(visible)setReply(visible);else{setReply(null);notify('原评论已不可见，草稿仍保留，可以改为评论当前帖子。');}}catch{notify('已登录，评论暂时无法确认，请稍后重试。');return;}}$('postCommentText').focus({preventScroll:true});$('postCommentForm').scrollIntoView({block:'center',behavior:'instant'});}
  function commentElement(c){
   const item=document.createElement('article');item.className='post-comment';item.id='comment-'+c.id;
   const meta=document.createElement('div');meta.className='post-comment-meta';
@@ -53,7 +54,7 @@
   const requested=id;
   try{
    const data=await request('/api/posts/'+requested+'/comments');if(requested!==id)return;list.replaceChildren();$('postCommentCount').textContent=data.comments.length?'('+data.comments.length+')':'';
-   if(!data.comments.length){list.textContent='还没有评论，来聊聊吧。';list.className='comment-empty';return;}
+   if(!data.comments.length){list.textContent='还没有评论，来聊聊吧。';list.className='comment-empty';return data.comments;}
    list.className='';
    const threads=new Map();
    for(const c of data.comments.filter(c=>!c.thread_id)){
@@ -61,7 +62,8 @@
    }
    for(const c of data.comments.filter(c=>c.thread_id)){const parent=threads.get(c.thread_id);if(parent)parent.append(commentElement(c));}
    if(/^#comment-\d+$/.test(location.hash)){const target=document.getElementById(location.hash.slice(1));if(target){target.scrollIntoView({block:'center',behavior:'instant'});target.tabIndex=-1;target.focus({preventScroll:true});}}
-  }catch(error){if(requested===id)list.textContent=error.status===404?'帖子已下架，无法查看评论。':'评论暂时无法加载，请刷新重试。';}
+   return data.comments;
+  }catch(error){if(requested===id)list.textContent=error.status===404?'帖子已下架，无法查看评论。':'评论暂时无法加载，请刷新重试。';return null;}
  }
  async function load(nextId,update=true){
   if(!/^\d+$/.test(String(nextId)))return;
@@ -98,9 +100,10 @@
  $('postHeart').addEventListener('click',async()=>{const button=$('postHeart'),target=id;button.disabled=true;try{const data=await request('/api/posts/'+target+'/heart',{});if(id!==target)return;$('postHearts').textContent=data.hearts;button.classList.add('liked');notify('谢谢你的喜欢');}catch(error){notify(error.message);}finally{button.disabled=false;}});
  $('postCommentForm').addEventListener('submit',async event=>{
   event.preventDefault();const text=$('postCommentText').value.trim();if(!text||!post)return;const button=$('postCommentSubmit'),target=id;button.disabled=true;
-  try{const replying=!!replyTo;await request('/api/posts/'+target+'/comments',{text,parent_id:replyTo?.id??null});if(id!==target)return;$('postCommentText').value='';setReply(null);await comments();notify(replying?'回复已发布':'评论已发布');}catch(error){notify(error.message);}finally{button.disabled=false;}
+  try{const reply=replyTo,replying=!!reply;await request('/api/posts/'+target+'/comments',{text,parent_id:reply?.id??null},{resume:()=>resumeComment(target,reply),purpose:'登录后继续编辑'+(replying?'这条回复':'这条评论')+'，内容不会自动发布。'});if(id!==target)return;$('postCommentText').value='';setReply(null);await comments();notify(replying?'回复已发布':'评论已发布');}catch(error){notify(error.message);}finally{button.disabled=false;}
  });
  $('commentReplyCancel').addEventListener('click',()=>{setReply(null);$('postCommentText').focus();});
+ document.addEventListener('sj:logout',()=>{$('postCommentText').value='';setReply(null);});
  async function copyLink(){
   const url=location.origin+'/post/'+id;
   try{await navigator.clipboard.writeText(url);notify('帖子链接已复制，可以分享给朋友了');return true;}catch{$('shareDialog').close();$('postShareFallback').hidden=false;$('postShareUrl').value=url;$('postShareUrl').focus();$('postShareUrl').select();notify('长按或复制下方帖子链接');return false;}

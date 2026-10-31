@@ -62,9 +62,9 @@ async function apiGet(path) {
   const res = await fetch(path);
   return res.json();
 }
-async function apiPost(path, body) {
+async function apiPost(path, body, authUI) {
   await window.SJAuth.ready;
-  if(!window.SJAuth.user){window.SJAuth.open();throw Error('请先登录后再操作');}
+  if(!window.SJAuth.user){window.SJAuth.open(authUI);const error=Error('请先登录后再操作');error.status=401;throw error;}
   const opt = { method: 'POST', headers: {'X-SJ-CSRF':window.SJAuth.csrf} };
   if (body instanceof FormData) {
     opt.body = body;
@@ -74,7 +74,7 @@ async function apiPost(path, body) {
   }
   const res = await fetch(path, opt);
   const data = await res.json();
-  if (!res.ok) {if(res.status===401){await window.SJAuth.refresh();window.SJAuth.open();}throw new Error(data.error || '请求失败');}
+  if (!res.ok) {if(res.status===401){await window.SJAuth.refresh();window.SJAuth.open(authUI);}const error=new Error(data.error || '请求失败');error.status=res.status;throw error;}
   return data;
 }
 
@@ -498,6 +498,7 @@ function setupPostForm() {
     }
   });
 
+  document.addEventListener('sj:logout',()=>{$('#postModal').classList.remove('show');$('#postForm').reset();$('#charCount').textContent='0';$('#filePreview').style.display='none';$('#filePreview').removeAttribute('src');$('#topicHint').style.display='none';joiningTopic=false;$('#postText').placeholder='此刻的心情、今天的见闻、想说又不好意思说的话...';});
   $('#postForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const text = $('#postText').value.trim();
@@ -516,7 +517,7 @@ function setupPostForm() {
     const btn = $('#btnSubmit');
     btn.disabled = true; btn.textContent = '发布中...';
     try {
-      const data = await apiPost('/api/posts', fd);
+      const data = await apiPost('/api/posts', fd, {resume:()=>{$('#postModal').classList.add('show');$('#postText').focus();},purpose:'登录已过期，重新登录后可继续编辑这条弹幕。'});
       toast('发布成功～');
       $('#postModal').classList.remove('show');
       $('#postForm').reset();

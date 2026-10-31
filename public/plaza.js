@@ -13,14 +13,15 @@
  document.querySelectorAll('[data-sort]').forEach(b=>b.addEventListener('click',()=>{sort=b.dataset.sort;page=1;document.querySelectorAll('[data-sort]').forEach(c=>c.setAttribute('aria-pressed',String(c===b)));load();}));
  $('plazaSearch').addEventListener('submit',e=>{e.preventDefault();query=$('discussionQuery').value.trim();page=1;load();});
  $('discussionPrev').onclick=()=>{if(page>1){page--;load();}};$('discussionNext').onclick=()=>{if(page<pages){page++;load();}};
- async function compose(){await window.SJAuth.ready;if(!window.SJAuth.user){window.SJAuth.open();return;}$('discussionError').textContent='';$('discussionDialog').showModal();}
+ async function compose(){await window.SJAuth.ready;if(!window.SJAuth.user){window.SJAuth.open({resume:compose,purpose:'登录后继续发起讨论，已填写的内容会保留。'});return;}$('discussionError').textContent='';if(!$('discussionDialog').open)$('discussionDialog').showModal();$('discussionBody').focus();}
  $('startDiscussion').onclick=compose;$('startDiscussionMobile').onclick=compose;$('discussionClose').onclick=()=>$('discussionDialog').close();
  $('discussionBody').addEventListener('input',()=>{$('discussionCount').textContent=$('discussionBody').value.length+' / 430';});
  $('useDailyTopic').onclick=()=>{$('discussionTitle').value=topic;compose();};
  $('discussionForm').addEventListener('submit',async e=>{e.preventDefault();const button=$('discussionSubmit');button.disabled=true;$('discussionError').textContent='';try{
-  await window.SJAuth.ready;if(!window.SJAuth.user){$('discussionDialog').close();window.SJAuth.open();return;}
+  await window.SJAuth.ready;if(!window.SJAuth.user){$('discussionDialog').close();window.SJAuth.open({resume:compose,purpose:'登录后继续编辑讨论，仍需你确认发布。'});return;}
   const file=$('discussionFile').files[0];if(file?.size>60*1024*1024)throw Error('图片或视频不能超过60MB');const data=new FormData();data.set('discussion','1');data.set('discussionTitle',$('discussionTitle').value.trim());data.set('text',$('discussionBody').value.trim());data.set('theme',$('discussionTheme').value);if(file)data.set('file',file);
-  const r=await fetch('/api/posts',{method:'POST',credentials:'same-origin',headers:{'X-SJ-CSRF':window.SJAuth.csrf},body:data}),result=await r.json();if(!r.ok)throw Error(result.error||'发布失败，请重试');location.assign('/post/'+result.post.id);
+  const r=await fetch('/api/posts',{method:'POST',credentials:'same-origin',headers:{'X-SJ-CSRF':window.SJAuth.csrf},body:data}),result=await r.json();if(!r.ok){if(r.status===401){$('discussionDialog').close();await SJAuth.refresh();SJAuth.open({resume:compose,purpose:'登录已过期，重新登录后可继续编辑讨论。'});}throw Error(result.error||'发布失败，请重试');}location.assign('/post/'+result.post.id);
  }catch(error){$('discussionError').textContent=error.message;}finally{button.disabled=false;}});
+ document.addEventListener('sj:logout',()=>{$('discussionDialog').close();$('discussionForm').reset();$('discussionCount').textContent='0 / 430';});
  fetch('/api/topic',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error();return r.json();}).then(d=>{topic=d.topic;$('plazaTopic').textContent=topic;$('useDailyTopic').disabled=false;}).catch(()=>{$('plazaTopic').textContent='今天有什么想和大家聊聊的？';});load();
 })();
