@@ -1,4 +1,4 @@
 (() => {
  const username=location.pathname.match(/^\/u\/([a-zA-Z0-9_]{3,20})\/?$/)?.[1];
- window.SJInviteReady=(async()=>{if(!username||new URLSearchParams(location.search).get('from')!=='invite')return;await SJAuth.ready;if(SJAuth.user)return;try{await fetch('/api/invitations/visit',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({username}),signal:AbortSignal.timeout(5000)});}catch{}})();
+ window.SJInviteReady=(async()=>{const query=new URLSearchParams(location.search);if(!username||query.get('from')!=='invite')return;const source=query.get('source')||'direct',version=query.get('variant')||'default',channel=['direct','xiaohongshu','qq','wechat','campus','other'].includes(source)?source:'other',variant=['default','a','b'].includes(version)?version:'default';await SJAuth.ready;if(SJAuth.user)return;try{await fetch('/api/invitations/visit',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,channel,variant}),signal:AbortSignal.timeout(5000)});}catch{}})();
 })();
