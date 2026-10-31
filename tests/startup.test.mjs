@@ -8,7 +8,8 @@ test('fresh deployment uses independent data and serves the complete application
  const base='http://127.0.0.1:'+port;let ready=false;
  for(let i=0;i<80;i++){try{if((await fetch(base+'/api/topic')).ok){ready=true;break;}}catch{}await delay(50);}
  assert.ok(ready,logs);
- for(const route of ['/','/appearance.js','/wall.js','/post.js','/post.css','/reader.css','/mobile.js','/mobile.css','/assets/lake.jpg','/admin'])assert.equal((await fetch(base+route)).status,200,route);
+ for(const route of ['/','/plaza','/plaza/','/plaza.js','/plaza.css','/appearance.js','/wall.js','/post.js','/post.css','/reader.css','/mobile.js','/mobile.css','/assets/lake.jpg','/admin'])assert.equal((await fetch(base+route)).status,200,route);
+ assert.equal((await(await fetch(base+'/api/discussions')).json()).total,0);
  const missing=await fetch(base+'/post/999');assert.equal(missing.status,404);assert.match(await missing.text(),/id="postState"/);
  assert.equal((await(await fetch(base+'/api/posts')).json()).posts.length,0);
  assert.equal((await(await fetch(base+'/api/admin/status')).json()).configured,false);

@@ -1,0 +1,26 @@
+(() => {
+ const $=id=>document.getElementById(id),names={daily:'日常',game:'游戏',campus:'校园',tech:'科技',mood:'心情',scene:'风景',food:'美食',vent:'吐槽',secret:'树洞',life:'生活',music:'音乐',travel:'旅行'};
+ let page=1,pages=1,theme='',sort='active',query='',version=0,topic='';const node=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=String(text);if(cls)e.className=cls;return e;};
+ for(const [value,label]of [['','全部讨论'],...Object.entries(names)]){const button=node('button',label);button.type='button';button.setAttribute('aria-pressed',String(!value));button.addEventListener('click',()=>{theme=value;page=1;for(const b of $('plazaCategories').children)b.setAttribute('aria-pressed',String(b===button));load();});$('plazaCategories').append(button);if(value){const option=node('option',label);option.value=value;$('discussionTheme').append(option);}}
+ function card(p){const item=node('article',undefined,'discussion-item'),title=node('a',p.text.split('\n')[0].replace(/^【讨论｜|】$/g,''),'discussion-title');title.href='/post/'+p.id;
+  const text=node('p',p.text.split('\n').slice(1).join('\n').slice(0,170),'discussion-excerpt'),meta=node('div',undefined,'discussion-meta');meta.append(node('span',names[p.theme]||'日常','discussion-tag'),node('span','@'+p.name),node('time',new Date(p.created_at).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})));
+  const footer=node('div',undefined,'discussion-footer'),join=node('a',p.replies?'参与讨论 →':'来做第一个回复的人 →');join.href='/post/'+p.id;footer.append(node('span',p.replies+' 条回复 · '+p.hearts+' 个赞'),join);item.append(meta,title,text);
+  if(p.media){const media=node('a',p.media_type==='video'?'▷ 查看视频':'查看配图 ↗','discussion-media-link');media.href='/post/'+p.id;item.append(media);}
+  item.append(footer);return item;}
+ async function load(){const current=++version;$('discussionState').textContent='正在加载讨论…';$('discussionPrev').disabled=true;$('discussionNext').disabled=true;
+  try{const r=await fetch('/api/discussions?'+new URLSearchParams({page,sort,theme,q:query}),{cache:'no-store'});if(!r.ok)throw Error();const data=await r.json();if(current!==version)return;if(page>data.pages){page=data.pages;return load();}pages=data.pages;$('discussionList').replaceChildren(...data.items.map(card));$('discussionState').textContent=data.total?'找到 '+data.total+' 场讨论':query||theme?'暂时没有匹配的话题，换个分类或搜索词试试。':'广场刚刚开放。今天想聊什么？来发起第一场讨论吧。';$('discussionPage').textContent=page+' / '+pages;$('discussionPrev').disabled=page<=1;$('discussionNext').disabled=page>=pages;
+  }catch{if(current===version){$('discussionState').textContent='讨论暂时无法加载，请稍后重试。';$('discussionList').replaceChildren();$('discussionPage').textContent='';}}}
+ document.querySelectorAll('[data-sort]').forEach(b=>b.addEventListener('click',()=>{sort=b.dataset.sort;page=1;document.querySelectorAll('[data-sort]').forEach(c=>c.setAttribute('aria-pressed',String(c===b)));load();}));
+ $('plazaSearch').addEventListener('submit',e=>{e.preventDefault();query=$('discussionQuery').value.trim();page=1;load();});
+ $('discussionPrev').onclick=()=>{if(page>1){page--;load();}};$('discussionNext').onclick=()=>{if(page<pages){page++;load();}};
+ async function compose(){await window.SJAuth.ready;if(!window.SJAuth.user){window.SJAuth.open();return;}$('discussionError').textContent='';$('discussionDialog').showModal();}
+ $('startDiscussion').onclick=compose;$('startDiscussionMobile').onclick=compose;$('discussionClose').onclick=()=>$('discussionDialog').close();
+ $('discussionBody').addEventListener('input',()=>{$('discussionCount').textContent=$('discussionBody').value.length+' / 430';});
+ $('useDailyTopic').onclick=()=>{$('discussionTitle').value=topic;compose();};
+ $('discussionForm').addEventListener('submit',async e=>{e.preventDefault();const button=$('discussionSubmit');button.disabled=true;$('discussionError').textContent='';try{
+  await window.SJAuth.ready;if(!window.SJAuth.user){$('discussionDialog').close();window.SJAuth.open();return;}
+  const file=$('discussionFile').files[0];if(file?.size>60*1024*1024)throw Error('图片或视频不能超过60MB');const data=new FormData();data.set('discussion','1');data.set('discussionTitle',$('discussionTitle').value.trim());data.set('text',$('discussionBody').value.trim());data.set('theme',$('discussionTheme').value);if(file)data.set('file',file);
+  const r=await fetch('/api/posts',{method:'POST',credentials:'same-origin',headers:{'X-SJ-CSRF':window.SJAuth.csrf},body:data}),result=await r.json();if(!r.ok)throw Error(result.error||'发布失败，请重试');location.assign('/post/'+result.post.id);
+ }catch(error){$('discussionError').textContent=error.message;}finally{button.disabled=false;}});
+ fetch('/api/topic',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error();return r.json();}).then(d=>{topic=d.topic;$('plazaTopic').textContent=topic;$('useDailyTopic').disabled=false;}).catch(()=>{$('plazaTopic').textContent='今天有什么想和大家聊聊的？';});load();
+})();

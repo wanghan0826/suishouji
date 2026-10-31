@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /* 随手记 · 弹幕分享站：零依赖 Node 后端（SQLite + 媒体上传 + 评论 + 签到 + 话题 + 静态托管） */
 import http from 'node:http';
+import {ensureDiscussions,discussionText,readDiscussions} from './scripts/discussions.mjs';
 import {createAnalytics} from './scripts/analytics.mjs';
 import { createAdminService } from './admin-service.mjs';
 import {createUserAuth} from './scripts/user-auth.mjs';
@@ -241,7 +242,8 @@ async function api(req, res, url) {
     catch { return send(res, 413, { error: '文件太大啦（限 60MB）' }); }
     const { fields, file } = parseMultipart(buf, boundary);
 
-    const text = String(fields.text || '').trim().slice(0, MAX_TEXT);
+    let discussion;try{if(fields.discussion==='1')discussion=discussionText(fields);}catch(e){return send(res,400,{error:e.message});}
+    const text = discussion || String(fields.text || '').trim().slice(0, MAX_TEXT);
     if (!text) return send(res, 400, { error: '说点什么吧，一个字也行' });
     const name = req.siteUser.username;
     const theme = THEMES.has(fields.theme) ? fields.theme : 'mood';
@@ -262,6 +264,7 @@ async function api(req, res, url) {
     const r = db.prepare(
       'INSERT INTO posts(text,name,theme,media,media_type,ip,topic,created_at,user_id) VALUES(?,?,?,?,?,?,?,?,?)'
     ).run(text, name, theme, media, mediaType, ip, topic, now, req.siteUser.id);
+    if(discussion)db.prepare('INSERT INTO discussion_posts(post_id) VALUES(?)').run(r.lastInsertRowid);
     const post = db.prepare(`SELECT ${POST_FIELDS} FROM posts WHERE id=?`).get(r.lastInsertRowid);
     return send(res, 200, { post });
   }
@@ -347,6 +350,7 @@ async function api(req, res, url) {
 const users = createUserAuth({db,origin:SITE_ORIGIN,localHttp,trustProxy:TRUST_PROXY});
 const admin = createAdminService({ db, dataDir: DATA, publicDir: PUBLIC, origin: SITE_ORIGIN, allowLocalHttp: localHttp, trustProxy: TRUST_PROXY, automaticTopic: todayTopic });
 
+ensureDiscussions(db);
 const analytics=createAnalytics({db,origin:SITE_ORIGIN,localHttp});
 /* ---------- 服务 ---------- */
 async function handler(req, res) {
@@ -358,6 +362,8 @@ async function handler(req, res) {
   if (!users.authorizeWrite(req, res)) return;
   if (admin.handlePublic(req, res)) return;
   const url = new URL(req.url, 'http://x');
+  if(req.method==='GET'&&url.pathname==='/api/discussions'){try{return send(res,200,readDiscussions(db,url));}catch{return send(res,400,{error:'筛选条件无效'});}}
+  if(['/plaza','/plaza/'].includes(url.pathname)&&['GET','HEAD'].includes(req.method))return serveFile(res,path.join(PUBLIC,'plaza.html'));
   if (url.pathname.startsWith('/api/')) return api(req, res, url).catch(e => send(res, 500, { error: String(e.message || e) }));
   if (url.pathname.startsWith('/uploads/')) {
     const f = path.normalize(path.join(UPLOADS, url.pathname.slice(9)));

@@ -71,6 +71,7 @@
   if(update)history.pushState({sjPost:id},'','/post/'+id);window.scrollTo({top:0,behavior:'instant'});$('postContent').scrollTop=0;announce();
   try{
    const data=await request('/api/posts/'+id);if(version!==loadVersion)return;post=data.post;window.SJTrack?.('view','/post/'+id);
+   const discussion=post.text.startsWith('【讨论｜');$('readerOrigin').hidden=discussion;$('readerBackToPlaza').hidden=!discussion;
    const lines=post.text.split('\n'),heading=lines.length>1&&lines[0].length<=90;
    const title=heading?lines.shift().replace(/^【|】$/g,''):(post.name||'小伙伴')+'的分享';
    document.title=title+' · 随手记';document.querySelector('meta[name="description"]').content=post.text.slice(0,150);
@@ -118,7 +119,7 @@
  window.SJOpenPost=load;
  document.addEventListener('click',event=>{
   const homeLink=event.target.closest('.brand,.main-nav a');
-  if(homeLink&&document.body.classList.contains('has-open-post')&&event.button===0&&!event.metaKey&&!event.ctrlKey&&!event.shiftKey&&!event.altKey){event.preventDefault();const target=homeLink.hash;closeReader();if(target)document.querySelector(target)?.scrollIntoView();return;}
+  if(homeLink&&(homeLink.hash||new URL(homeLink.href,location.href).pathname==='/')&&document.body.classList.contains('has-open-post')&&event.button===0&&!event.metaKey&&!event.ctrlKey&&!event.shiftKey&&!event.altKey){event.preventDefault();const target=homeLink.hash;closeReader();if(target)document.querySelector(target)?.scrollIntoView();return;}
   const link=event.target.closest('a.wall-post,a.card-link');if(!link||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey||link.target==='_blank')return;
   const url=new URL(link.href),match=url.pathname.match(/^\/post\/(\d+)$/);if(url.origin!==location.origin||!match)return;event.preventDefault();load(match[1]);
  });
@@ -128,3 +129,4 @@
  window.addEventListener('pagehide',stopMedia);
  if(routeId())load(routeId(),false);
 })();
+

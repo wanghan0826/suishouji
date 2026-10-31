@@ -1,5 +1,16 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs/promises';import os from 'node:os';import path from 'node:path';import net from 'node:net';import {spawn} from 'node:child_process';import {setTimeout as delay} from 'node:timers/promises';import {DatabaseSync} from 'node:sqlite';import {createAccount} from '../admin-service.mjs';
 const password='User_pw_42',adminPassword='Isolated-test-admin-password-42';
+
+test('discussion creation binds the real account and moderation controls plaza and wall together',async t=>{
+ const f=await fixture(t),form=new FormData();form.set('discussion','1');form.set('discussionTitle','一起聊游戏');form.set('text','你最近在玩什么？');form.set('theme','game');form.set('name','fake_author');
+ assert.equal((await f.call('/api/posts',{method:'POST',body:form})).status,401);
+ const user=await f.register();assert.equal((await f.call('/api/posts',{method:'POST',body:form,session:user,csrfOverride:'bad'})).status,403);
+ const created=await f.call('/api/posts',{method:'POST',body:form,session:user});assert.equal(created.status,200);const id=created.data.post.id;assert.equal(created.data.post.name,'account_one');assert.equal((await f.call('/api/discussions')).data.total,1);
+ assert.ok((await f.call('/api/posts')).data.posts.some(p=>p.id===id));
+ const reply=await f.call('/api/posts/'+id+'/comments',{method:'POST',body:{text:'一起玩！'},session:user});assert.equal(reply.status,200);assert.equal((await f.call('/api/discussions')).data.items[0].replies,1);assert.equal((await f.call('/api/discussions?sort=unanswered')).data.total,0);
+ const admin=await f.admin();await f.call('/api/admin/posts/'+id+'/archive',{method:'POST',session:admin,body:{}});assert.equal((await f.call('/api/discussions')).data.total,0);await f.call('/api/admin/posts/'+id+'/restore',{method:'POST',session:admin,body:{}});assert.equal((await f.call('/api/discussions')).data.total,1);
+ form.set('discussionTitle','bad\ntitle');assert.equal((await f.call('/api/posts',{method:'POST',body:form,session:user})).status,400);assert.equal((await f.call('/api/discussions')).data.total,1);
+});
 async function fixture(t,{secure=false}={}){
  const data=await fs.mkdtemp(path.join(os.tmpdir(),'sj-account-'));await fs.writeFile(path.join(data,'admin-auth.json'),JSON.stringify(await createAccount(adminPassword)));
  const probe=net.createServer();await new Promise(r=>probe.listen(0,'127.0.0.1',r));const port=probe.address().port;await new Promise(r=>probe.close(r));const base='http://127.0.0.1:'+port,origin=secure?'https://test.example': 'http://localhost:'+port;

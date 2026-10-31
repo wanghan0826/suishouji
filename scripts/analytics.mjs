@@ -17,10 +17,10 @@ export function createAnalytics({db,origin,localHttp=false}){
   if(req.method!=='POST')return json(405,{error:'仅支持POST'});
   if(req.headers.origin!==origin||!String(req.headers['content-type']).startsWith('application/json'))return json(403,{error:'请求来源无效'});
   let input;try{let bytes=0,chunks=[];for await(const c of req){bytes+=c.length;if(bytes>1024)return json(413,{error:'请求过大'});chunks.push(c);}input=JSON.parse(Buffer.concat(chunks).toString());}catch{return json(400,{error:'无效请求'});}
-  if(!input||!['view','share','card'].includes(input.event)||!/^\/(?:post\/[1-9]\d{0,9})?$/.test(input.path||''))return json(400,{error:'无效事件'});
-  const postId=Number(input.path.split('/')[2]||0);
-  if(postId&&!db.prepare("SELECT id FROM posts p WHERE id=? AND NOT EXISTS(SELECT 1 FROM admin_archive a WHERE a.kind='post' AND a.item_id=p.id)").get(postId))return json(404,{error:'帖子不存在'});
-  if(!postId&&input.event!=='view')return json(400,{error:'请选择帖子'});
+  if(!input||!['view','share','card'].includes(input.event)||!/^\/(?:plaza|post\/[1-9]\d{0,9})?$/.test(input.path||''))return json(400,{error:'无效事件'});
+  const postId=input.path==='/plaza'?-1:Number(input.path.split('/')[2]||0);
+  if(postId>0&&!db.prepare("SELECT id FROM posts p WHERE id=? AND NOT EXISTS(SELECT 1 FROM admin_archive a WHERE a.kind='post' AND a.item_id=p.id)").get(postId))return json(404,{error:'帖子不存在'});
+  if(postId<=0&&input.event!=='view')return json(400,{error:'请选择帖子'});
   if(/bot|crawler|spider|headless/i.test(req.headers['user-agent']||''))return json(200,{ok:true});
   const name=localHttp?'sj_visit':'__Host-sj_visit';let raw=String(req.headers.cookie||'').split(';').map(s=>s.trim()).find(s=>s.startsWith(name+'='))?.slice(name.length+1);
   const fresh=!/^[a-f0-9]{32}$/.test(raw||'');if(fresh)raw=crypto.randomBytes(16).toString('hex');
