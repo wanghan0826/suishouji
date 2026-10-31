@@ -1,3 +1,4 @@
+import {ensureInvitationSchema,claimInvitation} from './invitations.mjs';
 import crypto from 'node:crypto';import {promisify} from 'node:util';
 const scrypt=promisify(crypto.scrypt),digest=s=>crypto.createHash('sha256').update(s).digest('hex');
 const equal=(a,b)=>{const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&crypto.timingSafeEqual(x,y);};
@@ -10,7 +11,7 @@ export function ensureUserSchema(db){
  for(const table of ['posts','comments'])if(db.prepare("SELECT 1 FROM sqlite_master WHERE name=?").get(table)&&!db.prepare('PRAGMA table_info('+table+')').all().some(x=>x.name==='user_id'))db.exec('ALTER TABLE '+table+' ADD COLUMN user_id INTEGER');
 }
 export function createUserAuth({db,origin,localHttp=false,trustProxy=false}){
- ensureUserSchema(db);
+ ensureUserSchema(db);ensureInvitationSchema(db);
  const cookieName=localHttp?'sj_user_local':'__Host-sj_user',age=7*86400;
  let busy=0,lastClean=0;const buckets=new Map();
  const headers={'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'};
@@ -45,7 +46,7 @@ export function createUserAuth({db,origin,localHttp=false,trustProxy=false}){
      throttle('register:'+ip(req),5,86400000);if(user)throw error(409,'用户名已被使用');
      const salt=crypto.randomBytes(16).toString('hex'),hash=await derive(input.password,salt),now=Date.now();
      let id;try{id=Number(db.prepare('INSERT INTO site_users(username,salt,password_hash,created_at,last_login,registration_ip) VALUES(?,?,?,?,?,?)').run(username,salt,hash,now,now,ip(req)).lastInsertRowid);}catch(e){if(String(e.message).includes('UNIQUE'))throw error(409,'用户名已被使用');throw e;}
-     db.prepare('INSERT INTO user_access(user_id,event,ip,created_at) VALUES(?,?,?,?)').run(id,'register',ip(req),now);issue({id,username},res);return true;
+     db.prepare('INSERT INTO user_access(user_id,event,ip,created_at) VALUES(?,?,?,?)').run(id,'register',ip(req),now);claimInvitation(db,req,id,localHttp);issue({id,username},res);return true;
     }
     const hash=await derive(input.password,user?.salt||'0'.repeat(32));
     if(!user||!equal(hash,user.password_hash))throw error(401,'用户名或密码不正确');if(user.disabled)throw error(403,'账号已被封禁，请联系站主');

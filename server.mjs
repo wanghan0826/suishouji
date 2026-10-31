@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /* 随手记 · 弹幕分享站：零依赖 Node 后端（SQLite + 媒体上传 + 评论 + 签到 + 话题 + 静态托管） */
 import http from 'node:http';
+import {createInvitationTracking} from './scripts/invitations.mjs';
 import {createSocialInbox} from './scripts/social-inbox.mjs';
 import {createSpaces} from './scripts/spaces.mjs';
 import {ensureDiscussions,discussionText,readDiscussions} from './scripts/discussions.mjs';
@@ -354,6 +355,7 @@ const admin = createAdminService({ db, dataDir: DATA, publicDir: PUBLIC, origin:
 
 ensureDiscussions(db);
 const spaces=createSpaces({db,users});
+const invitations=createInvitationTracking({db,users,origin:SITE_ORIGIN,localHttp});
 const socialInbox=createSocialInbox({db,users});
 const analytics=createAnalytics({db,origin:SITE_ORIGIN,localHttp});
 /* ---------- 服务 ---------- */
@@ -362,6 +364,8 @@ async function handler(req, res) {
   if (await admin.handle(req, res)) return;
   if(new URL(req.url,'http://local').pathname==='/api/visit'&&limited('visit:'+clientIp(req),120,60000))return send(res,429,{error:'请求过多'});
   if (await analytics.handle(req,res)) return;
+  if(new URL(req.url,'http://local').pathname==='/api/invitations/visit'&&limited('invite:'+clientIp(req),30,60000))return send(res,429,{error:'请求过多'});
+  if(await invitations.handle(req,res))return;
   if (await users.handle(req, res)) return;
   if (await spaces.handle(req,res)) return;
   if (await socialInbox.handle(req,res)) return;

@@ -1,3 +1,4 @@
+import {ensureInvitationSchema,readInvitationAnalytics} from './scripts/invitations.mjs';
 import {ensureSpaces} from './scripts/spaces.mjs';
 import {ensureAnalytics,readAnalytics} from './scripts/analytics.mjs';
 import {ensureUserSchema} from './scripts/user-auth.mjs';
@@ -24,7 +25,7 @@ function failure(status,message){return Object.assign(Error(message),{status});}
 export function createAdminService({db,dataDir,publicDir,origin='https://example.com',allowLocalHttp=false,trustProxy=false,automaticTopic,sessionMs=8*3600000}){
   if(!db||!dataDir||!publicDir||typeof automaticTopic!=='function')throw Error('Missing admin service configuration');
   ensureUserSchema(db);
-  ensureSpaces(db);
+  ensureSpaces(db);ensureInvitationSchema(db);
   ensureAnalytics(db);
   ensureCommentThreads(db);
   const expectedOrigin=new URL(origin).origin;
@@ -92,6 +93,7 @@ export function createAdminService({db,dataDir,publicDir,origin='https://example
       if(danmakuAction&&req.method==='POST'){const id=checkId(danmakuAction[1]);const r=db.prepare('UPDATE space_danmaku SET hidden=? WHERE id=?').run(danmakuAction[2]==='archive'?1:0,id);if(!r.changes)throw failure(404,'弹幕不存在');audit(s.username,'space_danmaku_'+danmakuAction[2],id);json(res,200,{ok:true});return true;}
       const spaceAction=/^\/api\/admin\/space-updates\/(\d+)\/(archive|restore)$/.exec(p);
       if(spaceAction&&req.method==='POST'){const id=checkId(spaceAction[1]);const r=db.prepare('UPDATE space_updates SET hidden=? WHERE id=?').run(spaceAction[2]==='archive'?1:0,id);if(!r.changes)throw failure(404,'动态不存在');audit(s.username,'space_'+spaceAction[2],id);json(res,200,{ok:true});return true;}
+      if(p==='/api/admin/invitations'&&req.method==='GET'){json(res,200,readInvitationAnalytics(db));return true;}
       if(p==='/api/admin/analytics'&&req.method==='GET'){json(res,200,readAnalytics(db));return true;}
       if(p==='/api/admin/overview'&&req.method==='GET'){
         const start=Date.parse(chinaDate()+'T00:00:00+08:00');

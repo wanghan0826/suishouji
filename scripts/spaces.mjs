@@ -1,3 +1,4 @@
+import {recordInvitationMutual,recordInvitationNote} from './invitations.mjs';
 export const DEFAULT_SPACE_VISIBILITY='mutual';
 export function ensureSpaces(db){db.exec(`CREATE TABLE IF NOT EXISTS user_spaces(user_id INTEGER PRIMARY KEY,title TEXT NOT NULL DEFAULT '',bio TEXT NOT NULL DEFAULT '',visibility TEXT NOT NULL DEFAULT '${DEFAULT_SPACE_VISIBILITY}',color TEXT NOT NULL DEFAULT 'mint');
 CREATE TABLE IF NOT EXISTS user_follows(follower_id INTEGER NOT NULL,following_id INTEGER NOT NULL,created_at INTEGER NOT NULL,PRIMARY KEY(follower_id,following_id),CHECK(follower_id<>following_id));CREATE INDEX IF NOT EXISTS follows_target ON user_follows(following_id);
@@ -32,13 +33,13 @@ export function createSpaces({db,users}){
     throw fail(404,'接口不存在');
    }
    if(req.method!=='POST')throw fail(405,'请求方法不支持');const user=users.requireUser(req);limit(user.id);const input=await body(req);
-   if(action==='follow'||action==='unfollow'){if(isOwner)throw fail(400,'不能关注自己');if(action==='follow')db.prepare('INSERT OR IGNORE INTO user_follows VALUES(?,?,?)').run(user.id,id,Date.now());else db.prepare('DELETE FROM user_follows WHERE follower_id=? AND following_id=?').run(user.id,id);return send(200,{ok:true});}
+   if(action==='follow'||action==='unfollow'){if(isOwner)throw fail(400,'不能关注自己');if(action==='follow')db.prepare('INSERT OR IGNORE INTO user_follows VALUES(?,?,?)').run(user.id,id,Date.now());else db.prepare('DELETE FROM user_follows WHERE follower_id=? AND following_id=?').run(user.id,id);if(action==='follow')recordInvitationMutual(db,user.id,id);return send(200,{ok:true});}
    if(action==='danmaku'){
     if(match[3]){const item=db.prepare('SELECT author_id FROM space_danmaku WHERE id=? AND user_id=?').get(Number(match[3]),id);if(!item)throw fail(404,'弹幕不存在');if(!isOwner&&item.author_id!==user.id)throw fail(403,'只能撤回自己的弹幕');db.prepare('UPDATE space_danmaku SET hidden=1 WHERE id=? AND user_id=?').run(Number(match[3]),id);return send(200,{ok:true});}
     if(!canAccess)throw fail(403,'获得空间访问权限后才能留言');
     if(typeof input.text!=='string'||!input.text.trim()||input.text.trim().length>80)throw fail(400,'请填写1–80字的弹幕');
     const last=db.prepare('SELECT created_at FROM space_danmaku WHERE user_id=? AND author_id=? ORDER BY id DESC LIMIT 1').get(id,user.id);if(last&&Date.now()-last.created_at<10000)throw fail(429,'让弹幕飞一会儿，10秒后再发一条');
-    const result=db.prepare('INSERT INTO space_danmaku(user_id,author_id,text,created_at) VALUES(?,?,?,?)').run(id,user.id,input.text.trim(),Date.now());return send(200,{ok:true,id:Number(result.lastInsertRowid)});
+    const result=db.prepare('INSERT INTO space_danmaku(user_id,author_id,text,created_at) VALUES(?,?,?,?)').run(id,user.id,input.text.trim(),Date.now());recordInvitationNote(db,id,user.id);return send(200,{ok:true,id:Number(result.lastInsertRowid)});
    }
    if(!isOwner)throw fail(403,'只能管理自己的空间');
    if(action==='profile'){if(typeof input.title!=='string'||input.title.length>40||typeof input.bio!=='string'||input.bio.length>140||!['public','followers','mutual'].includes(input.visibility)||!['mint','sky','rose','sand'].includes(input.color))throw fail(400,'空间设置格式无效');db.prepare('INSERT INTO user_spaces VALUES(?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET title=excluded.title,bio=excluded.bio,visibility=excluded.visibility,color=excluded.color').run(id,input.title.trim(),input.bio.trim(),input.visibility,input.color);return send(200,{ok:true});}
