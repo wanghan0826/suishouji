@@ -143,7 +143,7 @@
       if (!conditions[profile.visibility]) throw Error('请刷新空间设置后重试。');
       const data = {
         username: profile.username, title: profile.title, color: profile.color,
-        visibility: profile.visibility, url: location.origin + '/u/' + encodeURIComponent(profile.username) + '?from=invite'
+        visibility: profile.visibility, url: location.origin + '/u/' + encodeURIComponent(profile.username) + '?from=invite&format=card'
       };
       await document.fonts.ready;
       if (!sameAccount()) return;
@@ -180,7 +180,9 @@
   $('spaceInviteCopy').onclick = async () => {
     if (!invite || SJAuth.user?.id !== accountId) return;
     const current = revision;
-    const text = '来我的随手记空间留一句弹幕：' + invite.url + '\n' + conditions[invite.visibility].join('，') + '。';
+    const url = new URL(invite.url);
+    url.searchParams.set('format', 'link');
+    const text = '来我的随手记空间留一句弹幕：' + url.href + '\n' + conditions[invite.visibility].join('，') + '。';
     try {
       await navigator.clipboard.writeText(text);
       if (current === revision) $('spaceInviteStatus').textContent = '邀请文案已复制，由你选择朋友发送。';
