@@ -14,7 +14,7 @@ const ask=(prompt,hidden=false)=>new Promise(resolve=>{
 });
 if(!process.stdin.isTTY)throw Error('请由站主在交互式终端中运行此命令。');
 const username=(await ask('管理用户名（默认 admin）：')).trim()||'admin';
-const first=await ask('设置管理密码（至少12位，输入不回显）：',true);
+const first=await ask('设置管理密码（6至256位，输入不回显）：',true);
 const again=await ask('再次输入密码：',true);
 if(first!==again)throw Error('两次密码不一致，未保存任何修改。');
 const account=await createAccount(first,username);

@@ -15,7 +15,7 @@ const token=()=>crypto.randomBytes(32).toString('base64url');
 const THEMES=new Set(['mood','daily','scene','food','vent','secret','game','campus','life','music','travel','tech']);
 export const chinaDate=(now=new Date())=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
 export async function createAccount(password,username='admin'){
-  if(typeof password!=='string'||password.length<12||password.length>256)throw Error('密码须为12至256位');
+  if(typeof password!=='string'||password.length<6||password.length>256)throw Error('密码须为6至256位');
   if(!/^[a-zA-Z0-9_-]{3,32}$/.test(username))throw Error('用户名须为3至32位字母、数字、下划线或连字符');
   const salt=crypto.randomBytes(16).toString('hex');
   const key=await scrypt(password,salt,64,{N:32768,r:8,p:1,maxmem:64*1024*1024});

@@ -1,8 +1,8 @@
 import test from 'node:test';import assert from 'node:assert/strict';import http from 'node:http';import fs from 'node:fs/promises';import path from 'node:path';import os from 'node:os';import {DatabaseSync} from 'node:sqlite';import {createAdminService,createAccount,chinaDate} from '../admin-service.mjs';
 const password='Only-for-isolated-local-tests-27';
-async function fixture(t,{configured=true,secure=false,trustProxy=false}={}){
+async function fixture(t,{configured=true,secure=false,trustProxy=false,credential=password}={}){
  const dir=await fs.mkdtemp(path.join(os.tmpdir(),'tmp-'));
- if(configured)await fs.writeFile(path.join(dir,'admin-auth.json'),JSON.stringify(await createAccount(password)));
+ if(configured)await fs.writeFile(path.join(dir,'admin-auth.json'),JSON.stringify(await createAccount(credential)));
  const db=new DatabaseSync(':memory:');
  db.exec(`CREATE TABLE posts(id INTEGER PRIMARY KEY,text TEXT,name TEXT,theme TEXT,media TEXT,media_type TEXT,hearts INTEGER,topic TEXT,created_at INTEGER);
  CREATE TABLE comments(id INTEGER PRIMARY KEY,post_id INTEGER,text TEXT,name TEXT,created_at INTEGER);`);
@@ -18,9 +18,16 @@ async function fixture(t,{configured=true,secure=false,trustProxy=false}={}){
   const headers={};if(session)headers.Cookie=session.cookie;if(method!=='GET'){headers.Origin=originOverride??origin;headers['Content-Type']='application/json';if(session)headers['X-CSRF-Token']=csrfOverride??session.csrf;}if(forwardTls)headers['X-Forwarded-Proto']='https';
   const response=await fetch(base+route,{method,headers,...(body!==undefined?{body:JSON.stringify(body)}:{})});const data=await response.json();return {status:response.status,data,cookie:response.headers.get('set-cookie'),headers:response.headers};
  };
- const login=async()=>{const result=await call('/api/admin/login',{method:'POST',body:{username:'admin',password},forwardTls:secure});assert.equal(result.status,200);return {cookie:result.cookie.split(';')[0],csrf:result.data.csrf};};
+ const login=async()=>{const result=await call('/api/admin/login',{method:'POST',body:{username:'admin',password:credential},forwardTls:secure});assert.equal(result.status,200);return {cookie:result.cookie.split(';')[0],csrf:result.data.csrf};};
  return {call,login,db,base,service};
 }
+test('admin setup accepts a six-character password and retains length bounds',async t=>{
+ await assert.rejects(createAccount('short'),/6至256/);
+ await assert.rejects(createAccount('x'.repeat(257)),/6至256/);
+ const f=await fixture(t,{credential:'six-42'}),session=await f.login();
+ assert.equal((await f.call('/api/admin/overview',{session})).status,200);
+});
+
 test('management data requires login, and setup is locked without an account',async t=>{
  const f=await fixture(t,{configured:false});assert.equal((await f.call('/api/admin/overview')).status,401);assert.equal((await f.call('/api/admin/status')).data.configured,false);assert.equal((await f.call('/api/admin/login',{method:'POST',body:{username:'admin',password}})).status,503);
 });
