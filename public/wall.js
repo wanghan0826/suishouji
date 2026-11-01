@@ -10,9 +10,10 @@
   const icons={mood:'☀',daily:'☕',scene:'❋',food:'◒',vent:'⚡',secret:'☾',game:'✦',campus:'✎',life:'❀',music:'♫',travel:'➚',tech:'⌘'};
   let pool=[],lanes=[],cursor=0,last=0,raf=0,resizeTimer;
   let previousWidth=0,restored=false;
-  const progressKey='sj-wall-progress-v1';
+  const progressKey='sj-wall-progress-v2';
   function saveProgress(){if(!pool.length)return;try{sessionStorage.setItem(progressKey,JSON.stringify({at:Date.now(),ids:pool.map(p=>p.id).join(','),nextId:pool[cursor%pool.length]?.id,width:area.clientWidth,lanes:lanes.map(l=>l.items.slice(0,5).map(e=>({id:Number(e.element.dataset.postId),x:e.x})))}));}catch{}}
-  function restoreProgress(){if(restored)return null;restored=true;try{const s=JSON.parse(sessionStorage.getItem(progressKey));if(s&&Number.isFinite(s.at)&&Date.now()-s.at>=0&&Date.now()-s.at<86400000&&s.ids===pool.map(p=>p.id).join(',')&&Number.isFinite(s.width)&&s.width>0&&Array.isArray(s.lanes)&&s.lanes.length<=7&&s.lanes.every(row=>Array.isArray(row)&&row.length<=5&&row.every(e=>e&&Number.isSafeInteger(e.id)&&Number.isFinite(e.x)&&Math.abs(e.x)<10000))){const next=pool.findIndex(p=>p.id===s.nextId);if(next>=0)cursor=next;return s;}}catch{}return null;}
+  function shuffle(posts){const result=[...posts];for(let i=result.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[result[i],result[j]]=[result[j],result[i]];}return result;}
+  function restoreProgress(){if(restored)return null;restored=true;try{const s=JSON.parse(sessionStorage.getItem(progressKey));if(s&&Number.isFinite(s.at)&&Date.now()-s.at>=0&&Date.now()-s.at<86400000&&typeof s.ids==='string'&&Number.isFinite(s.width)&&s.width>0&&Array.isArray(s.lanes)&&s.lanes.length<=7&&s.lanes.every(row=>Array.isArray(row)&&row.length<=5&&row.every(e=>e&&Number.isSafeInteger(e.id)&&Number.isFinite(e.x)&&Math.abs(e.x)<10000))){const byId=new Map(pool.map(p=>[p.id,p])),order=s.ids.split(',').map(Number);if(order.length!==pool.length||new Set(order).size!==pool.length||order.some(id=>!byId.has(id)))return null;pool=order.map(id=>byId.get(id));const next=pool.findIndex(p=>p.id===s.nextId);if(next>=0)cursor=next;return s;}}catch{}return null;}
   let backgroundImages=[],backgroundIndex=0;
   function changeBackground(){
     bg.style.backgroundImage=backgroundImages.length?`url("/uploads/${encodeURIComponent(backgroundImages[backgroundIndex++%backgroundImages.length].media)}")`:'url("/assets/lake.jpg")';
@@ -104,7 +105,10 @@
   }
   function setPosts(posts){
     const nextId=pool[cursor%pool.length]?.id;
-    pool=[...new Map(posts.map(p=>[p.id,p])).values()];
+    const incoming=new Map(posts.map(p=>[p.id,p]));
+    const retained=pool.filter(p=>incoming.has(p.id)).map(p=>incoming.get(p.id));
+    const known=new Set(retained.map(p=>p.id));
+    pool=[...retained,...shuffle([...incoming.values()].filter(p=>!known.has(p.id)))];
     cursor=Math.max(0,pool.findIndex(p=>p.id===nextId));
     const byId=new Map(pool.map(p=>[p.id,p]));
     for(const lane of lanes){lane.items=lane.items.filter(entry=>{if(byId.has(Number(entry.element.dataset.postId)))return true;entry.element.remove();return false;});}
