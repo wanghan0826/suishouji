@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /* 随手记 · 弹幕分享站：零依赖 Node 后端（SQLite + 媒体上传 + 评论 + 签到 + 话题 + 静态托管） */
 import http from 'node:http';
+import {createWordGame} from './scripts/word-game.mjs';
 import {createXiaoji} from './scripts/xiaoji.mjs';
 import {createFriendFeed} from './scripts/friend-feed.mjs';
 import {recordSocialActivity} from './scripts/social-metrics.mjs';
@@ -365,6 +366,7 @@ ensureDiscussions(db);
 const spaces=createSpaces({db,users});
 const invitations=createInvitationTracking({db,users,origin:SITE_ORIGIN,localHttp});
 const friends=createFriendFeed({db,users});
+const wordGame=createWordGame({db,users});
 const socialInbox=createSocialInbox({db,users});
 const analytics=createAnalytics({db,origin:SITE_ORIGIN,localHttp});
 /* ---------- 服务 ---------- */
@@ -380,9 +382,11 @@ async function handler(req, res) {
   if (await spaces.handle(req,res)) return;
   if (await socialInbox.handle(req,res)) return;
   if(friends.handle(req,res))return;
+  if(await wordGame.handle(req,res))return;
   if (!users.authorizeWrite(req, res)) return;
   if (admin.handlePublic(req, res)) return;
   const url = new URL(req.url, 'http://x');
+  if(/^\/play(?:\/[a-f0-9]{32})?\/?$/.test(url.pathname)&&['GET','HEAD'].includes(req.method))return serveFile(res,path.join(PUBLIC,'word-game.html'));
   if(req.method==='GET'&&url.pathname==='/api/discussions'){try{return send(res,200,readDiscussions(db,url));}catch{return send(res,400,{error:'筛选条件无效'});}}
   if(['/friends','/friends/'].includes(url.pathname)&&['GET','HEAD'].includes(req.method))return serveFile(res,path.join(PUBLIC,'friends.html'));
   if(['/plaza','/plaza/'].includes(url.pathname)&&['GET','HEAD'].includes(req.method))return serveFile(res,path.join(PUBLIC,'plaza.html'));

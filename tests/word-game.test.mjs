@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {normalizeWord,validateWord} from '../scripts/word-game.mjs';
+test('same-word matching normalizes width, spaces and case without treating synonyms as equal',()=>{assert.equal(normalizeWord('  ＡＰＰＬＥ '),normalizeWord('apple'));assert.equal(normalizeWord('月 亮'),normalizeWord('月亮'));assert.notEqual(normalizeWord('月亮'),normalizeWord('月球'));assert.equal(validateWord(' 苹果 '),'苹果');for(const value of ['', 'a'.repeat(13), null, [], 'a\u200bb','a\nb'])assert.throws(()=>validateWord(value));});

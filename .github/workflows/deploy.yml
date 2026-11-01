@@ -21,8 +21,9 @@ jobs:
         run: |
           node --check server.mjs
           node --check scripts/xiaoji.mjs
+          node --check scripts/word-game.mjs
+          node --check public/word-game.js
           node --check public/app.js
-          node --check public/wall.js
           node --check public/wall.js
           node --check public/appearance.js
           node --check public/post.js
