@@ -4,6 +4,8 @@
   const bg=document.getElementById('danmakuBg');
   const status=document.getElementById('wallStatus');
   const toggle=document.getElementById('toggleDanmaku');
+  // Remove only the legacy player's initial items when taking over playback.
+  area.querySelectorAll('.danmaku-item').forEach(e=>e.remove());
   const reduce=matchMedia('(prefers-reduced-motion: reduce)');
   const icons={mood:'☀',daily:'☕',scene:'❋',food:'◒',vent:'⚡',secret:'☾',game:'✦',campus:'✎',life:'❀',music:'♫',travel:'➚',tech:'⌘'};
   let pool=[],lanes=[],cursor=0,last=0,raf=0,resizeTimer;

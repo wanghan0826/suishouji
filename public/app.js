@@ -161,11 +161,12 @@ function spawnDanmaku(post) {
 }
 
 function startDanmakuLoop(posts) {
+  const initialPlayer=startDanmakuLoop;
   if (danmakuInterval) clearInterval(danmakuInterval);
   let i = 0;
   const pool = [...posts].reverse();
   for (let j = 0; j < Math.min(6, pool.length); j++) {
-    setTimeout(() => spawnDanmaku(pool[j]), j * 400);
+    setTimeout(() => { if(startDanmakuLoop===initialPlayer)spawnDanmaku(pool[j]); }, j * 400);
   }
   i = 6;
   danmakuInterval = setInterval(() => {
