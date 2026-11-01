@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /* 随手记 · 弹幕分享站：零依赖 Node 后端（SQLite + 媒体上传 + 评论 + 签到 + 话题 + 静态托管） */
 import http from 'node:http';
+import {createXiaoji} from './scripts/xiaoji.mjs';
 import {createFriendFeed} from './scripts/friend-feed.mjs';
 import {recordSocialActivity} from './scripts/social-metrics.mjs';
 import {createInvitationTracking} from './scripts/invitations.mjs';
@@ -271,6 +272,7 @@ async function api(req, res, url) {
     ).run(text, name, theme, media, mediaType, ip, topic, now, req.siteUser.id);
     if(discussion)db.prepare('INSERT INTO discussion_posts(post_id) VALUES(?)').run(r.lastInsertRowid);
     recordSocialActivity(db,req.siteUser.id,'post');
+    xiaoji.afterPost(Number(r.lastInsertRowid));
     const post = db.prepare(`SELECT ${POST_FIELDS} FROM posts WHERE id=?`).get(r.lastInsertRowid);
     return send(res, 200, { post });
   }
@@ -317,6 +319,7 @@ async function api(req, res, url) {
     ).run(postId, text, name, ip, now, req.siteUser.id, parentId, threadId);
     const comment = db.prepare('SELECT id,text,name,created_at,parent_id,thread_id FROM comments WHERE id=?').get(r.lastInsertRowid);
     recordSocialActivity(db,req.siteUser.id,'comment');
+    xiaoji.afterComment(Number(r.lastInsertRowid),postId);
     comment.reply_to_name = target?.name || null;
     return send(res, 200, { comment });
   }
@@ -355,7 +358,8 @@ async function api(req, res, url) {
 }
 
 const users = createUserAuth({db,origin:SITE_ORIGIN,localHttp,trustProxy:TRUST_PROXY});
-const admin = createAdminService({ db, dataDir: DATA, publicDir: PUBLIC, origin: SITE_ORIGIN, allowLocalHttp: localHttp, trustProxy: TRUST_PROXY, automaticTopic: todayTopic });
+const xiaoji=createXiaoji({db,dataDir:DATA});
+const admin = createAdminService({ db, dataDir: DATA, publicDir: PUBLIC, origin: SITE_ORIGIN, allowLocalHttp: localHttp, trustProxy: TRUST_PROXY, automaticTopic: todayTopic,assistant:xiaoji });
 
 ensureDiscussions(db);
 const spaces=createSpaces({db,users});
@@ -366,6 +370,7 @@ const analytics=createAnalytics({db,origin:SITE_ORIGIN,localHttp});
 /* ---------- 服务 ---------- */
 async function handler(req, res) {
   try {
+  if(req.method==='GET'&&new URL(req.url,'http://local').pathname==='/api/assistant'){const s=xiaoji.status();return send(res,200,{name:s.name,model:s.model,enabled:s.enabled});}
   if (await admin.handle(req, res)) return;
   if(new URL(req.url,'http://local').pathname==='/api/visit'&&limited('visit:'+clientIp(req),120,60000))return send(res,429,{error:'请求过多'});
   if (await analytics.handle(req,res)) return;

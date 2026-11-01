@@ -207,3 +207,11 @@ tests/                 隔离数据库的管理接口测试
 仓库不包含原站数据库、用户上传、管理账户、会话、服务器私钥或阿里云配置。自行部署的站点互相独立，不会连接原站数据库。
 
 部署基础参考：[Docker Compose 官方文档](https://docs.docker.com/compose/gettingstarted/)、[Caddy 反向代理及 HTTPS 文档](https://caddyserver.com/docs/quick-starts/reverse-proxy)。
+
+## 小记 · DeepSeek Flash 助手
+
+管理端数据概览的“小记”面板填写服务接口地址和 API 密钥，点击“验证 Flash 并启用”。模型固定为 `deepseek-flash`（[官方文档](https://api-docs.deepseek.com/quick_start/agent_integrations/)），不回退到 Pro。认证通过才保存配置，密钥只写入服务器 `DATA_DIR/ai-config.json`，不通过公开接口返回；无需写入源码或 GitHub。可随时在管理端停用。
+
+启用后，新公开帖子和广场讨论各产生一条AI评论；评论中 `@小记` 或直接回复小记会生成定向回复。明确显示“小记 / AI助手”，不会冒充真人，不补刷历史帖子，不读取私人空间动态。目前依据帖子文字及最多8条可见评论回应，不解析图片和视频。相关公开文字会发至配置的模型服务。
+
+任务在独立队列持久化，去重且串行处理；失败最多尝试3次，认证/余额错误不反复重试，不影响用户发帖。生成前后重新检查帖子、评论及账号的可见状态；AI评论沿用现有下架及回复线程规则。AI不主动回复自己的消息，也不记入真人社交参与行为。页面打开时每8秒检查新评论，不自动滚动或覆盖编辑中的文字。

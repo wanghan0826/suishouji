@@ -4,6 +4,7 @@ export function ensureCommentThreads(db){
  db.exec('BEGIN IMMEDIATE');
  try{
   for(const column of ['parent_id','thread_id'])if(!columns.has(column))db.exec(`ALTER TABLE comments ADD COLUMN ${column} INTEGER`);
+  if(!columns.has('is_ai'))db.exec('ALTER TABLE comments ADD COLUMN is_ai INTEGER NOT NULL DEFAULT 0');
   db.exec('CREATE INDEX IF NOT EXISTS idx_comments_thread ON comments(post_id,thread_id,id)');
   db.exec('COMMIT');
  }catch(error){db.exec('ROLLBACK');throw error;}
@@ -13,7 +14,7 @@ export function publicCommentVisible(alias='c'){
  return `${visible(alias)} AND (${alias}.thread_id IS NULL OR EXISTS(SELECT 1 FROM comments root WHERE root.id=${alias}.thread_id AND root.post_id=${alias}.post_id AND ${visible('root')}))`;
 }
 export function readPublicComments(db,postId){
- return db.prepare(`SELECT c.id,c.text,c.name,c.created_at,c.parent_id,c.thread_id,
+ return db.prepare(`SELECT c.id,c.text,c.name,c.created_at,c.parent_id,c.thread_id,c.is_ai,
  CASE WHEN target.id IS NOT NULL AND ${visible('target')} THEN target.name ELSE NULL END reply_to_name
  FROM comments c LEFT JOIN comments target ON target.id=c.parent_id AND target.post_id=c.post_id
  WHERE c.post_id=? AND ${publicCommentVisible()}

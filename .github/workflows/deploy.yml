@@ -20,6 +20,7 @@ jobs:
       - name: Check scripts and test a fresh deployment
         run: |
           node --check server.mjs
+          node --check scripts/xiaoji.mjs
           node --check public/app.js
           node --check public/wall.js
           node --check public/appearance.js

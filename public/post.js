@@ -1,7 +1,7 @@
 (() => {
  const $=id=>document.getElementById(id),routeId=()=>location.pathname.match(/^\/post\/(\d+)\/?$/)?.[1];
  const categories={mood:'心情',daily:'日常',scene:'风景',food:'美食',vent:'吐槽',secret:'树洞',game:'游戏',campus:'校园',life:'生活',music:'音乐',travel:'旅行',tech:'科技'};
- let post,toastTimer,replyTo=null,id=null,loadVersion=0;
+ let post,toastTimer,replyTo=null,id=null,loadVersion=0,commentSnapshot="";
  const announce=()=>document.dispatchEvent(new Event('sj:reading-change'));
  function stopMedia(){for(const video of $('postMedia').querySelectorAll('video'))video.pause();}
  function closeReader(update=true){
@@ -44,16 +44,16 @@
   const item=document.createElement('article');item.className='post-comment';item.id='comment-'+c.id;
   const meta=document.createElement('div');meta.className='post-comment-meta';
   const name=document.createElement(/^[a-z0-9_]{3,20}$/i.test(c.name)?'a':'strong');name.textContent=c.name||'匿名小伙伴';if(name.tagName==='A')name.href='/u/'+encodeURIComponent(c.name);
-  const time=document.createElement('time');time.dateTime=new Date(c.created_at).toISOString();time.textContent=date(c.created_at);meta.append(name,time);
+  const time=document.createElement('time');time.dateTime=new Date(c.created_at).toISOString();time.textContent=date(c.created_at);meta.append(name,time);if(c.is_ai){const badge=document.createElement('span');badge.className='comment-ai-badge';badge.textContent='AI 助手';meta.append(badge);}
   const text=document.createElement('p');text.textContent=c.text;item.append(meta);
   if(c.parent_id){const target=document.createElement(c.reply_to_name?'a':'span');target.className='comment-reply-target';target.textContent=c.reply_to_name?'回复 @'+c.reply_to_name:'回复的评论已下架';if(c.reply_to_name)target.href='#comment-'+c.parent_id;item.append(target);}
   const button=document.createElement('button');button.type='button';button.className='comment-reply-button';button.textContent='回复';button.setAttribute('aria-label','回复 @'+(c.name||'匿名小伙伴')+' 的评论');button.addEventListener('click',()=>chooseReply(c));item.append(text,button);return item;
  }
- async function comments(){
-  const list=$('postComments');list.textContent='评论加载中…';
+ async function comments(quiet=false){
+  const list=$('postComments');if(!quiet)list.textContent='评论加载中…';
   const requested=id;
   try{
-   const data=await request('/api/posts/'+requested+'/comments');if(requested!==id)return;list.replaceChildren();$('postCommentCount').textContent=data.comments.length?'('+data.comments.length+')':'';
+   const data=await request('/api/posts/'+requested+'/comments');if(requested!==id)return;const snapshot=JSON.stringify(data.comments);if(quiet&&snapshot===commentSnapshot)return data.comments;commentSnapshot=snapshot;list.replaceChildren();$('postCommentCount').textContent=data.comments.length?'('+data.comments.length+')':'';
    if(!data.comments.length){list.textContent='还没有评论，来聊聊吧。';list.className='comment-empty';return data.comments;}
    list.className='';
    const threads=new Map();
@@ -61,9 +61,9 @@
     const thread=document.createElement('div');thread.className='comment-thread';thread.append(commentElement(c));const replies=document.createElement('div');replies.className='comment-replies';thread.append(replies);threads.set(c.id,replies);list.append(thread);
    }
    for(const c of data.comments.filter(c=>c.thread_id)){const parent=threads.get(c.thread_id);if(parent)parent.append(commentElement(c));}
-   if(/^#comment-\d+$/.test(location.hash)){const target=document.getElementById(location.hash.slice(1));if(target){target.scrollIntoView({block:'center',behavior:'instant'});target.tabIndex=-1;target.focus({preventScroll:true});}}
+   if(!quiet&&/^#comment-\d+$/.test(location.hash)){const target=document.getElementById(location.hash.slice(1));if(target){target.scrollIntoView({block:'center',behavior:'instant'});target.tabIndex=-1;target.focus({preventScroll:true});}}
    return data.comments;
-  }catch(error){if(requested===id)list.textContent=error.status===404?'帖子已下架，无法查看评论。':'评论暂时无法加载，请刷新重试。';return null;}
+  }catch(error){if(requested===id&&!quiet)list.textContent=error.status===404?'帖子已下架，无法查看评论。':'评论暂时无法加载，请刷新重试。';return null;}
  }
  async function load(nextId,update=true){
   if(!/^\d+$/.test(String(nextId)))return;
@@ -132,5 +132,6 @@
  window.addEventListener('popstate',()=>{const next=routeId();if(next)load(next,false);else closeReader(false);});
  window.addEventListener('pagehide',stopMedia);
  if(routeId())load(routeId(),false);
+$('mentionXiaoji').onclick=()=>{if(!$('postCommentText').value.includes('@小记'))$('postCommentText').value+=($('postCommentText').value?' ':'')+'@小记 ';$('postCommentText').focus();};let assistantEnabled=false;fetch('/api/assistant').then(r=>r.json()).then(s=>{assistantEnabled=s.enabled;const hint=document.getElementById('xiaojiHint');if(hint)hint.hidden=!s.enabled;$('mentionXiaoji').hidden=!s.enabled;}).catch(()=>{});setInterval(()=>{if(assistantEnabled&&id&&!document.hidden&&!$('postReader').hidden)comments(true);},8000);
 })();
 

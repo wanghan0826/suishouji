@@ -31,7 +31,7 @@
   }
   function recentItem(post){const item=node('div','recent-item');item.append(mediaElement(post,'recent-media'));const copy=node('div','recent-copy');copy.append(node('p','',post.text.split(/[\r\n]/)[0]),node('small','',(post.name||'匿名小伙伴')+' · '+(themes[post.theme]||'分享')+' · '+fmt(post.created_at)));const button=node('button','text-button','查看 →');button.onclick=()=>details(post);item.append(copy,button);return item;}
   async function loadOverview(id){
-    const data=await api('overview');if(id!==requestId)return;
+    const data=await api('overview');if(id!==requestId)return;loadAssistant();
     for(const [key,stat] of [['statPosts','posts'],['statComments','comments'],['statImages','images'],['statToday','todayPosts']])$(key).textContent=data[stat];
     $('todayDate').textContent=data.topic.date;$('todayTopic').textContent=data.topic.topic;$('archiveCount').textContent='回收站：'+data.archived+' 项';
     $('recentPosts').replaceChildren(...(data.recent.length?data.recent.map(recentItem):[node('p','empty-state','还没有分享')]));
@@ -130,5 +130,8 @@
     if(location.protocol!=='https:'&&!local){$('connectionNotice').classList.remove('hidden');$('connectionNotice').append(document.createTextNode('管理登录需要加密连接。'),Object.assign(document.createElement('a'),{href:'https://'+location.host+'/admin',textContent:'切换到HTTPS →'}));$('loginButton').disabled=true;$('password').disabled=true;return;}
     try{const data=await api('status');if(data.authenticated)enter(data);else if(!data.configured){$('connectionNotice').textContent='管理账户尚未启用，请由站主完成首次账户设置。';$('connectionNotice').classList.remove('hidden');$('loginButton').disabled=true;$('password').disabled=true;}}catch(e){$('loginError').textContent=e.message;}
   }
+  async function loadAssistant(){try{const s=await api('assistant');$('assistantBase').value=s.baseUrl||'https://api.deepseek.com';$('assistantStatus').textContent=s.enabled?'小记已启用 · deepseek-flash':'小记尚未启用，请配置有效密钥。';}catch(e){$('assistantStatus').textContent=e.message;}}
+  $('assistantForm').onsubmit=async e=>{e.preventDefault();const button=e.submitter;button.disabled=true;$('assistantStatus').textContent='正在验证 Flash 连接…';try{await api('assistant',{method:'POST',body:{enabled:true,baseUrl:$('assistantBase').value,apiKey:$('assistantKey').value}});$('assistantKey').value='';await loadAssistant();}catch(e){$('assistantStatus').textContent=e.message;$('assistantKey').value='';}finally{button.disabled=false;}};
+  $('assistantDisable').onclick=async()=>{try{await api('assistant',{method:'POST',body:{enabled:false}});$('assistantKey').value='';await loadAssistant();}catch(e){$('assistantStatus').textContent=e.message;}};
   init();
 })();

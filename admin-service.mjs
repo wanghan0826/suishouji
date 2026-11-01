@@ -24,7 +24,7 @@ export async function createAccount(password,username='admin'){
 const constant=(a,b)=>{const x=Buffer.from(String(a)),y=Buffer.from(String(b));return x.length===y.length&&crypto.timingSafeEqual(x,y);};
 const validDate=d=>/^\d{4}-\d{2}-\d{2}$/.test(d)&&!Number.isNaN(Date.parse(d+'T00:00:00Z'))&&new Date(d+'T00:00:00Z').toISOString().slice(0,10)===d;
 function failure(status,message){return Object.assign(Error(message),{status});}
-export function createAdminService({db,dataDir,publicDir,origin='https://example.com',allowLocalHttp=false,trustProxy=false,automaticTopic,sessionMs=8*3600000}){
+export function createAdminService({db,dataDir,publicDir,origin='https://example.com',allowLocalHttp=false,trustProxy=false,automaticTopic,sessionMs=8*3600000,assistant}){
   if(!db||!dataDir||!publicDir||typeof automaticTopic!=='function')throw Error('Missing admin service configuration');
   ensureUserSchema(db);
   ensureSpaces(db);ensureInvitationSchema(db);ensureSocialMetrics(db);
@@ -89,6 +89,8 @@ export function createAdminService({db,dataDir,publicDir,origin='https://example
       const s=session(req);if(!s)throw failure(401,'登录已失效，请重新登录');
       if(!['GET','HEAD'].includes(req.method)){mutationOrigin(req);if(!constant(req.headers['x-csrf-token']||'',s.csrf))throw failure(403,'页面凭据已失效，请刷新重试');}
       if(p==='/api/admin/logout'&&req.method==='POST'){db.prepare('DELETE FROM admin_sessions WHERE token_hash=?').run(s.token_hash);audit(s.username,'logout','session');json(res,200,{ok:true},{'Set-Cookie':cookie('',0)});return true;}
+      if(p==='/api/admin/assistant'&&req.method==='GET'){json(res,200,assistant?.status()||{enabled:false,name:'小记',model:'deepseek-flash'});return true;}
+      if(p==='/api/admin/assistant'&&req.method==='POST'){if(!assistant)throw failure(503,'助手暂时不可用');const result=await assistant.configure(await body(req));audit(s.username,'assistant_config','小记');json(res,200,result);return true;}
       if(p==='/api/admin/space-updates'&&req.method==='GET'){json(res,200,{items:db.prepare('SELECT s.id,s.text,s.created_at,s.hidden,u.username FROM space_updates s JOIN site_users u ON u.id=s.user_id ORDER BY s.id DESC LIMIT 30').all()});return true;}
       if(p==='/api/admin/space-danmaku'&&req.method==='GET'){json(res,200,{items:db.prepare(`SELECT d.id,d.text,d.created_at,d.hidden,CASE WHEN ${visibleSpaceMessage('d')} THEN 0 ELSE 1 END contextHidden,a.username,o.username space_owner FROM space_danmaku d JOIN site_users a ON a.id=d.author_id JOIN site_users o ON o.id=d.user_id ORDER BY d.id DESC LIMIT 30`).all()});return true;}
       const danmakuAction=/^\/api\/admin\/space-danmaku\/(\d+)\/(archive|restore)$/.exec(p);
