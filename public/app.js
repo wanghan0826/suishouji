@@ -273,7 +273,6 @@ async function loadPosts(reset = false) {
     if (allPosts.length === 0) $('#waterfallGrid').innerHTML = '<div class="feed-state">这个角落还很安静，来分享第一条日常吧。</div>';
 
     if (reset) {
-      $('#danmakuArea').querySelectorAll('.danmaku-item').forEach(el => el.remove());
       startDanmakuLoop(posts);
       startBgSlideshow(posts);
     }
