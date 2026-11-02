@@ -1,0 +1,3 @@
+(()=>{const segments=typeof Intl.Segmenter==='function'?new Intl.Segmenter('zh',{granularity:'grapheme'}):null,chars=s=>segments?[...segments.segment(s)].map(x=>x.segment):Array.from(s);
+function summary(post){if(post.wall_title)return {text:post.wall_title,kind:'弹幕'};const raw=String(post.text||'').trim(),line=raw.split(/\r?\n/).find(x=>x.trim())||'',clean=line.replace(/^【讨论｜(.*)】$/,'$1').replace(/^【(.*)】$/,'$1').replace(/\s+/gu,' ').trim(),parts=chars(clean),short=parts.slice(0,24).join('');return {text:short+(parts.length>24?'…':''),kind:parts.length>24||raw.includes('\n')?'摘要':'全文'};}
+globalThis.SJWallText={summary,count:s=>chars(String(s)).length};})();

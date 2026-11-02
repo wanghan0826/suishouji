@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="/mobile.css?v=20261029-compact-wall">
 <link rel="stylesheet" href="/post.css?v=20261029-reader">
 <link rel="stylesheet" href="/reader.css?v=20261029-light-full">
-<link rel="stylesheet" href="/social-inbox.css"><link rel="stylesheet" href="/platform.css"></head>
+<link rel="stylesheet" href="/social-inbox.css"><link rel="stylesheet" href="/platform.css"><link rel="stylesheet" href="/portrait-wall.css"></head>
 <body>
 
 <!-- 顶栏 -->
@@ -57,7 +57,7 @@
   <button class="load-more" id="btnLoadMore">再翻一页</button>
 </section>
 
-</main><footer class="site-footer page-width"><div><span class="footer-brand">随手记</span><span>认真生活，随手记录。</span></div><p>编辑精选为本站整理的灵感文章 · 配图来自 Unsplash<br>用户分享由发布者提供，请友善交流并尊重原创。</p><a href="/admin">站主管理</a><a href="#" aria-label="回到顶部">回到顶部 ↑</a></footer>
+</main><footer class="site-footer page-width"><div><span class="footer-brand">随手记</span><span>认真生活，随手记录。</span></div><p>编辑精选为本站整理的灵感文章 · 配图来自 Unsplash<br>用户分享由发布者提供，请友善交流并尊重原创。</p><a href="/mobile-lab">竖屏测试台</a><a href="/admin">站主管理</a><a href="#" aria-label="回到顶部">回到顶部 ↑</a></footer>
 <dialog id="articleDialog" class="article-dialog" aria-labelledby="articleTitle"><button class="article-close" aria-label="关闭图文">×</button><img id="articleImage" alt=""><div class="article-body"><p class="eyebrow" id="articleTag"></p><h2 id="articleTitle"></h2><p class="article-intro" id="articleIntro"></p><div id="articleContent"></div><p class="article-credit">编辑精选 · 灵感文章 / 配图：Unsplash</p><button class="btn-post" id="articlePost">记录我的这一刻 →</button></div></dialog>
 <dialog id="appearanceDialog" class="appearance-dialog" aria-labelledby="appearanceTitle" aria-describedby="appearanceDescription">
   <div class="appearance-heading"><div><p class="appearance-kicker">MAKE IT YOUR MOMENT</p><h2 id="appearanceTitle">换一种心情，看世界</h2></div><button class="appearance-close" data-appearance-close aria-label="关闭主题设置">×</button></div>
@@ -95,7 +95,7 @@
       <input type="text" aria-label="发布昵称" id="postName" readonly placeholder="登录后显示账号">
 
       <label>选择主题</label>
-      <label for="postSection">发布分区</label><select id="postSection" name="section"><option value="life">生活日常</option><option value="game">游戏交流</option><option value="news">游戏资讯</option></select><div id="postGameWrap" hidden><label for="postGameTag">相关游戏（可选）</label><select id="postGameTag"><option value="">全部游戏 / 不指定</option><option value="word">同频猜词</option><option value="valorant">无畏契约</option><option value="hok">王者荣耀</option><option value="lol">英雄联盟</option><option value="cs">CS</option><option value="other">其他游戏</option></select></div><div class="theme-picker" id="themePicker"></div>
+      <label for="postWallTitle">弹幕文案（可选，最多24字）</label><input id="postWallTitle" maxlength="384" autocomplete="off" placeholder="一句完整短标题，正文在帖子里展开"><small>不填时使用正文首句的摘要，不影响完整帖子。</small><label for="postSection">发布分区</label><select id="postSection" name="section"><option value="life">生活日常</option><option value="game">游戏交流</option><option value="news">游戏资讯</option></select><div id="postGameWrap" hidden><label for="postGameTag">相关游戏（可选）</label><select id="postGameTag"><option value="">全部游戏 / 不指定</option><option value="word">同频猜词</option><option value="valorant">无畏契约</option><option value="hok">王者荣耀</option><option value="lol">英雄联盟</option><option value="cs">CS</option><option value="other">其他游戏</option></select></div><div class="theme-picker" id="themePicker"></div>
 
       <div class="topic-hint" id="topicHint" style="display:none">
         📌 正在参与今日话题：<b id="topicHintText"></b>
@@ -143,7 +143,7 @@
 <div class="toast" role="status" aria-live="polite" id="toast"></div>
 
 <script src="/user-auth.js?v=20261028-user"></script>
-<script src="/app.js?v=20261029-reader"></script>
+<script src="/wall-copy.js"></script><script src="/app.js?v=20261029-reader"></script>
 <script src="/wall.js?v=20261029-reader"></script>
 <script src="/enhance.js?v=20261019-wall-4"></script>
 <nav class="mobile-nav" id="mobileNav" aria-label="手机导航"><a href="#wall" aria-current="location">◌ 弹幕墙</a><a href="/games">◉ 游戏</a><a href="/plaza">◫ 社区</a><button type="button" data-mobile-compose>＋ 写一条</button></nav>

@@ -173,6 +173,13 @@ test('community publishing binds sections and game tags, wall filters agree and 
  assert.equal((await f.call('/games')).status,200);assert.equal((await f.call('/plaza?section=life')).status,200);
 });
 
+test('optional wall titles persist with the authenticated post, reject invalid input and follow moderation',async t=>{
+ const f=await fixture(t),user=await f.register('wall_title_owner');const form=new FormData();form.set('text','完整正文必须保留，不能被短标题覆盖。');form.set('wallTitle','一句完整的弹幕标题');
+ assert.equal((await f.call('/api/posts',{method:'POST',body:form,session:user,csrfOverride:'wrong'})).status,403);const created=await f.call('/api/posts',{method:'POST',body:form,session:user});assert.equal(created.status,200);const id=created.data.post.id;assert.equal(created.data.post.wall_title,'一句完整的弹幕标题');assert.equal(created.data.post.text,'完整正文必须保留，不能被短标题覆盖。');assert.equal((await f.call('/api/posts/'+id)).data.post.wall_title,'一句完整的弹幕标题');assert.equal((await f.call('/api/posts')).data.posts[0].wall_title,'一句完整的弹幕标题');
+ form.set('wallTitle','超'.repeat(25));assert.equal((await f.call('/api/posts',{method:'POST',body:form,session:user})).status,400);assert.equal(f.db.prepare('SELECT count(*) n FROM posts').get().n,1);const admin=await f.admin();await f.call('/api/admin/posts/'+id+'/archive',{method:'POST',session:admin,body:{}});assert.equal((await f.call('/api/posts/'+id)).status,404);assert.equal((await f.call('/api/posts')).data.posts.length,0);
+ assert.equal((await f.call('/mobile-lab')).status,200);assert.equal((await f.call('/wall-demo')).status,200);
+});
+
 test('registration establishes hashed sessions; posting and comments use the account, never a supplied nickname',async t=>{
  const f=await fixture(t);assert.equal((await f.call('/api/auth/status')).data.user,null);
  assert.equal((await f.call('/api/posts',{method:'POST'})).status,401);assert.equal((await f.call('/api/checkin',{method:'POST',body:{}})).status,401);

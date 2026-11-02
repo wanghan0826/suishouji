@@ -1,3 +1,4 @@
+import {ensureWallTitles,attachWallTitles} from './scripts/wall-titles.mjs';
 import {ensureCommunity,channelFilter} from './scripts/community.mjs';
 import {visibleSpaceMessage} from './scripts/space-threads.mjs';
 import {ensureSocialMetrics,readSocialMetrics} from './scripts/social-metrics.mjs';
@@ -27,7 +28,7 @@ const validDate=d=>/^\d{4}-\d{2}-\d{2}$/.test(d)&&!Number.isNaN(Date.parse(d+'T0
 function failure(status,message){return Object.assign(Error(message),{status});}
 export function createAdminService({db,dataDir,publicDir,origin='https://example.com',allowLocalHttp=false,trustProxy=false,automaticTopic,sessionMs=8*3600000,assistant}){
   if(!db||!dataDir||!publicDir||typeof automaticTopic!=='function')throw Error('Missing admin service configuration');
-  ensureUserSchema(db);ensureCommunity(db);
+  ensureUserSchema(db);ensureCommunity(db);ensureWallTitles(db);
   ensureSpaces(db);ensureInvitationSchema(db);ensureSocialMetrics(db);
   ensureAnalytics(db);
   ensureCommentThreads(db);
@@ -48,7 +49,7 @@ export function createAdminService({db,dataDir,publicDir,origin='https://example
     'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Referrer-Policy':'same-origin',
     'Content-Security-Policy':"default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"
   };
-  function json(res,status,data,extra={}){res.writeHead(status,{...headers,'Content-Type':'application/json; charset=utf-8',...extra});res.end(JSON.stringify(data));}
+  function json(res,status,data,extra={}){if(Array.isArray(data.posts))attachWallTitles(db,data.posts);if(data.post&&typeof data.post==='object')attachWallTitles(db,[data.post]);res.writeHead(status,{...headers,'Content-Type':'application/json; charset=utf-8',...extra});res.end(JSON.stringify(data));}
   async function account(){try{const a=JSON.parse(await fs.readFile(authFile,'utf8'));if(a.version!==1||!a.username||!a.salt||!/^[a-f0-9]{128}$/.test(a.key))throw Error();return a;}catch(e){if(e.code==='ENOENT')return null;throw failure(503,'管理账户配置异常，请联系站主');}}
   function session(req){const cookies=String(req.headers.cookie||'').split(';').map(x=>x.trim());const raw=cookies.find(x=>x.startsWith(cookieName+'='))?.slice(cookieName.length+1);if(!raw||!/^[A-Za-z0-9_-]{43}$/.test(raw))return null;return db.prepare('SELECT * FROM admin_sessions WHERE token_hash=? AND expires_at>?').get(hash(raw),Date.now())||null;}
   const cookie=(value,age)=>`${cookieName}=${value}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${age}${allowLocalHttp?'':'; Secure'}`;

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import {ensureWallTitles,wallTitleInput,attachWallTitles} from './scripts/wall-titles.mjs';
 /* 随手记 · 弹幕分享站：零依赖 Node 后端（SQLite + 媒体上传 + 评论 + 签到 + 话题 + 静态托管） */
 import http from 'node:http';
 import {ensureCommunity,channelInput,readCommunity} from './scripts/community.mjs';
@@ -251,7 +252,7 @@ async function api(req, res, url) {
     const { fields, file } = parseMultipart(buf, boundary);
 
     let discussion;try{if(fields.discussion==='1')discussion=discussionText(fields);}catch(e){return send(res,400,{error:e.message});}
-    let channel;try{channel=channelInput(fields);}catch(e){return send(res,400,{error:e.message});}
+    let channel,wallTitle;try{channel=channelInput(fields);wallTitle=wallTitleInput(fields.wallTitle);}catch(e){return send(res,400,{error:e.message});}
     const text = discussion || String(fields.text || '').trim().slice(0, MAX_TEXT);
     if (!text) return send(res, 400, { error: '说点什么吧，一个字也行' });
     const name = req.siteUser.username;
@@ -274,11 +275,12 @@ async function api(req, res, url) {
       'INSERT INTO posts(text,name,theme,media,media_type,ip,topic,created_at,user_id) VALUES(?,?,?,?,?,?,?,?,?)'
     ).run(text, name, theme, media, mediaType, ip, topic, now, req.siteUser.id);
     db.prepare('INSERT INTO post_channels(post_id,section,game_tag) VALUES(?,?,?)').run(r.lastInsertRowid,channel.section,channel.gameTag);
+    if(wallTitle)db.prepare('INSERT INTO post_wall_titles(post_id,title) VALUES(?,?)').run(r.lastInsertRowid,wallTitle);
     if(discussion)db.prepare('INSERT INTO discussion_posts(post_id) VALUES(?)').run(r.lastInsertRowid);db.exec('COMMIT');}catch(e){db.exec('ROLLBACK');throw e;}
     recordSocialActivity(db,req.siteUser.id,'post');
     xiaoji.afterPost(Number(r.lastInsertRowid));
     const post = db.prepare(`SELECT ${POST_FIELDS} FROM posts WHERE id=?`).get(r.lastInsertRowid);
-    return send(res, 200, { post });
+    attachWallTitles(db,[post]);return send(res, 200, { post });
   }
 
   /* 点赞 */
@@ -366,7 +368,7 @@ const xiaoji=createXiaoji({db,dataDir:DATA});
 const admin = createAdminService({ db, dataDir: DATA, publicDir: PUBLIC, origin: SITE_ORIGIN, allowLocalHttp: localHttp, trustProxy: TRUST_PROXY, automaticTopic: todayTopic,assistant:xiaoji });
 
 ensureDiscussions(db);
-ensureCommunity(db);
+ensureCommunity(db);ensureWallTitles(db);
 const spaces=createSpaces({db,users});
 const invitations=createInvitationTracking({db,users,origin:SITE_ORIGIN,localHttp});
 const friends=createFriendFeed({db,users});
@@ -390,6 +392,8 @@ async function handler(req, res) {
   if (!users.authorizeWrite(req, res)) return;
   if (admin.handlePublic(req, res)) return;
   const url = new URL(req.url, 'http://x');
+  if(['/mobile-lab','/mobile-lab/'].includes(url.pathname)&&['GET','HEAD'].includes(req.method))return serveFile(res,path.join(PUBLIC,'mobile-lab.html'));
+  if(['/wall-demo','/wall-demo/'].includes(url.pathname)&&['GET','HEAD'].includes(req.method))return serveFile(res,path.join(PUBLIC,'wall-demo.html'));
   if(/^\/play(?:\/[a-f0-9]{32})?\/?$/.test(url.pathname)&&['GET','HEAD'].includes(req.method))return serveFile(res,path.join(PUBLIC,'word-game.html'));
   if(req.method==='GET'&&url.pathname==='/api/community'){try{return send(res,200,readCommunity(db,url));}catch{return send(res,400,{error:'分区筛选条件无效'});}}
   if(['/games','/games/'].includes(url.pathname)&&['GET','HEAD'].includes(req.method))return serveFile(res,path.join(PUBLIC,'games.html'));

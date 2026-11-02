@@ -518,6 +518,7 @@ function setupPostForm() {
     fd.append('text', text);
     fd.append('name', name);
     fd.append('theme', theme);
+    fd.append('wallTitle',document.getElementById('postWallTitle').value.trim());
     fd.append('section',document.getElementById('postSection').value);
     fd.append('gameTag',document.getElementById('postSection').value==='life'?'':document.getElementById('postGameTag').value);
     if (joiningTopic && todayTopicData.date) fd.append('topic', todayTopicData.date);

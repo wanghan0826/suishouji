@@ -23,6 +23,10 @@ jobs:
           node --check scripts/xiaoji.mjs
           node --check scripts/word-game.mjs
           node --check scripts/community.mjs
+          node --check scripts/wall-titles.mjs
+          node --check public/wall-copy.js
+          node --check public/mobile-lab.js
+          node --check public/demo-mode.js
           node --check public/word-game.js
           node --check public/app.js
           node --check public/wall.js

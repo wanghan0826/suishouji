@@ -1,0 +1,4 @@
+const segmenter=new Intl.Segmenter('zh',{granularity:'grapheme'});
+export function ensureWallTitles(db){db.exec('CREATE TABLE IF NOT EXISTS post_wall_titles(post_id INTEGER PRIMARY KEY,title TEXT NOT NULL)');}
+export function wallTitleInput(value){if(value===undefined||value==='')return '';if(typeof value!=='string'||!value.isWellFormed())throw Error('弹幕文案格式无效');const title=value.trim();if(title.length>384||[...segmenter.segment(title)].length>24||/[\p{Cc}\p{Zl}\p{Zp}\u202a-\u202e\u2066-\u2069\u200b]/u.test(title))throw Error('弹幕文案最多24字，请勿换行');return title;}
+export function attachWallTitles(db,posts){if(!posts.length)return posts;const titles=new Map(db.prepare('SELECT post_id,title FROM post_wall_titles WHERE post_id IN ('+posts.map(()=>'?').join(',')+')').all(...posts.map(p=>p.id)).map(r=>[r.post_id,r.title]));for(const p of posts)if(titles.has(p.id))p.wall_title=titles.get(p.id);return posts;}

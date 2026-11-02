@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="/mobile.css?v=20261029-compact-wall">
 <link rel="stylesheet" href="/post.css?v=20261029-reader">
 <link rel="stylesheet" href="/reader.css?v=20261029-light-full">
-<link rel="stylesheet" href="/social-inbox.css"><link rel="stylesheet" href="/platform.css"></head>
+<link rel="stylesheet" href="/social-inbox.css"><link rel="stylesheet" href="/platform.css"><link rel="stylesheet" href="/portrait-wall.css"></head>
 <body>
 
 <!-- 顶栏 -->
@@ -94,7 +94,7 @@
       <input type="text" aria-label="发布昵称" id="postName" readonly placeholder="登录后显示账号">
 
       <label>选择主题</label>
-      <label for="postSection">发布分区</label><select id="postSection" name="section"><option value="life">生活日常</option><option value="game">游戏交流</option><option value="news">游戏资讯</option></select><div id="postGameWrap" hidden><label for="postGameTag">相关游戏（可选）</label><select id="postGameTag"><option value="">全部游戏 / 不指定</option><option value="word">同频猜词</option><option value="valorant">无畏契约</option><option value="hok">王者荣耀</option><option value="lol">英雄联盟</option><option value="cs">CS</option><option value="other">其他游戏</option></select></div><div class="theme-picker" id="themePicker"></div>
+      <label for="postWallTitle">弹幕文案（可选，最多24字）</label><input id="postWallTitle" maxlength="384" autocomplete="off" placeholder="一句完整短标题，正文在帖子里展开"><small>不填时使用正文首句的摘要，不影响完整帖子。</small><label for="postSection">发布分区</label><select id="postSection" name="section"><option value="life">生活日常</option><option value="game">游戏交流</option><option value="news">游戏资讯</option></select><div id="postGameWrap" hidden><label for="postGameTag">相关游戏（可选）</label><select id="postGameTag"><option value="">全部游戏 / 不指定</option><option value="word">同频猜词</option><option value="valorant">无畏契约</option><option value="hok">王者荣耀</option><option value="lol">英雄联盟</option><option value="cs">CS</option><option value="other">其他游戏</option></select></div><div class="theme-picker" id="themePicker"></div>
 
       <div class="topic-hint" id="topicHint" style="display:none">
         📌 正在参与今日话题：<b id="topicHintText"></b>
@@ -142,7 +142,7 @@
 <div class="toast" role="status" aria-live="polite" id="toast"></div>
 
 <script src="/user-auth.js?v=20261028-user"></script>
-<script src="/app.js?v=20261029-reader"></script>
+<script src="/wall-copy.js"></script><script src="/app.js?v=20261029-reader"></script>
 <script src="/wall.js?v=20261029-reader"></script>
 <script src="/enhance.js?v=20261019-wall-4"></script>
 <nav class="mobile-nav" id="mobileNav" aria-label="手机导航"><a href="#wall" aria-current="location">◌ 弹幕墙</a><a href="/friends">◉ 朋友</a><a href="/plaza">◫ 社区广场</a><button type="button" data-mobile-compose>＋ 写一条</button></nav>
