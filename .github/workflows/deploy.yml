@@ -44,6 +44,7 @@ jobs:
           node --check public/conversation-prompts.js
           node --check public/space-wall.js
           node --check public/space.js
+          node --check public/friends.js
           node --check public/space-invite.js
           node --check public/invite-tracking.js
           node --check public/admin/admin.js

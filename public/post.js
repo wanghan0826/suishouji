@@ -1,7 +1,7 @@
 (() => {
  const $=id=>document.getElementById(id),routeId=()=>location.pathname.match(/^\/post\/(\d+)\/?$/)?.[1];
  const categories={mood:'心情',daily:'日常',scene:'风景',food:'美食',vent:'吐槽',secret:'树洞',game:'游戏',campus:'校园',life:'生活',music:'音乐',travel:'旅行',tech:'科技'};
- let post,toastTimer,replyTo=null,id=null,loadVersion=0,commentSnapshot="";
+ let post,toastTimer,replyTo=null,id=null,loadVersion=0,commentSnapshot="",commentGeneration=0;
  const announce=()=>document.dispatchEvent(new Event('sj:reading-change'));
  function stopMedia(){for(const video of $('postMedia').querySelectorAll('video'))video.pause();}
  function closeReader(update=true){
@@ -99,11 +99,11 @@
  }
  $('postHeart').addEventListener('click',async()=>{const button=$('postHeart'),target=id;button.disabled=true;try{const data=await request('/api/posts/'+target+'/heart',{});if(id!==target)return;$('postHearts').textContent=data.hearts;button.classList.add('liked');notify('谢谢你的喜欢');}catch(error){notify(error.message);}finally{button.disabled=false;}});
  $('postCommentForm').addEventListener('submit',async event=>{
-  event.preventDefault();const text=$('postCommentText').value.trim();if(!text||!post)return;const button=$('postCommentSubmit'),target=id;button.disabled=true;
-  try{const reply=replyTo,replying=!!reply;await request('/api/posts/'+target+'/comments',{text,parent_id:reply?.id??null},{resume:()=>resumeComment(target,reply),purpose:'登录后继续编辑'+(replying?'这条回复':'这条评论')+'，内容不会自动发布。'});if(id!==target)return;$('postCommentText').value='';setReply(null);await comments();notify(replying?'回复已发布':'评论已发布');}catch(error){notify(error.message);}finally{button.disabled=false;}
+  event.preventDefault();const draft=$('postCommentText').value,text=draft.trim();if(!text||!post)return;const button=$('postCommentSubmit'),target=id,author=SJAuth.user?.id,current=loadVersion,session=commentGeneration;if(button.disabled)return;button.disabled=true;
+  try{const reply=replyTo,replying=!!reply;await request('/api/posts/'+target+'/comments',{text,parent_id:reply?.id??null},{resume:()=>resumeComment(target,reply),purpose:'登录后继续编辑'+(replying?'这条回复':'这条评论')+'，内容不会自动发布。'});if(current!==loadVersion||session!==commentGeneration||SJAuth.user?.id!==author)return;const unchanged=$('postCommentText').value===draft&&(replyTo?.id??null)===(reply?.id??null);if(unchanged){$('postCommentText').value='';setReply(null);}await comments();if(current===loadVersion&&session===commentGeneration)notify((replying?'回复已发布':'评论已发布')+(unchanged?'':'，新草稿已保留'));}catch(error){if(current===loadVersion&&session===commentGeneration)notify(error.name==='TypeError'?'网络暂时不可用，评论草稿已保留，请稍后再试。':error.message);}finally{button.disabled=false;}
  });
  $('commentReplyCancel').addEventListener('click',()=>{setReply(null);$('postCommentText').focus();});
- document.addEventListener('sj:logout',()=>{$('postCommentText').value='';setReply(null);});
+ document.addEventListener('sj:logout',()=>{commentGeneration++;$('postCommentText').value='';setReply(null);});
  async function copyLink(){
   const url=location.origin+'/post/'+id;
   try{await navigator.clipboard.writeText(url);notify('帖子链接已复制，可以分享给朋友了');return true;}catch{$('shareDialog').close();$('postShareFallback').hidden=false;$('postShareUrl').value=url;$('postShareUrl').focus();$('postShareUrl').select();notify('长按或复制下方帖子链接');return false;}
