@@ -160,6 +160,19 @@ async function fixture(t,{secure=false}={}){
  const admin=async()=>{const r=await call('/api/admin/login',{method:'POST',body:{username:'admin',password:adminPassword}});assert.equal(r.status,200);return {...r.data,cookie:r.cookie.split(';')[0]};};
  return {call,register,login,admin,db,origin};
 }
+test('community publishing binds sections and game tags, wall filters agree and moderation applies to both feeds',async t=>{
+ const f=await fixture(t),user=await f.register('section_owner');
+ const form=(section,gameTag='')=>{const data=new FormData();data.set('text','test '+section);data.set('theme','game');data.set('section',section);data.set('gameTag',gameTag);return data;};
+ assert.equal((await f.call('/api/posts',{method:'POST',body:form('news','lol')})).status,401);
+ assert.equal((await f.call('/api/posts',{method:'POST',body:form('news','lol'),session:user,csrfOverride:'wrong'})).status,403);
+ assert.equal((await f.call('/api/posts',{method:'POST',body:form('life','lol'),session:user})).status,400);
+ const ids={};for(const [section,tag]of [['game','word'],['news','lol'],['life','']]){const r=await f.call('/api/posts',{method:'POST',body:form(section,tag),session:user});assert.equal(r.status,200);ids[section]=r.data.post.id;}
+ for(const section of ['game','news','life']){const feed=await f.call('/api/community?section='+section),wall=await f.call('/api/posts?section='+section);assert.equal(feed.status,200);assert.equal(feed.data.total,1);assert.equal(feed.data.items[0].id,ids[section]);assert.deepEqual(wall.data.posts.map(p=>p.id),[ids[section]]);assert.ok(!JSON.stringify(feed.data).includes('user_id'));}
+ assert.equal((await f.call('/api/community?section=news&tag=lol')).data.total,1);assert.equal((await f.call('/api/community?section=game&tag=lol')).data.total,0);assert.equal((await f.call('/api/posts?section=invalid')).status,400);
+ const admin=await f.admin();await f.call('/api/admin/posts/'+ids.news+'/archive',{method:'POST',session:admin,body:{}});assert.equal((await f.call('/api/community?section=news')).data.total,0);assert.equal((await f.call('/api/posts?section=news')).data.posts.length,0);
+ assert.equal((await f.call('/games')).status,200);assert.equal((await f.call('/plaza?section=life')).status,200);
+});
+
 test('registration establishes hashed sessions; posting and comments use the account, never a supplied nickname',async t=>{
  const f=await fixture(t);assert.equal((await f.call('/api/auth/status')).data.user,null);
  assert.equal((await f.call('/api/posts',{method:'POST'})).status,401);assert.equal((await f.call('/api/checkin',{method:'POST',body:{}})).status,401);

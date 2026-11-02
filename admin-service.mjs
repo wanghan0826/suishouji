@@ -1,3 +1,4 @@
+import {ensureCommunity,channelFilter} from './scripts/community.mjs';
 import {visibleSpaceMessage} from './scripts/space-threads.mjs';
 import {ensureSocialMetrics,readSocialMetrics} from './scripts/social-metrics.mjs';
 import {ensureInvitationSchema,readInvitationAnalytics} from './scripts/invitations.mjs';
@@ -26,7 +27,7 @@ const validDate=d=>/^\d{4}-\d{2}-\d{2}$/.test(d)&&!Number.isNaN(Date.parse(d+'T0
 function failure(status,message){return Object.assign(Error(message),{status});}
 export function createAdminService({db,dataDir,publicDir,origin='https://example.com',allowLocalHttp=false,trustProxy=false,automaticTopic,sessionMs=8*3600000,assistant}){
   if(!db||!dataDir||!publicDir||typeof automaticTopic!=='function')throw Error('Missing admin service configuration');
-  ensureUserSchema(db);
+  ensureUserSchema(db);ensureCommunity(db);
   ensureSpaces(db);ensureInvitationSchema(db);ensureSocialMetrics(db);
   ensureAnalytics(db);
   ensureCommentThreads(db);
@@ -158,7 +159,7 @@ export function createAdminService({db,dataDir,publicDir,origin='https://example
     const url=new URL(req.url,'http://internal'),p=url.pathname;
     if(p==='/api/topic'&&req.method==='GET'){json(res,200,currentTopic());return true;}
     if(p==='/api/posts'&&req.method==='GET'){
-      let conditions=[visiblePost],args=[];const theme=url.searchParams.get('theme'),topic=url.searchParams.get('topic');
+      let conditions=[visiblePost],args=[];try{channelFilter(url,conditions,args);}catch{json(res,400,{error:'分区筛选无效'});return true;}const theme=url.searchParams.get('theme'),topic=url.searchParams.get('topic');
       const before=Number(url.searchParams.get('before')||Date.now()+1000);if(!Number.isFinite(before)){json(res,400,{error:'无效分页时间'});return true;}
       conditions.push('p.created_at<?');args.push(before);
       if(topic){conditions.push('p.topic=?');args.push(topic);}else if(theme&&THEMES.has(theme)){conditions.push('p.theme=?');args.push(theme);}

@@ -22,6 +22,7 @@ jobs:
           node --check server.mjs
           node --check scripts/xiaoji.mjs
           node --check scripts/word-game.mjs
+          node --check scripts/community.mjs
           node --check public/word-game.js
           node --check public/app.js
           node --check public/wall.js

@@ -19,6 +19,8 @@ const ANIMALS = ['柯基','水豚','柴犬','橘猫','熊猫','企鹅','海豹',
 const VERBS = ['摸鱼的','看云的','发呆的','打盹的','闲逛的','躺平的','冒泡的','路过的','追风的','听雨的','晒太阳的','追星星的','数羊的','啃草的','打滚的','打哈欠的','蹭饭的','熬夜的','摸肚皮的','偷看的'];
 
 let currentTheme = 'all';
+let currentSection = '';
+let feedVersion = 0;
 let currentTopicFilter = ''; // 话题筛选时存日期
 let pageBefore = Date.now() + 1000;
 let hasMore = true;
@@ -251,6 +253,8 @@ function appendCards(posts) {
 }
 
 async function loadPosts(reset = false) {
+  if (reset) feedVersion++;
+  const version=feedVersion;
   if (reset) {
     pageBefore = Date.now() + 1000;
     hasMore = true;
@@ -260,11 +264,13 @@ async function loadPosts(reset = false) {
   if (!hasMore) return;
 
   const params = new URLSearchParams({ limit: '60', before: String(pageBefore) });
+  if (currentSection) params.set('section',currentSection);
   if (currentTheme !== 'all') params.set('theme', currentTheme);
   if (currentTopicFilter) params.set('topic', currentTopicFilter);
 
   try {
     const data = await apiGet('/api/posts?' + params);
+    if(version!==feedVersion)return;
     const posts = data.posts || [];
     if (posts.length < 60) hasMore = false;
     if (posts.length > 0) pageBefore = posts[posts.length - 1].created_at;
@@ -289,11 +295,12 @@ async function loadPosts(reset = false) {
       }
     } else if (tip) tip.remove();
   } catch (e) {
+    if(version!==feedVersion)return;
     $('#waterfallGrid').querySelector('.feed-loading')?.remove();
     if (!allPosts.length) $('#waterfallGrid').innerHTML = '<div class="feed-state">暂时没能加载分享，请稍后重试。</div>';
     $('#btnLoadMore').style.display = 'block';
     $('#btnLoadMore').textContent = '重新加载';
-    toast('加载失败：' + e.message);
+    if(version===feedVersion)toast('加载失败：' + e.message);
   }
 }
 function loadFresh() { loadPosts(true); }
@@ -511,6 +518,8 @@ function setupPostForm() {
     fd.append('text', text);
     fd.append('name', name);
     fd.append('theme', theme);
+    fd.append('section',document.getElementById('postSection').value);
+    fd.append('gameTag',document.getElementById('postSection').value==='life'?'':document.getElementById('postGameTag').value);
     if (joiningTopic && todayTopicData.date) fd.append('topic', todayTopicData.date);
     if (file) fd.append('media', file);
 
@@ -529,6 +538,7 @@ function setupPostForm() {
       $('#postText').placeholder = '此刻的心情、今天的见闻、想说又不好意思说的话...';
 
       const post = data.post;
+      if(currentSection&&currentSection!==fd.get('section')){loadFresh();return;}
       spawnDanmaku(post);
       allPosts.unshift(post);
       $('#waterfallGrid').insertAdjacentHTML('afterbegin', cardHTML(post));
@@ -566,3 +576,7 @@ setupCheckin();
 setupHot();
 loadTopic();
 loadPosts(true);
+
+ document.getElementById("wallChannels")?.addEventListener("click",e=>{const b=e.target.closest("[data-section]");if(!b)return;currentSection=b.dataset.section;for(const c of b.parentElement.children)c.setAttribute("aria-pressed",String(c===b));currentTopicFilter="";loadFresh();});
+ const postSection=document.getElementById("postSection");postSection.addEventListener("change",()=>{document.getElementById("postGameWrap").hidden=postSection.value==="life";});
+ document.getElementById("postForm").addEventListener("reset",()=>{document.getElementById("postGameWrap").hidden=true;});

@@ -6,7 +6,7 @@
  function stopMedia(){for(const video of $('postMedia').querySelectorAll('video'))video.pause();}
  function closeReader(update=true){
   loadVersion++;stopMedia();id=null;post=null;$('postReader').hidden=true;document.body.classList.remove('has-open-post','reader-expanded');$('readerExpand').textContent='展开阅读';$('readerExpand').setAttribute('aria-expanded','false');
-  window.SJTrack?.('view','/');document.title='随手记 · 满屏都是你的心情';if(update)history.pushState(null,'','/');announce();
+  window.SJTrack?.('view','/');document.title='随手记 · 一起玩，聊到一起';if(update)history.pushState(null,'','/');announce();
  }
  const date=ts=>new Date(ts).toLocaleString('zh-CN',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
  function notify(text){$('toast').textContent=text;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),3000);}

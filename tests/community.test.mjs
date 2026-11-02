@@ -1,0 +1,11 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {DatabaseSync} from 'node:sqlite';import {ensureCommunity,channelInput,readCommunity} from '../scripts/community.mjs';
+test('community migration preserves explicit sections and separates public posts from private space data',()=>{
+ const db=new DatabaseSync(':memory:');db.exec("CREATE TABLE posts(id INTEGER PRIMARY KEY,text TEXT,name TEXT,theme TEXT,media TEXT,media_type TEXT,created_at INTEGER,hearts INTEGER);CREATE TABLE comments(id INTEGER PRIMARY KEY,post_id INTEGER,thread_id INTEGER,created_at INTEGER);CREATE TABLE admin_archive(kind TEXT,item_id INTEGER);CREATE TABLE space_updates(text TEXT);INSERT INTO space_updates VALUES('private-space-secret');INSERT INTO posts VALUES(1,'version 100%','alice','game','','',1,0),(2,'day','bob','daily','','',2,0);");
+ ensureCommunity(db);assert.equal(db.prepare('SELECT section FROM post_channels WHERE post_id=1').get().section,'game');db.exec("UPDATE post_channels SET section='news',game_tag='valorant' WHERE post_id=1");ensureCommunity(db);assert.equal(db.prepare('SELECT section FROM post_channels WHERE post_id=1').get().section,'news');
+ const read=q=>readCommunity(db,new URL('https://example.com/api/community'+q));assert.equal(read('').total,2);assert.equal(read('?section=game').total,0);assert.equal(read('?section=life').items[0].id,2);assert.equal(read('?section=news&tag=valorant').items[0].id,1);assert.equal(read('?q=100%25').total,1);assert.equal(read('?q=_').total,0);assert.ok(!JSON.stringify(read('')).includes('private-space-secret'));
+ db.exec("INSERT INTO admin_archive VALUES('post',1)");assert.equal(read('?section=news').total,0);assert.throws(()=>read('?section=unknown'));assert.throws(()=>read('?tag=__proto__'));assert.throws(()=>read('?section=life&tag=word'));assert.throws(()=>read('?page=-1'));db.close();
+});
+test('channel input validates sections and game tags and retains older publishing clients',()=>{
+ assert.deepEqual(channelInput({theme:'game'}),{section:'game',gameTag:''});assert.deepEqual(channelInput({theme:'mood'}),{section:'life',gameTag:''});assert.deepEqual(channelInput({section:'news',gameTag:'lol'}),{section:'news',gameTag:'lol'});
+ for(const fields of [{section:'__proto__'},{section:'news',gameTag:'nope'},{section:'life',gameTag:'word'}])assert.throws(()=>channelInput(fields));
+});
