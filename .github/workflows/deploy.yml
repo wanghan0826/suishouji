@@ -20,6 +20,7 @@ jobs:
       - name: Check scripts and test a fresh deployment
         run: |
           node --check server.mjs
+          node --check deploy/prepare-release.mjs
           node --check scripts/xiaoji.mjs
           node --check scripts/word-game.mjs
           node --check scripts/community.mjs
@@ -75,3 +76,5 @@ jobs:
         run: |
           curl --fail --retry 3 --retry-delay 2 "https://suishouji.online/__deployment.json?check=$RELEASE_SHA" > /tmp/deployed.json
           node -e 'const fs=require("fs");if(JSON.parse(fs.readFileSync("/tmp/deployed.json")).commit!==process.env.RELEASE_SHA)process.exit(1)'
+          curl --fail --retry 3 --retry-delay 2 "https://suishouji.online/__asset-manifest.json?check=$RELEASE_SHA" > /tmp/assets.json
+          node -e 'const fs=require("fs"),a=JSON.parse(fs.readFileSync("/tmp/assets.json"));if(a.commit!==process.env.RELEASE_SHA||!Object.keys(a.assets||{}).length)process.exit(1)'
