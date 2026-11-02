@@ -1,0 +1,16 @@
+{
+  "generator": "Built-in image_gen",
+  "date": "2026-11-02",
+  "assets": [
+    {
+      "key": "game-chibi",
+      "prompt": "Use case: stylized-concept. Create a polished original Q版 chibi illustration for the game lobby of a friendly Chinese indie web game and community called Suishouji. Landscape 3:2 composition, single cohesive scene, no panels. On a tiny rounded cream table, a round beige capybara in a sage green hoodie and a small ivory rabbit in peach overalls play a word association game together. They each hold a small blank game card; above their heads two soft thought bubbles both contain the same little crescent moon, clearly celebrating an idea in common. Cute oversized heads, tiny bodies, rosy cheeks, rounded paws, joyful but gentle expressions. Soft 3D clay illustration with subtle matte felt texture, high quality cozy mobile-game editorial art. Small lilac star cushions and a leaf-shaped game token around the base. Soft mint to warm cream backdrop, gentle studio shadows and a few peach and lavender accents. Subjects fully visible and clearly readable on a phone, generous clean margins, balanced center composition, not too busy. No text, no lettering, no numbers, no logos, no watermarks. This is a website illustration asset, not a screenshot or UI mockup.",
+      "transparent_background": false
+    },
+    {
+      "key": "community-chibi",
+      "prompt": "Use case: stylized-concept. Create a polished original Q版 chibi illustration for the community banner of a friendly indie web-game and everyday-life sharing website. Landscape 3:2 composition, a single cohesive little gathering, no panels. A round beige capybara in a sage hoodie holds a small unbranded peach game controller; an ivory rabbit in peach overalls shares a tiny newspaper with blank abstract rectangles and no writing; a small lilac kitten shows a little illustrated journal containing a simple flower. They sit close together on soft rounded mint and cream cushions, talking happily, surrounded by just three small pastel speech bubbles, a houseplant and a little tea cup. Cute oversized heads, tiny bodies, rosy cheeks, rounded paws. Soft 3D clay illustration with subtle matte felt texture, cozy playful editorial quality, consistent sage green, warm cream, peach pink and lavender palette. Warm light, pale peach-cream background with mint accents, generous clean margins, subjects fully visible, focal characters large enough for mobile display. No text, no lettering, no numbers, no logos, no watermarks. An original website illustration asset, not a screenshot or UI mockup.",
+      "transparent_background": false
+    }
+  ]
+}
