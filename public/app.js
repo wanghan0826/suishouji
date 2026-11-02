@@ -487,23 +487,7 @@ function setupPostForm() {
     $('#charCount').textContent = $('#postText').value.length;
   });
 
-  $('#fileArea').addEventListener('click', e => { if (e.target !== $('#postFile')) $('#postFile').click(); });
-  $('#postFile').addEventListener('change', (e) => {
-    const f = e.target.files[0];
-    if (!f) return;
-    if (f.size > 60 * 1024 * 1024) {
-      toast('文件太大啦（限 60MB）');
-      e.target.value = '';
-      return;
-    }
-    const preview = $('#filePreview');
-    if (f.type.startsWith('image/')) {
-      preview.src = URL.createObjectURL(f);
-      preview.style.display = 'block';
-    } else {
-      preview.style.display = 'none';
-    }
-  });
+  SJAttachments.attach({input:$('#postFile'),preview:$('#filePreview'),status:$('#postFileSummary'),remove:$('#clearPostFile'),form:$('#postForm'),zone:$('#fileArea'),notify:toast});
 
   document.addEventListener('sj:logout',()=>{$('#postModal').classList.remove('show');$('#postForm').reset();$('#charCount').textContent='0';$('#filePreview').style.display='none';$('#filePreview').removeAttribute('src');$('#topicHint').style.display='none';joiningTopic=false;$('#postText').placeholder='此刻的心情、今天的见闻、想说又不好意思说的话...';});
   $('#postForm').addEventListener('submit', async (e) => {
@@ -546,7 +530,7 @@ function setupPostForm() {
       bindCardEvents($('#waterfallGrid'));
       if (post.media_type === 'image' && post.media) bgPool.unshift(post);
     } catch (err) {
-      toast(err.message);
+      toast(window.SJTouchUI?.draftError(err)||err.message);
     } finally {
       btn.disabled = false; btn.textContent = '发布 🚀';
     }

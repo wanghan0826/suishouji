@@ -94,8 +94,8 @@
       <label>发布账号</label>
       <input type="text" aria-label="发布昵称" id="postName" readonly placeholder="登录后显示账号">
 
-      <label>选择主题</label>
-      <label for="postWallTitle">弹幕文案（可选，最多24字）</label><input id="postWallTitle" maxlength="384" autocomplete="off" placeholder="一句完整短标题，正文在帖子里展开"><small>不填时使用正文首句的摘要，不影响完整帖子。</small><label for="postSection">发布分区</label><select id="postSection" name="section"><option value="life">生活日常</option><option value="game">游戏交流</option><option value="news">游戏资讯</option></select><div id="postGameWrap" hidden><label for="postGameTag">相关游戏（可选）</label><select id="postGameTag"><option value="">全部游戏 / 不指定</option><option value="word">同频猜词</option><option value="valorant">无畏契约</option><option value="hok">王者荣耀</option><option value="lol">英雄联盟</option><option value="cs">CS</option><option value="other">其他游戏</option></select></div><div class="theme-picker" id="themePicker"></div>
+      
+      <label for="postWallTitle">弹幕文案（可选，最多24字）</label><input id="postWallTitle" maxlength="384" autocomplete="off" placeholder="一句完整短标题，正文在帖子里展开"><small>不填时使用正文首句的摘要，不影响完整帖子。</small><label for="postSection">发布分区</label><select id="postSection" name="section"><option value="life">生活日常</option><option value="game">游戏交流</option><option value="news">游戏资讯</option></select><div id="postGameWrap" hidden><label for="postGameTag">相关游戏（可选）</label><select id="postGameTag"><option value="">全部游戏 / 不指定</option><option value="word">同频猜词</option><option value="valorant">无畏契约</option><option value="hok">王者荣耀</option><option value="lol">英雄联盟</option><option value="cs">CS</option><option value="other">其他游戏</option></select></div><label>内容主题</label><div class="theme-picker" id="themePicker"></div>
 
       <div class="topic-hint" id="topicHint" style="display:none">
         📌 正在参与今日话题：<b id="topicHintText"></b>
@@ -103,11 +103,11 @@
       </div>
 
       <label>图片/视频 <span style="font-weight:400">（60MB以内，可选）</span></label>
-      <div class="file-area" id="fileArea">
+      <div class="file-area" id="fileArea" role="button" tabindex="0" aria-label="选择图片或视频附件" aria-describedby="postFileSummary">
         📎 点击选择文件（支持拍照/相册）
-        <input type="file" id="postFile" accept="image/*,video/*">
+        <input type="file" id="postFile" accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm,video/quicktime">
       </div>
-      <img class="file-preview" id="filePreview" style="display:none">
+      <img class="file-preview" id="filePreview" alt="待发布图片预览" style="display:none"><div class="post-attachment-summary"><p id="postFileSummary" role="status"></p><button type="button" id="clearPostFile" class="text-button" hidden>移除附件 ×</button></div>
 
       <button type="submit" class="submit-btn" id="btnSubmit">发布 🚀</button>
     </form>
@@ -143,7 +143,7 @@
 <div class="toast" role="status" aria-live="polite" id="toast"></div>
 
 <script src="/user-auth.js?v=20261028-user"></script>
-<script src="/demo-mode.js"></script><script src="/wall-copy.js"></script><script src="/app.js?v=20261029-reader"></script>
+<script src="/demo-mode.js"></script><script src="/wall-copy.js"></script><script src="/attachment-picker.js"></script><script src="/app.js?v=20261029-reader"></script>
 <script src="/wall.js?v=20261029-reader"></script>
 <script src="/enhance.js?v=20261019-wall-4"></script>
 <nav class="mobile-nav" id="mobileNav" data-touch-layout="main" aria-label="手机导航"><a href="#wall" aria-current="location"><span aria-hidden="true">◌</span><span>弹幕</span></a><a href="/games"><span aria-hidden="true">◉</span><span>游戏</span></a><button type="button" data-mobile-compose aria-label="发布弹幕帖子"><span aria-hidden="true">＋</span><span>发布</span></button><a href="/plaza"><span aria-hidden="true">◫</span><span>社区</span></a><a href="/space"><span aria-hidden="true">♧</span><span>我的</span></a></nav>
