@@ -178,7 +178,9 @@ function startDanmakuLoop(posts) {
 
 /* ---------- 背景照片轮播 ---------- */
 function startBgSlideshow(posts) {
+  const initialSlideshow=startBgSlideshow;
   if (bgInterval) { clearInterval(bgInterval); bgInterval = null; }
+  if(document.documentElement.dataset.lightweight==='true'){$('#danmakuBg').style.backgroundImage='url("/assets/lake.jpg")';$('#danmakuBg').classList.add('show');return;}
   bgPool = posts.filter(p => p.media_type === 'image' && p.media);
   bgIndex = 0;
   const bg = $('#danmakuBg');
@@ -192,6 +194,7 @@ function startBgSlideshow(posts) {
     const p = bgPool[bgIndex % bgPool.length];
     bg.classList.remove('show');
     setTimeout(() => {
+      if(startBgSlideshow!==initialSlideshow||document.documentElement.dataset.lightweight==='true')return;
       const url = '/uploads/' + p.media;
       bg.style.backgroundImage = `url("${url}")`;
       const img = new Image();
@@ -210,14 +213,17 @@ function startBgSlideshow(posts) {
 }
 
 /* ---------- 瀑布流卡片 ---------- */
+const lazyMedia=typeof IntersectionObserver==='function'?new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting){const e=entry.target;if(e.dataset.src){e.src=e.dataset.src;delete e.dataset.src;}lazyMedia.unobserve(e);}},{rootMargin:'160px 0px'}):null;
+function hydrateMedia(container=document){for(const image of container.querySelectorAll('img[data-src]')){if(document.documentElement.dataset.lightweight==='true'&&lazyMedia)lazyMedia.observe(image);else{image.src=image.dataset.src;delete image.dataset.src;lazyMedia?.unobserve(image);}}}
+document.addEventListener('sj:appearance-change',()=>{if(document.documentElement.dataset.lightweight!=='true')hydrateMedia();});
 function cardHTML(post) {
   const t = THEMES[post.theme] || THEMES.mood;
   const name = post.name || '匿名小伙伴';
   let media = '';
   if (post.media) {
-    const src = '/uploads/' + post.media;
-    if (post.media_type === 'image') media = `<img class="card-media" src="${src}" loading="lazy" alt="用户分享的图片">`;
-    else if (post.media_type === 'video') media = `<video class="card-media video" src="${src}" muted preload="metadata"></video>`;
+    const src = '/uploads/' + encodeURIComponent(post.media),saving=document.documentElement.dataset.lightweight==='true';
+    if (post.media_type === 'image') media = `<img class="card-media" ${saving?'data-src':'src'}="${src}" loading="lazy" alt="用户分享的图片">`;
+    else if (post.media_type === 'video') media = `<video class="card-media video" src="${src}" muted preload="${saving?'none':'metadata'}"></video>`;
   }
   const topicTag = post.topic ? `<div style="font-size:11px;color:#d946ef;margin-bottom:6px">📌 今日话题</div>` : '';
   return `
@@ -237,6 +243,7 @@ function cardHTML(post) {
 let allPosts = [];
 
 function bindCardEvents(container) {
+  hydrateMedia(container);
   container.querySelectorAll('.card-heart:not([data-bound])').forEach(h => {
     h.setAttribute('data-bound', '1');
     h.addEventListener('click', (e) => {

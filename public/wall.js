@@ -16,18 +16,18 @@
   function saveProgress(){if(!pool.length)return;try{sessionStorage.setItem(progressKey,JSON.stringify({at:Date.now(),ids:pool.map(p=>p.id).join(','),nextId:pool[cursor%pool.length]?.id,width:area.clientWidth,lanes:lanes.map(l=>l.items.slice(0,5).map(e=>({id:Number(e.element.dataset.postId),x:e.x})))}));}catch{}}
   function shuffle(posts){const result=[...posts];for(let i=result.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[result[i],result[j]]=[result[j],result[i]];}return result;}
   function restoreProgress(){if(restored)return null;restored=true;try{const s=JSON.parse(sessionStorage.getItem(progressKey));if(s&&Number.isFinite(s.at)&&Date.now()-s.at>=0&&Date.now()-s.at<86400000&&typeof s.ids==='string'&&Number.isFinite(s.width)&&s.width>0&&Array.isArray(s.lanes)&&s.lanes.length<=7&&s.lanes.every(row=>Array.isArray(row)&&row.length<=5&&row.every(e=>e&&Number.isSafeInteger(e.id)&&Number.isFinite(e.x)&&Math.abs(e.x)<10000))){const byId=new Map(pool.map(p=>[p.id,p])),order=s.ids.split(',').map(Number);if(order.length!==pool.length||new Set(order).size!==pool.length||order.some(id=>!byId.has(id)))return null;pool=order.map(id=>byId.get(id));const next=pool.findIndex(p=>p.id===s.nextId);if(next>=0)cursor=next;return s;}}catch{}return null;}
-  let backgroundImages=[],backgroundIndex=0;
+  let backgroundImages=[],backgroundIndex=0;const lightweight=()=>document.documentElement.dataset.lightweight==='true';
   function changeBackground(){
-    bg.style.backgroundImage=backgroundImages.length?`url("/uploads/${encodeURIComponent(backgroundImages[backgroundIndex++%backgroundImages.length].media)}")`:'url("/assets/lake.jpg")';
+    bg.style.backgroundImage=!lightweight()&&backgroundImages.length?`url("/uploads/${encodeURIComponent(backgroundImages[backgroundIndex++%backgroundImages.length].media)}")`:'url("/assets/lake.jpg")';
     bg.classList.add('show');
   }
   function configureBackground(){
     if(bgInterval){clearInterval(bgInterval);bgInterval=null;}
-    if(document.documentElement.dataset.backgroundRotation==='true'&&backgroundImages.length>1){
+    if(!lightweight()&&document.documentElement.dataset.backgroundRotation==='true'&&backgroundImages.length>1){
       bgInterval=setInterval(()=>{if(!document.hidden&&!document.querySelector('#appearanceDialog[open]'))changeBackground();},12000);
     }
   }
-  document.addEventListener('sj:appearance-change',configureBackground);
+  document.addEventListener('sj:appearance-change',()=>{for(const lane of lanes)for(const entry of lane.items){const avatar=entry.element.querySelector('.wall-avatar');if(lightweight()){avatar.replaceChildren();avatar.textContent=icons[entry.post.theme]||'✦';}else if(entry.post.media&&entry.post.media_type==='image'&&!avatar.querySelector('img')){const image=document.createElement('img');image.alt='';image.src='/uploads/'+encodeURIComponent(entry.post.media);image.loading='lazy';avatar.replaceChildren(image);}}changeBackground();configureBackground();});
   let manualPaused=reduce.matches;
   const stopped=()=>manualPaused||document.hidden;
   const updateControl=()=>{
@@ -44,7 +44,7 @@
     button.setAttribute('aria-label',`打开${post.name||'匿名小伙伴'}的帖子：${post.text}`);
     button.style.setProperty('--post-color',theme.color);
     const avatar=document.createElement('span');avatar.className='wall-avatar';avatar.textContent=icons[post.theme]||'✦';avatar.setAttribute('aria-hidden','true');
-    if(post.media&&post.media_type==='image'){
+    if(!lightweight()&&post.media&&post.media_type==='image'){
       const image=document.createElement('img');image.alt='';image.src='/uploads/'+encodeURIComponent(post.media);image.loading='lazy';avatar.replaceChildren(image);
     }
     const copy=document.createElement('span');copy.className='wall-copy';

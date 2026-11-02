@@ -4,19 +4,21 @@
   const themes=['paper','mint','sky','rose','sand','night','forest','sunset'];
   const names={night:'静谧夜色',forest:'林间微光',sunset:'暖橙日落',paper:'晴日纸白',mint:'薄荷清晨',sky:'晴空浅蓝',rose:'樱花浅粉',sand:'奶杏暖阳'};
   const colors={night:'#101e26',forest:'#142e27',sunset:'#3c252d',paper:'#f0ede3',mint:'#e5f4ec',sky:'#e8f2fb',rose:'#f9eaf0',sand:'#f7eedf'};
-  let preferences={theme:'paper',automatic:false,interval:60,slideshow:false};
+  const saveDataDefault=navigator.connection?.saveData===true;
+  let preferences={theme:'paper',automatic:false,interval:60,slideshow:false,lightweight:saveDataDefault};
   try {
     const saved=JSON.parse(localStorage.getItem(key));
     if(saved&&typeof saved==='object')preferences={
       theme:themes.includes(saved.theme)?saved.theme:'paper',
       automatic:saved.automatic===true,
       interval:[30,60,300].includes(saved.interval)?saved.interval:60,
-      slideshow:saved.slideshow===true
+      slideshow:saved.slideshow===true,
+      lightweight:typeof saved.lightweight==='boolean'?saved.lightweight:saveDataDefault
     };
   } catch {}
   const root=document.documentElement;
   const apply=()=>{
-    root.dataset.appearance=preferences.theme;
+    root.dataset.appearance=preferences.theme;root.dataset.lightweight=String(preferences.lightweight);
     root.dataset.backgroundRotation=String(preferences.slideshow);
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content',colors[preferences.theme]);
   };
@@ -26,7 +28,7 @@
     const trigger=document.getElementById('btnAppearance');
     const automatic=document.getElementById('appearanceAutomatic');
     const interval=document.getElementById('appearanceInterval');
-    const slideshow=document.getElementById('appearanceSlideshow');
+    const slideshow=document.getElementById('appearanceSlideshow'),lightweight=document.getElementById('appearanceLightweight');
     const state=document.getElementById('appearanceState');
     const savedState=document.getElementById('appearanceSaved');
     const choices=[...dialog.querySelectorAll('[data-appearance-choice]')];
@@ -36,15 +38,15 @@
       automatic.checked=preferences.automatic;
       interval.value=String(preferences.interval);
       interval.disabled=!preferences.automatic;
-      slideshow.checked=preferences.slideshow;
-      state.textContent=`当前：${names[preferences.theme]} · ${preferences.automatic?'自动切换中':'已固定'}`;
+      slideshow.checked=preferences.slideshow;slideshow.disabled=preferences.lightweight;if(lightweight)lightweight.checked=preferences.lightweight;const slideNote=slideshow.closest('label')?.querySelector('small');if(slideNote)slideNote.textContent=preferences.lightweight?'首页省流模式下固定背景，关闭省流后可开启轮播':'每12秒更换一张帖子配图，关闭后固定当前图片';
+      state.textContent=`当前：${names[preferences.theme]} · ${preferences.automatic?'自动切换中':'已固定'}${preferences.lightweight?' · 首页省流中':''}`;
       trigger.title=`视觉主题：${names[preferences.theme]}`;
     }
     function persist(){
       try {localStorage.setItem(key,JSON.stringify(preferences));savedState.textContent='已自动保存到当前浏览器';}
       catch {savedState.textContent='当前浏览器无法保存设置，本次访问仍然有效';}
     }
-    function notify(){document.dispatchEvent(new CustomEvent('sj:appearance-change',{detail:{slideshow:preferences.slideshow}}));}
+    function notify(){document.dispatchEvent(new CustomEvent('sj:appearance-change',{detail:{slideshow:preferences.slideshow,lightweight:preferences.lightweight}}));}
     function startTimer(){
       clearInterval(timer);
       if(preferences.automatic)timer=setInterval(()=>{
@@ -60,6 +62,7 @@
     }));
     automatic.addEventListener('change',()=>{preferences.automatic=automatic.checked;render();persist();startTimer();});
     interval.addEventListener('change',()=>{preferences.interval=Number(interval.value);persist();startTimer();});
+    lightweight?.addEventListener('change',()=>{preferences.lightweight=lightweight.checked;apply();render();persist();notify();});
     slideshow.addEventListener('change',()=>{preferences.slideshow=slideshow.checked;apply();persist();notify();});
     trigger.addEventListener('click',()=>{render();dialog.showModal();});
     dialog.querySelector('[data-appearance-close]').addEventListener('click',()=>dialog.close());

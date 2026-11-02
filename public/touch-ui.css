@@ -16,3 +16,5 @@
 }
 
 .post-attachment-summary{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px}.post-attachment-summary [role=status]{font-size:12px;line-height:1.8;color:var(--text2);overflow-wrap:anywhere;min-width:0}.post-attachment-summary button{flex-shrink:0;min-height:44px}.file-area[role=button]:focus-visible{outline:3px solid #d9974a;outline-offset:3px}
+
+.card-media[data-src]{display:block;width:100%;aspect-ratio:4/3;min-height:160px;background:var(--surface2);color:var(--text2)}html[data-lightweight=true] .card-media.video{aspect-ratio:16/9;background:#1c2922}
