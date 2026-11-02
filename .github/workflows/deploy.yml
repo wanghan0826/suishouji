@@ -28,6 +28,7 @@ jobs:
           node --check public/profile-editor.js
           node --check public/wall-copy.js
           node --check public/mobile-lab.js
+          node --check public/touch-ui.js
           node --check public/demo-mode.js
           node --check public/word-game.js
           node --check public/app.js
