@@ -1,0 +1,9 @@
+import test from 'node:test';import assert from 'node:assert/strict';import{DatabaseSync}from'node:sqlite';import{ensureProfileDetails,readProfileDetails,validateProfileDetails,saveProfileDetails,parseAvatar}from'../scripts/profile-details.mjs';
+const input={displayName:'小记',tagline:'一起玩',region:'广东',occupation:'学生',website:'https://example.com',interests:['游戏','摄影','游戏'],games:['word','lol'],avatar:'rabbit'};
+test('profile details validate links, labels and avatar inputs and preserve optional legacy state',()=>{
+ const d=validateProfileDetails(input);assert.deepEqual(d.interests,['游戏','摄影']);assert.equal(d.website,'https://example.com/');for(const patch of [{website:'javascript:alert(1)'},{website:'https://user:pass@example.com/'},{interests:['过'.repeat(17)]},{games:['invalid']},{displayName:'名'.repeat(25)},{avatar:'unknown'},{avatarData:'data:image/svg+xml;base64,PHN2Zz4='}])assert.throws(()=>validateProfileDetails({...input,...patch}));
+ const db=new DatabaseSync(':memory:');ensureProfileDetails(db);ensureProfileDetails(db);assert.equal(readProfileDetails(db,1).displayName,'');saveProfileDetails(db,1,d);assert.equal(readProfileDetails(db,1).avatar,'rabbit');assert.equal(readProfileDetails(db,1).displayName,'小记');assert.ok(!JSON.stringify(readProfileDetails(db,1)).includes('blob'));db.close();
+});
+test('avatar payloads require raster signatures and bounded dimensions and bytes',()=>{
+ const image='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6kZYAAAAASUVORK5CYII=';assert.equal(parseAvatar(image).mime,'image/png');for(const value of ['data:image/webp;base64,PHNjcmlwdD4=',image+'?', 'data:image/png;base64,'+'A'.repeat(360000)])assert.throws(()=>parseAvatar(value));const b=Buffer.from(image.split(',')[1],'base64');b.writeUInt32BE(65535,16);assert.throws(()=>parseAvatar('data:image/png;base64,'+b.toString('base64')));
+});

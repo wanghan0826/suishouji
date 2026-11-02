@@ -180,6 +180,17 @@ test('optional wall titles persist with the authenticated post, reject invalid i
  assert.equal((await f.call('/mobile-lab')).status,200);assert.equal((await f.call('/wall-demo')).status,200);
 });
 
+test('personal details and avatars follow space access, remain owner-managed and are not leaked to public feeds',async t=>{
+ const f=await fixture(t),owner=await f.register('profile_owner'),fan=await f.register('profile_fan'),other=await f.register('profile_other'),base='/api/spaces/profile_owner';
+ const details={displayName:'私密昵称',tagline:'私密签名',region:'私密地区',occupation:'私密身份',website:'https://example.com/',interests:['摄影'],games:['word'],avatar:'upload',avatarData:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6kZYAAAAASUVORK5CYII='},settings={title:'公开空间名称',bio:'简介',visibility:'mutual',color:'mint',details};
+ assert.equal((await f.call(base+'/profile',{method:'POST',body:settings,session:other})).status,403);assert.equal((await f.call(base+'/profile',{method:'POST',body:settings,session:owner,csrfOverride:'wrong'})).status,403);assert.equal((await f.call(base+'/profile',{method:'POST',body:settings,session:owner})).status,200);assert.equal((await f.call(base,{session:owner})).data.details.displayName,'私密昵称');assert.equal((await f.call(base)).data.details,null);assert.equal((await f.call(base+'/avatar')).status,401);assert.equal((await f.call(base+'/avatar',{session:other})).status,403);
+ const image=await f.call(base+'/avatar',{session:owner});assert.equal(image.status,200);assert.equal(image.headers.get('content-type'),'image/png');assert.match(image.headers.get('cache-control'),/no-store/);assert.ok(!JSON.stringify((await f.call('/api/posts')).data).includes('私密昵称'));
+ await f.call(base+'/follow',{method:'POST',session:fan,body:{}});assert.equal((await f.call(base,{session:fan})).data.details,null);await f.call('/api/spaces/profile_fan/follow',{method:'POST',session:owner,body:{}});assert.equal((await f.call(base,{session:fan})).data.details.region,'私密地区');assert.equal((await f.call(base+'/avatar',{session:fan})).status,200);await f.call(base+'/unfollow',{method:'POST',session:fan,body:{}});assert.equal((await f.call(base,{session:fan})).data.details,null);assert.equal((await f.call(base+'/avatar',{session:fan})).status,403);
+ const legacy={title:'公开空间名称',bio:'更新简介',visibility:'public',color:'sky'};assert.equal((await f.call(base+'/profile',{method:'POST',body:legacy,session:owner})).status,200);assert.equal((await f.call(base)).data.details.displayName,'私密昵称');assert.equal((await f.call(base+'/avatar')).status,200);
+ assert.equal((await f.call(base+'/profile',{method:'POST',body:{...legacy,title:'应回滚',details:{...details,website:'javascript:alert(1)'}},session:owner})).status,400);assert.equal((await f.call(base)).data.title,'公开空间名称');
+ await f.call(base+'/profile',{method:'POST',body:{...legacy,visibility:'mutual',details:{...details,avatar:'cat',avatarData:undefined}},session:owner});assert.equal((await f.call(base+'/avatar',{session:owner})).status,404);assert.equal((await f.call(base)).data.details,null);
+});
+
 test('registration establishes hashed sessions; posting and comments use the account, never a supplied nickname',async t=>{
  const f=await fixture(t);assert.equal((await f.call('/api/auth/status')).data.user,null);
  assert.equal((await f.call('/api/posts',{method:'POST'})).status,401);assert.equal((await f.call('/api/checkin',{method:'POST',body:{}})).status,401);

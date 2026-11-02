@@ -1,0 +1,25 @@
+import crypto from 'node:crypto';
+const avatars=new Set(['initial','capybara','rabbit','cat','game','leaf','upload']),games=new Set(['word','valorant','hok','lol','cs','other']);
+export function ensureProfileDetails(db){db.exec("CREATE TABLE IF NOT EXISTS user_profile_details(user_id INTEGER PRIMARY KEY,display_name TEXT NOT NULL DEFAULT '',tagline TEXT NOT NULL DEFAULT '',region TEXT NOT NULL DEFAULT '',occupation TEXT NOT NULL DEFAULT '',website TEXT NOT NULL DEFAULT '',interests TEXT NOT NULL DEFAULT '[]',games TEXT NOT NULL DEFAULT '[]',avatar TEXT NOT NULL DEFAULT 'initial',avatar_blob BLOB,avatar_mime TEXT NOT NULL DEFAULT '',avatar_version TEXT NOT NULL DEFAULT '')");}
+const fail=message=>{throw Object.assign(Error(message),{status:400});};
+function text(value,max,label){if(typeof value!=='string'||!value.isWellFormed()||Array.from(value.trim()).length>max||/[\p{Cc}\u202a-\u202e\u2066-\u2069]/u.test(value))fail(label+'格式无效，最多'+max+'字');return value.trim();}
+export function parseAvatar(data){
+ if(typeof data!=='string'||data.length>360000)fail('头像图片过大');const match=/^data:image\/(webp|png);base64,([A-Za-z0-9+/]+={0,2})$/.exec(data);if(!match)fail('头像须为处理后的 PNG 或 WebP 图片');const blob=Buffer.from(match[2],'base64');if(blob.toString('base64')!==match[2]||blob.length>256*1024||blob.length<30)fail('头像图片格式或大小无效');let w=0,h=0;
+ if(match[1]==='png'){if(blob.length<33||blob.subarray(0,8).toString('hex')!=='89504e470d0a1a0a'||blob.subarray(12,16).toString()!=='IHDR')fail('头像图片无效');w=blob.readUInt32BE(16);h=blob.readUInt32BE(20);}
+ else{if(blob.subarray(0,4).toString()!=='RIFF'||blob.subarray(8,12).toString()!=='WEBP'||blob.readUInt32LE(4)+8!==blob.length)fail('头像图片无效');const kind=blob.subarray(12,16).toString();if(kind==='VP8X'){w=1+blob.readUIntLE(24,3);h=1+blob.readUIntLE(27,3);}else if(kind==='VP8L'&&blob[20]===47){w=1+((blob[21]|blob[22]<<8)&0x3fff);h=1+((blob[22]>>6|blob[23]<<2|blob[24]<<10)&0x3fff);}else if(kind==='VP8 '&&blob.subarray(23,26).toString('hex')==='9d012a'){w=blob.readUInt16LE(26)&0x3fff;h=blob.readUInt16LE(28)&0x3fff;}else fail('头像图片无效');}
+ if(w<1||h<1||w>512||h>512)fail('头像尺寸不能超过512像素');return {blob,mime:'image/'+match[1],version:crypto.randomBytes(8).toString('hex')};
+}
+export function validateProfileDetails(input){
+ if(!input||typeof input!=='object'||Array.isArray(input))fail('个人资料格式无效');
+ const value={displayName:text(input.displayName,24,'昵称'),tagline:text(input.tagline,60,'个性签名'),region:text(input.region,40,'所在地区'),occupation:text(input.occupation,40,'职业/身份'),website:text(input.website,240,'个人网址')};
+ if(value.website){let u;try{u=new URL(value.website);}catch{fail('个人网址请填写完整的 http:// 或 https:// 地址');}if(!['http:','https:'].includes(u.protocol)||u.username||u.password)fail('个人网址仅支持不含账号密码的 HTTP 或 HTTPS 地址');value.website=u.href;if(value.website.length>300)fail('个人网址过长');}
+ if(!Array.isArray(input.interests)||input.interests.length>8)fail('兴趣标签最多8个');value.interests=[...new Set(input.interests.map(x=>text(x,16,'兴趣标签')).filter(Boolean))];
+ if(!Array.isArray(input.games)||input.games.length>6||input.games.some(x=>!games.has(x)))fail('请选择有效的游戏标签');value.games=[...new Set(input.games)];if(!avatars.has(input.avatar))fail('请选择有效头像');value.avatar=input.avatar;
+ const image=input.avatarData===undefined?null:parseAvatar(input.avatarData);if(image&&value.avatar!=='upload')fail('上传头像与当前选择不一致');return {...value,image};
+}
+export function readProfileDetails(db,id){const row=db.prepare('SELECT display_name displayName,tagline,region,occupation,website,interests,games,avatar,avatar_version avatarVersion,(avatar_blob IS NOT NULL) hasUpload FROM user_profile_details WHERE user_id=?').get(id);if(!row)return {displayName:'',tagline:'',region:'',occupation:'',website:'',interests:[],games:[],avatar:'initial',avatarVersion:'',hasUpload:false};return {...row,hasUpload:!!row.hasUpload,interests:JSON.parse(row.interests),games:JSON.parse(row.games)};}
+export function saveProfileDetails(db,id,v){
+ const old=db.prepare('SELECT avatar_blob,avatar_mime,avatar_version FROM user_profile_details WHERE user_id=?').get(id);if(v.avatar==='upload'&&!v.image&&!old?.avatar_blob)fail('请先选择一张头像图片');
+ const image=v.avatar==='upload'?(v.image||{blob:old.avatar_blob,mime:old.avatar_mime,version:old.avatar_version}):{blob:null,mime:'',version:''};
+ db.prepare('INSERT INTO user_profile_details(user_id,display_name,tagline,region,occupation,website,interests,games,avatar,avatar_blob,avatar_mime,avatar_version) VALUES(?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET display_name=excluded.display_name,tagline=excluded.tagline,region=excluded.region,occupation=excluded.occupation,website=excluded.website,interests=excluded.interests,games=excluded.games,avatar=excluded.avatar,avatar_blob=excluded.avatar_blob,avatar_mime=excluded.avatar_mime,avatar_version=excluded.avatar_version').run(id,v.displayName,v.tagline,v.region,v.occupation,v.website,JSON.stringify(v.interests),JSON.stringify(v.games),v.avatar,image.blob,image.mime,image.version);
+}
