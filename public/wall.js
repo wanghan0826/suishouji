@@ -30,7 +30,7 @@
   }
   document.addEventListener('sj:appearance-change',()=>{for(const lane of lanes)for(const entry of lane.items){const avatar=entry.element.querySelector('.wall-avatar');if(lightweight()){avatar.replaceChildren();avatar.textContent=icons[entry.post.theme]||'✦';}else if(entry.post.media&&entry.post.media_type==='image'&&!avatar.querySelector('img')){const image=document.createElement('img');image.alt='';image.src='/uploads/'+encodeURIComponent(entry.post.media);image.loading='lazy';avatar.replaceChildren(image);}}changeBackground();configureBackground();});
   let manualPaused=reduce.matches;
-  const wallInUse=()=>!document.hidden&&!pageSuspended&&wallVisible&&!(innerWidth<=760&&document.body.classList.contains('reader-expanded'));
+  const wallInUse=()=>!document.hidden&&!pageSuspended&&wallVisible&&!document.body.classList.contains('sj-image-open')&&!(innerWidth<=760&&document.body.classList.contains('reader-expanded'));
   const stopped=()=>manualPaused||!wallInUse();
   const updateControl=()=>{
     toggle.textContent=manualPaused?'▶ 播放弹幕':'Ⅱ 暂停弹幕';
@@ -158,6 +158,7 @@
   window.addEventListener('pageshow',()=>{pageSuspended=false;updateControl();});
   setInterval(()=>{if(!stopped())saveProgress();},5000);
   document.addEventListener('sj:reading-change',()=>{layout();if(stopped())saveProgress();});
+  document.addEventListener('sj:image-view-change',()=>{if(stopped())saveProgress();updateControl();});
   new ResizeObserver(()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(layout,120);}).observe(area);
   if(typeof IntersectionObserver==='function')new IntersectionObserver(entries=>{const visible=entries[0].isIntersecting;if(wallVisible&&!visible)saveProgress();wallVisible=visible;updateControl();}).observe(area);
   if(allPosts.length)setPosts(allPosts);

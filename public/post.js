@@ -98,7 +98,7 @@
    if(post.media){
     const src='/uploads/'+encodeURIComponent(post.media);
     if(post.media_type==='image'){
-     const figure=document.createElement('figure'),link=document.createElement('a'),image=document.createElement('img'),caption=document.createElement('figcaption');link.href=src;link.target='_blank';link.rel='noopener';link.setAttribute('aria-label','查看帖子原图');image.src=src;image.alt=title+' · 帖子配图';caption.textContent='点击图片查看原图';link.append(image);figure.append(link,caption);$('postMedia').append(figure);
+     const figure=document.createElement('figure'),link=document.createElement('a'),image=document.createElement('img'),caption=document.createElement('figcaption');link.href=src;link.target='_blank';link.rel='noopener';link.dataset.imageViewer='';link.dataset.postId=String(post.id);link.setAttribute('aria-label','放大查看帖子配图');image.src=src;image.alt=title+' · 帖子配图';caption.textContent='点击放大图片';link.append(image);figure.append(link,caption);$('postMedia').append(figure);
     }else if(post.media_type==='video'){
      const video=document.createElement('video');video.src=src;video.controls=true;video.playsInline=true;video.setAttribute('playsinline','');video.setAttribute('webkit-playsinline','');video.preload='metadata';video.setAttribute('aria-label','帖子视频');
      const toggle=document.createElement('button');toggle.type='button';toggle.className='reader-video-toggle';toggle.textContent='播放视频';

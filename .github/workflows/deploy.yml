@@ -38,6 +38,7 @@ jobs:
           node --check public/wall.js
           node --check public/appearance.js
           node --check public/post.js
+          node --check public/image-viewer.js
           node --check public/mobile.js
           node --check public/user-auth.js
           node --check public/plaza.js
