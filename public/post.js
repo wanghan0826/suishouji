@@ -1,12 +1,22 @@
 (() => {
- const $=id=>document.getElementById(id),routeId=()=>location.pathname.match(/^\/post\/(\d+)\/?$/)?.[1];
+ const $=id=>document.getElementById(id),demoPage=/^\/wall-demo\/?$/.test(location.pathname);
+ const demoHome=()=>{const url=new URL(location.href);url.searchParams.delete('post');return url.pathname+url.search+url.hash;};
+ const routeId=()=>demoPage?(/^\d+$/.test(new URLSearchParams(location.search).get('post')||'')?new URLSearchParams(location.search).get('post'):null):location.pathname.match(/^\/post\/(\d+)\/?$/)?.[1];
  const categories={mood:'心情',daily:'日常',scene:'风景',food:'美食',vent:'吐槽',secret:'树洞',game:'游戏',campus:'校园',life:'生活',music:'音乐',travel:'旅行',tech:'科技'};
  let post,toastTimer,replyTo=null,id=null,loadVersion=0,commentSnapshot="",commentGeneration=0;
+ let origin=null,closing=false,closeTarget=null;
+ function savedOrigin(value){if(!value||!Number.isFinite(value.y)||value.y<0||value.y>1e7||typeof value.url!=='string')return null;try{const url=new URL(value.url,location.origin);if(url.origin===location.origin&&['/','/index.html','/wall-demo','/wall-demo/'].includes(url.pathname))return {url:url.pathname+url.search+url.hash,y:value.y};}catch{}return null;}
  const announce=()=>document.dispatchEvent(new Event('sj:reading-change'));
  function stopMedia(){for(const video of $('postMedia').querySelectorAll('video'))video.pause();}
- function closeReader(update=true){
+ function closeReader(update=true,target=null){
+  if(target)closeTarget=target;
+  if(update&&closing)return;
+  if(update&&origin&&history.state?.sjReaderEntry&&history.length>1){closing=true;history.back();return;}
+  closing=false;
   loadVersion++;stopMedia();id=null;post=null;$('postReader').hidden=true;document.body.classList.remove('has-open-post','reader-expanded');$('readerExpand').textContent='展开阅读';$('readerExpand').setAttribute('aria-expanded','false');
-  window.SJTrack?.('view','/');document.title='随手记 · 一起玩，聊到一起';if(update)history.pushState(null,'','/');announce();
+  window.SJTrack?.('view','/');document.title=demoPage?'竖屏弹幕演示 · 随手记':'随手记 · 一起玩，聊到一起';document.querySelector('meta[name="description"]').content='随手记，一个以互动小游戏为入口的弹幕社区。玩同频猜词，交流游戏、分享资讯，也记录生活。';const canonical=document.querySelector('link[rel="canonical"]');if(canonical)canonical.href=location.origin+(demoPage?'/wall-demo':'/');if(update)history.replaceState(null,'',origin?.url||(demoPage?demoHome():'/'));announce();
+  const restore=savedOrigin(history.state?.sjReaderReturn)||origin,anchor=closeTarget;closeTarget=null;
+  requestAnimationFrame(()=>{if(routeId()||!$('postReader').hidden)return;if(anchor)document.querySelector(anchor)?.scrollIntoView({behavior:'instant'});else if(restore){window.scrollTo({top:restore.y,behavior:'instant'});origin?.focus?.isConnected&&origin.focus.focus({preventScroll:true});}});
  }
  const date=ts=>new Date(ts).toLocaleString('zh-CN',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
  function notify(text){$('toast').textContent=text;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),3000);}
@@ -68,10 +78,14 @@
  async function load(nextId,update=true){
   if(!/^\d+$/.test(String(nextId)))return;
   if(id===String(nextId)&&!$('postReader').hidden)return;
+  const wasOpen=!$('postReader').hidden;
+  if(update&&!wasOpen){origin={url:location.pathname+location.search+location.hash,y:scrollY,focus:document.activeElement};history.replaceState({...history.state,sjReaderReturn:{url:origin.url,y:origin.y}},'',location.href);}
+  else if(!origin)origin=savedOrigin(history.state?.sjReaderOrigin);
+  closing=false;
   const version=++loadVersion;stopMedia();id=String(nextId);post=null;
   $('postMedia').replaceChildren();$('postBody').replaceChildren();$('postComments').replaceChildren();$('postArticle').hidden=true;$('postState').hidden=false;$('postState').textContent='正在展开这条弹幕…';$('postTopic').hidden=true;$('postShareFallback').hidden=true;$('postCommentText').value='';setReply(null);
   $('postReader').hidden=false;document.body.classList.add('has-open-post');document.body.classList.remove('reader-expanded');$('readerExpand').textContent='展开阅读';$('readerExpand').setAttribute('aria-expanded','false');
-  if(update)history.pushState({sjPost:id},'','/post/'+id);window.scrollTo({top:0,behavior:'instant'});$('postContent').scrollTop=0;announce();
+  if(update){const url=demoPage?new URL(location.href):null;if(url)url.searchParams.set('post',id);const address=url?url.pathname+url.search+url.hash:'/post/'+id,state={sjPost:id,sjReaderEntry:!!origin,sjReaderOrigin:origin?{url:origin.url,y:origin.y}:null};if(wasOpen)history.replaceState(state,'',address);else history.pushState(state,'',address);}window.scrollTo({top:0,behavior:'instant'});$('postContent').scrollTop=0;announce();
   try{
    const data=await request('/api/posts/'+id);if(version!==loadVersion)return;post=data.post;window.SJTrack?.('view','/post/'+id);
    const discussion=post.text.startsWith('【讨论｜');$('readerOrigin').hidden=discussion;$('readerBackToPlaza').hidden=!discussion;
@@ -93,7 +107,7 @@
     }
    }
    $('postState').hidden=true;$('postArticle').hidden=false;
-   let canonical=document.querySelector('link[rel="canonical"]');if(!canonical){canonical=document.createElement('link');canonical.rel='canonical';document.head.append(canonical);}canonical.href=location.origin+'/post/'+id;
+   let canonical=document.querySelector('link[rel="canonical"]');if(!canonical){canonical=document.createElement('link');canonical.rel='canonical';document.head.append(canonical);}canonical.href=location.origin+(demoPage?'/wall-demo':'/post/'+id);
    comments();
   }catch(error){if(version!==loadVersion)return;$('postState').textContent=error.status===404?'这条分享不存在或已下架，收起后看看其他弹幕吧。':'帖子暂时无法加载，请刷新重试。';document.title=error.status===404?'帖子不存在 · 随手记':'帖子加载失败 · 随手记';}
  }
@@ -123,7 +137,7 @@
  window.SJOpenPost=load;
  document.addEventListener('click',event=>{
   const homeLink=event.target.closest('.brand,.main-nav a');
-  if(homeLink&&(homeLink.hash||new URL(homeLink.href,location.href).pathname==='/')&&document.body.classList.contains('has-open-post')&&event.button===0&&!event.metaKey&&!event.ctrlKey&&!event.shiftKey&&!event.altKey){event.preventDefault();const target=homeLink.hash;closeReader();if(target)document.querySelector(target)?.scrollIntoView();return;}
+  if(homeLink&&(homeLink.hash||new URL(homeLink.href,location.href).pathname==='/')&&document.body.classList.contains('has-open-post')&&event.button===0&&!event.metaKey&&!event.ctrlKey&&!event.shiftKey&&!event.altKey){event.preventDefault();closeReader(true,homeLink.hash||'#wall');return;}
   const link=event.target.closest('a.wall-post,a.card-link');if(!link||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey||link.target==='_blank')return;
   const url=new URL(link.href),match=url.pathname.match(/^\/post\/(\d+)$/);if(url.origin!==location.origin||!match)return;event.preventDefault();load(match[1]);
  });
