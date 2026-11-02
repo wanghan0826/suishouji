@@ -15,7 +15,7 @@ export function ensureCommunity(db){
 export function channelFilter(url,conditions,args,alias='p'){
  const section=url.searchParams.get('section')||'',gameTag=url.searchParams.get('tag')||'';
  if(section&&!own(SECTIONS,section)||gameTag&&!own(GAME_TAGS,gameTag)||section==='life'&&gameTag)throw Error('分区筛选无效');
- if(section){conditions.push(`EXISTS(SELECT 1 FROM post_channels pc WHERE pc.post_id=${alias}.id AND pc.section=?)`);args.push(section);}
+ if(section){conditions.push(`COALESCE((SELECT pc.section FROM post_channels pc WHERE pc.post_id=${alias}.id),CASE WHEN ${alias}.theme='game' THEN 'game' ELSE 'life' END)=?`);args.push(section);}
  if(gameTag){conditions.push(`EXISTS(SELECT 1 FROM post_channels pc WHERE pc.post_id=${alias}.id AND pc.game_tag=?)`);args.push(gameTag);}
 }
 export function readCommunity(db,url){
@@ -26,8 +26,8 @@ export function readCommunity(db,url){
  const theme=url.searchParams.get('theme')||'';if(theme){where.push('p.theme=?');args.push(theme);}
  if(q){where.push("p.text LIKE ? ESCAPE '\\'");args.push('%'+q.replace(/[\\%_]/g,'\\$&')+'%');}
  const visible=publicCommentVisible();if(sort==='unanswered')where.push(`NOT EXISTS(SELECT 1 FROM comments c WHERE c.post_id=p.id AND ${visible})`);
- const base=`FROM posts p JOIN post_channels pc ON pc.post_id=p.id WHERE ${where.join(' AND ')}`;
+ const base=`FROM posts p LEFT JOIN post_channels pc ON pc.post_id=p.id WHERE ${where.join(' AND ')}`;
  const total=db.prepare('SELECT COUNT(*) total '+base).get(...args).total;
- const items=db.prepare(`SELECT p.id,p.text,p.name,p.theme,p.media,p.media_type,p.created_at,p.hearts,pc.section,pc.game_tag gameTag,(SELECT COUNT(*) FROM comments c WHERE c.post_id=p.id AND ${visible}) replies,MAX(p.created_at,COALESCE((SELECT MAX(c.created_at) FROM comments c WHERE c.post_id=p.id AND ${visible}),0)) activity ${base} ORDER BY ${sort==='active'?'activity':'p.created_at'} DESC,p.id DESC LIMIT 20 OFFSET ?`).all(...args,(page-1)*20);
+ const items=db.prepare(`SELECT p.id,p.text,p.name,p.theme,p.media,p.media_type,p.created_at,p.hearts,COALESCE(pc.section,CASE WHEN p.theme='game' THEN 'game' ELSE 'life' END) section,COALESCE(pc.game_tag,'') gameTag,(SELECT COUNT(*) FROM comments c WHERE c.post_id=p.id AND ${visible}) replies,MAX(p.created_at,COALESCE((SELECT MAX(c.created_at) FROM comments c WHERE c.post_id=p.id AND ${visible}),0)) activity ${base} ORDER BY ${sort==='active'?'activity':'p.created_at'} DESC,p.id DESC LIMIT 20 OFFSET ?`).all(...args,(page-1)*20);
  return {items,total,page,pages:Math.max(1,Math.ceil(total/20))};
 }
