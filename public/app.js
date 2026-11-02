@@ -74,6 +74,7 @@ async function apiPost(path, body, authUI) {
     opt.headers['Content-Type'] = 'application/json';
     opt.body = JSON.stringify(body || {});
   }
+  if(authUI?.requestKey)opt.headers['X-SJ-Post-Request']=authUI.requestKey;
   const res = await fetch(path, opt);
   const data = await res.json();
   if (!res.ok) {if(res.status===401){await window.SJAuth.refresh();window.SJAuth.open(authUI);}const error=new Error(data.error || '请求失败');error.status=res.status;throw error;}
@@ -495,10 +496,12 @@ function setupPostForm() {
   });
 
   SJAttachments.attach({input:$('#postFile'),preview:$('#filePreview'),status:$('#postFileSummary'),remove:$('#clearPostFile'),form:$('#postForm'),zone:$('#fileArea'),notify:toast});
+  const publishRequest=SJPostRequests.attach($('#postForm'));
 
   document.addEventListener('sj:logout',()=>{$('#postModal').classList.remove('show');$('#postForm').reset();$('#charCount').textContent='0';$('#filePreview').style.display='none';$('#filePreview').removeAttribute('src');$('#topicHint').style.display='none';joiningTopic=false;$('#postText').placeholder='此刻的心情、今天的见闻、想说又不好意思说的话...';});
   $('#postForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+    if($('#btnSubmit').disabled)return;
     const text = $('#postText').value.trim();
     if (!text) { toast('说点什么吧～'); return; }
     const name = $('#postName').value.trim();
@@ -518,8 +521,8 @@ function setupPostForm() {
     const btn = $('#btnSubmit');
     btn.disabled = true; btn.textContent = '发布中...';
     try {
-      const data = await apiPost('/api/posts', fd, {resume:()=>{$('#postModal').classList.add('show');$('#postText').focus();},purpose:'登录已过期，重新登录后可继续编辑这条弹幕。'});
-      toast('发布成功～');
+      const data = await apiPost('/api/posts', fd, {requestKey:publishRequest.key(fd),resume:()=>{$('#postModal').classList.add('show');$('#postText').focus();},purpose:'登录已过期，重新登录后可继续编辑这条弹幕。'});
+      toast(data.replayed?'已确认发布成功～':'发布成功～');
       $('#postModal').classList.remove('show');
       $('#postForm').reset();
       window.SJAuth.render();

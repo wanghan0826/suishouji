@@ -149,8 +149,8 @@ async function fixture(t,{secure=false}={}){
  const child=spawn(process.execPath,['server.mjs'],{env:{...process.env,PORT:String(port),EXTRA_PORTS:'',DATA_DIR:data,SITE_ORIGIN:origin,HOST:'127.0.0.1'},stdio:['ignore','pipe','pipe']});let logs='';child.stdout.on('data',x=>logs+=x);child.stderr.on('data',x=>logs+=x);
  let db;t.after(async()=>{db?.close();child.kill();await new Promise(r=>child.exitCode!==null?r():child.once('exit',r));await fs.rm(data,{recursive:true,force:true});});
  let ready=false;for(let i=0;i<100;i++){try{if((await fetch(base+'/api/topic')).ok){ready=true;break;}}catch{}await delay(50);}assert.ok(ready,logs);db=new DatabaseSync(path.join(data,'wall.db'));
- async function call(route,{method='GET',body,session,originOverride,csrfOverride,forwardTls=false,uaOverride}={}){
-  const headers={};if(uaOverride)headers['User-Agent']=uaOverride;if(session){headers.Cookie=session.cookie;headers['X-SJ-CSRF']=csrfOverride??session.csrf;headers['X-CSRF-Token']=session.csrf;}
+ async function call(route,{method='GET',body,session,originOverride,csrfOverride,forwardTls=false,uaOverride,requestKey}={}){
+  const headers={};if(requestKey!==undefined)headers['X-SJ-Post-Request']=requestKey;if(uaOverride)headers['User-Agent']=uaOverride;if(session){headers.Cookie=session.cookie;headers['X-SJ-CSRF']=csrfOverride??session.csrf;headers['X-CSRF-Token']=session.csrf;}
   if(method!=='GET')headers.Origin=originOverride??origin;if(forwardTls)headers['X-Forwarded-Proto']='https';
   if(body!==undefined&&!(body instanceof FormData))headers['Content-Type']='application/json';
   const r=await fetch(base+route,{method,headers,...(body!==undefined?{body:body instanceof FormData?body:JSON.stringify(body)}:{})});const text=await r.text();let json;try{json=JSON.parse(text);}catch{json=text;}return {status:r.status,data:json,cookie:r.headers.get('set-cookie'),headers:r.headers};
@@ -158,8 +158,37 @@ async function fixture(t,{secure=false}={}){
  const register=async(username='account_one')=>{const r=await call('/api/auth/register',{method:'POST',body:{username,password,accept:true}});assert.equal(r.status,200,JSON.stringify(r.data));return {...r.data,cookie:r.cookie.split(';')[0]};};
  const login=async(username='account_one',pwd=password)=>{const r=await call('/api/auth/login',{method:'POST',body:{username,password:pwd}});return {...r.data,cookie:r.cookie?.split(';')[0],status:r.status};};
  const admin=async()=>{const r=await call('/api/admin/login',{method:'POST',body:{username:'admin',password:adminPassword}});assert.equal(r.status,200);return {...r.data,cookie:r.cookie.split(';')[0]};};
- return {call,register,login,admin,db,origin};
+ return {call,register,login,admin,db,origin,data};
 }
+
+test('post retries confirm one durable post, reject changed payloads, preserve account isolation and respect moderation',async t=>{
+ const f=await fixture(t),owner=await f.register('retry_owner'),other=await f.register('retry_other');
+ const form=(text='响应可能丢失的帖子',bytes='image-one',section='game')=>{const data=new FormData();data.set('text',text);data.set('theme','game');data.set('section',section);data.set('gameTag',section==='game'?'word':'');data.set('wallTitle','短标题');data.set('media',new Blob([bytes],{type:'image/png'}),'test.png');return data;};
+ const requestKey='local-request-one-1234',options={method:'POST',session:owner,requestKey};
+ assert.equal((await f.call('/api/posts',{...options,session:undefined,body:form()})).status,401);
+ assert.equal((await f.call('/api/posts',{...options,csrfOverride:'bad',body:form()})).status,403);
+ assert.equal((await f.call('/api/posts',{...options,requestKey:'bad',body:form()})).status,400);
+ const first=await f.call('/api/posts',{...options,body:form()});assert.equal(first.status,200);const id=first.data.post.id;
+ // A new multipart boundary and File instance must still match the same bytes.
+ for(let i=0;i<7;i++){const retry=await f.call('/api/posts',{...options,body:form()});assert.equal(retry.status,200);assert.equal(retry.data.post.id,id);assert.equal(retry.data.replayed,true);}
+ assert.equal(f.db.prepare('SELECT COUNT(*) n FROM posts').get().n,1);assert.equal((await fs.readdir(path.join(f.data,'uploads'))).length,1);
+ assert.equal(f.db.prepare("SELECT SUM(n) n FROM social_activity_daily WHERE kind='post'").get().n,1);
+ for(const body of [form('更改了正文'),form(undefined,'different-image'),form(undefined,undefined,'life')])assert.equal((await f.call('/api/posts',{...options,body})).status,409);
+ const someoneElse=await f.call('/api/posts',{...options,session:other,body:form()});assert.equal(someoneElse.status,200);assert.notEqual(someoneElse.data.post.id,id);
+ const admin=await f.admin();await f.call('/api/admin/posts/'+id+'/archive',{method:'POST',session:admin,body:{}});
+ const hidden=await f.call('/api/posts',{...options,body:form()});assert.equal(hidden.status,410);assert.equal(hidden.data.post,undefined);assert.equal(f.db.prepare('SELECT COUNT(*) n FROM posts').get().n,2);
+ await f.call('/api/admin/posts/'+id+'/restore',{method:'POST',session:admin,body:{}});assert.equal((await f.call('/api/posts',{...options,body:form()})).data.post.id,id);
+ f.db.prepare('UPDATE site_users SET disabled=1 WHERE id=?').run(owner.user.id);assert.equal((await f.call('/api/posts',{...options,body:form()})).status,403);
+});
+
+test('simultaneous media retries write one post and keep one upload; older clients can still publish',async t=>{
+ const f=await fixture(t),owner=await f.register('parallel_post');const form=()=>{const data=new FormData();data.set('discussion','1');data.set('discussionTitle','手机弱网讨论');data.set('text','同一次提交只能产生一条讨论');data.set('theme','daily');data.set('media',new Blob(['parallel-media'],{type:'image/png'}),'parallel.png');return data;};
+ const options={method:'POST',session:owner,requestKey:'parallel-request-1234'};
+ const results=await Promise.all([f.call('/api/posts',{...options,body:form()}),f.call('/api/posts',{...options,body:form()})]);
+ assert.deepEqual(results.map(r=>r.status),[200,200]);assert.equal(results[0].data.post.id,results[1].data.post.id);assert.equal(results.filter(r=>r.data.replayed).length,1);
+ assert.equal(f.db.prepare('SELECT COUNT(*) n FROM discussion_posts').get().n,1);assert.equal(f.db.prepare('SELECT COUNT(*) n FROM post_channels').get().n,1);assert.equal((await fs.readdir(path.join(f.data,'uploads'))).length,1);
+ const old=await f.call('/api/posts',{method:'POST',session:owner,body:form()});assert.equal(old.status,200);assert.notEqual(old.data.post.id,results[0].data.post.id);
+});
 test('community publishing binds sections and game tags, wall filters agree and moderation applies to both feeds',async t=>{
  const f=await fixture(t),user=await f.register('section_owner');
  const form=(section,gameTag='')=>{const data=new FormData();data.set('text','test '+section);data.set('theme','game');data.set('section',section);data.set('gameTag',gameTag);return data;};

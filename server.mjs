@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import {ensureWallTitles,wallTitleInput,attachWallTitles} from './scripts/wall-titles.mjs';
+import {ensurePostRequests,postRequestKey,postFingerprint,findPostRequest,commitPostRequest} from './scripts/post-requests.mjs';
 /* 随手记 · 弹幕分享站：零依赖 Node 后端（SQLite + 媒体上传 + 评论 + 签到 + 话题 + 静态托管） */
 import http from 'node:http';
 import {ensureCommunity,channelInput,readCommunity} from './scripts/community.mjs';
@@ -16,7 +17,7 @@ import { createAdminService } from './admin-service.mjs';
 import {createUserAuth} from './scripts/user-auth.mjs';
 import {findReplyTarget,readPublicComments} from './scripts/comment-threads.mjs';
 import {renderPostShareHtml} from './scripts/post-sharing.mjs';
-import { stat, mkdir, writeFile, readFile } from 'node:fs/promises';
+import { stat, mkdir, writeFile, readFile, unlink } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -241,7 +242,8 @@ async function api(req, res, url) {
 
   /* 发帖 */
   if (req.method === 'POST' && url.pathname === '/api/posts') {
-    if (limited(ip, 6, 60_000)) return send(res, 429, { error: '发得太勤啦，喝口水再来～' });
+    if(limited('upload:'+ip,30,60_000))return send(res,429,{error:'请求太频繁，请稍后再试，草稿会保留'});
+    let requestKey;try{requestKey=postRequestKey(req.headers['x-sj-post-request']);}catch(e){return send(res,e.status,{error:e.message});}
     const ct = req.headers['content-type'] || '';
     if (!ct.includes('multipart/form-data')) return send(res, 400, { error: 'bad form' });
     const boundary = (ct.match(/boundary=(.+)$/) || [])[1];
@@ -259,28 +261,32 @@ async function api(req, res, url) {
     const theme = THEMES.has(fields.theme) ? fields.theme : 'mood';
     const topic = fields.topic === todayTopic().date ? fields.topic : '';
 
-    let media = '', mediaType = '';
+    let media = '', mediaType = '',extension='';
     if (file && file.data.length) {
       if (file.data.length > MAX_UPLOAD) return send(res, 413, { error: '文件太大啦（限 60MB）' });
       const ext = path.extname(file.name).toLowerCase();
       if (IMG_EXT.has(ext)) mediaType = 'image';
       else if (VID_EXT.has(ext)) mediaType = 'video';
       else return send(res, 400, { error: '只支持图片或视频哦' });
-      media = crypto.randomBytes(12).toString('hex') + ext;
-      await writeFile(path.join(UPLOADS, media), file.data);
+      extension=ext;
     }
 
+    const request={userId:req.siteUser.id,key:requestKey,fingerprint:postFingerprint([text,theme,String(fields.topic||''),channel.section,channel.gameTag,wallTitle,!!discussion,extension],file?.data.length?file.data:null)};
+    function published(id,replayed){const post=db.prepare(`SELECT ${POST_FIELDS} FROM posts WHERE id=?`).get(id);attachWallTitles(db,[post]);return send(res,200,{post,...(replayed?{replayed:true}:{})});}
+    try{const existing=findPostRequest(db,request);if(existing!==null)return published(existing,true);}catch(e){if(e.status)return send(res,e.status,{error:e.message});throw e;}
+    if (limited(ip, 6, 60_000)) return send(res, 429, { error: '发得太勤啦，喝口水再来～' });
+    if(extension){media=crypto.randomBytes(12).toString('hex')+extension;try{await writeFile(path.join(UPLOADS,media),file.data);}catch(e){await unlink(path.join(UPLOADS,media)).catch(()=>{});throw e;}}
     const now = Date.now();
-    db.exec('BEGIN IMMEDIATE');let r;try{r = db.prepare(
+    let result;try{result=commitPostRequest(db,request,()=>{const r = db.prepare(
       'INSERT INTO posts(text,name,theme,media,media_type,ip,topic,created_at,user_id) VALUES(?,?,?,?,?,?,?,?,?)'
     ).run(text, name, theme, media, mediaType, ip, topic, now, req.siteUser.id);
     db.prepare('INSERT INTO post_channels(post_id,section,game_tag) VALUES(?,?,?)').run(r.lastInsertRowid,channel.section,channel.gameTag);
     if(wallTitle)db.prepare('INSERT INTO post_wall_titles(post_id,title) VALUES(?,?)').run(r.lastInsertRowid,wallTitle);
-    if(discussion)db.prepare('INSERT INTO discussion_posts(post_id) VALUES(?)').run(r.lastInsertRowid);db.exec('COMMIT');}catch(e){db.exec('ROLLBACK');throw e;}
-    recordSocialActivity(db,req.siteUser.id,'post');
-    xiaoji.afterPost(Number(r.lastInsertRowid));
-    const post = db.prepare(`SELECT ${POST_FIELDS} FROM posts WHERE id=?`).get(r.lastInsertRowid);
-    attachWallTitles(db,[post]);return send(res, 200, { post });
+    if(discussion)db.prepare('INSERT INTO discussion_posts(post_id) VALUES(?)').run(r.lastInsertRowid);return r.lastInsertRowid;});}
+    catch(e){if(media)await unlink(path.join(UPLOADS,media)).catch(()=>{});if(e.status)return send(res,e.status,{error:e.message});throw e;}
+    if(result.replayed){if(media)await unlink(path.join(UPLOADS,media)).catch(()=>{});}
+    else{recordSocialActivity(db,req.siteUser.id,'post');xiaoji.afterPost(result.id);}
+    return published(result.id,result.replayed);
   }
 
   /* 点赞 */
@@ -368,7 +374,7 @@ const xiaoji=createXiaoji({db,dataDir:DATA});
 const admin = createAdminService({ db, dataDir: DATA, publicDir: PUBLIC, origin: SITE_ORIGIN, allowLocalHttp: localHttp, trustProxy: TRUST_PROXY, automaticTopic: todayTopic,assistant:xiaoji });
 
 ensureDiscussions(db);
-ensureCommunity(db);ensureWallTitles(db);
+ensureCommunity(db);ensureWallTitles(db);ensurePostRequests(db);
 const spaces=createSpaces({db,users});
 const invitations=createInvitationTracking({db,users,origin:SITE_ORIGIN,localHttp});
 const friends=createFriendFeed({db,users});
