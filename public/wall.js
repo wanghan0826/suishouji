@@ -12,6 +12,7 @@
   const icons={mood:'☀',daily:'☕',scene:'❋',food:'◒',vent:'⚡',secret:'☾',game:'✦',campus:'✎',life:'❀',music:'♫',travel:'➚',tech:'⌘'};
   let pool=[],lanes=[],cursor=0,last=0,raf=0,resizeTimer;
   let previousWidth=0,restored=false;
+  let wallVisible=(()=>{const r=area.getBoundingClientRect();return r.bottom>0&&r.top<innerHeight;})(),pageSuspended=false;
   const progressKey='sj-wall-progress-v3-'+(new URLSearchParams(location.search).get('wall')==='classic'?'classic':'portrait');
   function saveProgress(){if(!pool.length)return;try{sessionStorage.setItem(progressKey,JSON.stringify({at:Date.now(),ids:pool.map(p=>p.id).join(','),nextId:pool[cursor%pool.length]?.id,width:area.clientWidth,lanes:lanes.map(l=>l.items.slice(0,5).map(e=>({id:Number(e.element.dataset.postId),x:e.x})))}));}catch{}}
   function shuffle(posts){const result=[...posts];for(let i=result.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[result[i],result[j]]=[result[j],result[i]];}return result;}
@@ -23,17 +24,21 @@
   }
   function configureBackground(){
     if(bgInterval){clearInterval(bgInterval);bgInterval=null;}
-    if(!lightweight()&&document.documentElement.dataset.backgroundRotation==='true'&&backgroundImages.length>1){
-      bgInterval=setInterval(()=>{if(!document.hidden&&!document.querySelector('#appearanceDialog[open]'))changeBackground();},12000);
+    if(wallInUse()&&!lightweight()&&document.documentElement.dataset.backgroundRotation==='true'&&backgroundImages.length>1){
+      bgInterval=setInterval(()=>{if(wallInUse()&&!document.querySelector('#appearanceDialog[open]'))changeBackground();},12000);
     }
   }
   document.addEventListener('sj:appearance-change',()=>{for(const lane of lanes)for(const entry of lane.items){const avatar=entry.element.querySelector('.wall-avatar');if(lightweight()){avatar.replaceChildren();avatar.textContent=icons[entry.post.theme]||'✦';}else if(entry.post.media&&entry.post.media_type==='image'&&!avatar.querySelector('img')){const image=document.createElement('img');image.alt='';image.src='/uploads/'+encodeURIComponent(entry.post.media);image.loading='lazy';avatar.replaceChildren(image);}}changeBackground();configureBackground();});
   let manualPaused=reduce.matches;
-  const stopped=()=>manualPaused||document.hidden;
+  const wallInUse=()=>!document.hidden&&!pageSuspended&&wallVisible&&!(innerWidth<=760&&document.body.classList.contains('reader-expanded'));
+  const stopped=()=>manualPaused||!wallInUse();
   const updateControl=()=>{
     toggle.textContent=manualPaused?'▶ 播放弹幕':'Ⅱ 暂停弹幕';
     toggle.setAttribute('aria-pressed',String(manualPaused));
     area.classList.toggle('is-paused',stopped());
+    if(stopped()||!pool.length){if(raf)cancelAnimationFrame(raf);raf=0;last=0;}
+    else if(!raf){last=0;raf=requestAnimationFrame(frame);}
+    configureBackground();
   };
   function nextPost(){return pool[cursor++%pool.length];}
   function item(post,lane,x){
@@ -96,20 +101,24 @@
     status.textContent=pool.length+' 条分享正在循环播放';updateControl();
   }
   function frame(now){
+    raf=0;
+    if(stopped()||!pool.length){last=0;return;}
     const dt=last?Math.min((now-last)/1000,.06):0;last=now;
-    if(!stopped()){
+    const width=area.clientWidth,portraitMode=width<=760&&!classicMode;
+    {
       for(const lane of lanes){
         if(!lane.active)continue;
         for(const [index,entry] of lane.items.entries()){
-          if(!entry.hovered&&!entry.focused&&!entry.held)entry.x-=(portrait()?Math.min(lane.speed,Math.max(8,(area.clientWidth-entry.width)/3.5)):lane.speed)*dt;
-          if(portrait()&&index>0){const previous=lane.items[index-1];entry.x=Math.max(entry.x,previous.x+previous.width+lane.gap);}
-          entry.element.style.transform=`translate3d(${entry.x}px,0,0)`;
+          const previousX=entry.x;
+          if(!entry.hovered&&!entry.focused&&!entry.held)entry.x-=(portraitMode?Math.min(lane.speed,Math.max(8,(width-entry.width)/3.5)):lane.speed)*dt;
+          if(portraitMode&&index>0){const previous=lane.items[index-1];entry.x=Math.max(entry.x,previous.x+previous.width+lane.gap);}
+          if(entry.x!==previousX)entry.element.style.transform=`translate3d(${entry.x}px,0,0)`;
         }
         const expired=lane.items.filter(entry=>entry.x+entry.width<-40&&!entry.hovered&&!entry.focused&&!entry.held);
         for(const entry of expired){
           entry.element.remove();lane.items.splice(lane.items.indexOf(entry),1);
-          const tail=Math.max(area.clientWidth,...lane.items.map(e=>e.x+e.width+lane.gap));
-          const fresh=item(nextPost(),lane,tail);lane.items.push(fresh);if(portrait()&&fresh.element.offsetHeight>lane.rowCapacity+2)requestAnimationFrame(layout);
+          const tail=Math.max(width,...lane.items.map(e=>e.x+e.width+lane.gap));
+          const fresh=item(nextPost(),lane,tail);lane.items.push(fresh);if(portraitMode&&fresh.element.offsetHeight>lane.rowCapacity+2)requestAnimationFrame(layout);
         }
       }
     }
@@ -142,13 +151,15 @@
     status.textContent=pool.length+' 条分享正在循环播放';
     if(portrait())requestAnimationFrame(layout);
   };
-  toggle.addEventListener('click',()=>{manualPaused=!manualPaused;updateControl();});
+  toggle.addEventListener('click',()=>{manualPaused=!manualPaused;if(manualPaused)saveProgress();updateControl();});
   document.getElementById('wallPost').addEventListener('click',()=>document.getElementById('btnOpenPost').click());
   document.addEventListener('visibilitychange',()=>{if(document.hidden)saveProgress();last=0;updateControl();});
-  window.addEventListener('pagehide',saveProgress);
-  setInterval(saveProgress,5000);
-  document.addEventListener('sj:reading-change',layout);
+  window.addEventListener('pagehide',()=>{saveProgress();pageSuspended=true;updateControl();});
+  window.addEventListener('pageshow',()=>{pageSuspended=false;updateControl();});
+  setInterval(()=>{if(!stopped())saveProgress();},5000);
+  document.addEventListener('sj:reading-change',()=>{layout();if(stopped())saveProgress();});
   new ResizeObserver(()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(layout,120);}).observe(area);
+  if(typeof IntersectionObserver==='function')new IntersectionObserver(entries=>{const visible=entries[0].isIntersecting;if(wallVisible&&!visible)saveProgress();wallVisible=visible;updateControl();}).observe(area);
   if(allPosts.length)setPosts(allPosts);
-  updateControl();raf=requestAnimationFrame(frame);
+  updateControl();
 })();
