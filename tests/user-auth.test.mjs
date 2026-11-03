@@ -150,7 +150,7 @@ async function fixture(t,{secure=false}={}){
  let db;t.after(async()=>{db?.close();child.kill();await new Promise(r=>child.exitCode!==null?r():child.once('exit',r));await fs.rm(data,{recursive:true,force:true});});
  let ready=false;for(let i=0;i<100;i++){try{if((await fetch(base+'/api/topic')).ok){ready=true;break;}}catch{}await delay(50);}assert.ok(ready,logs);db=new DatabaseSync(path.join(data,'wall.db'));
  async function call(route,{method='GET',body,session,originOverride,csrfOverride,forwardTls=false,uaOverride,requestKey,extraHeaders={}}={}){
-  const headers={...extraHeaders};if(requestKey!==undefined)headers['X-SJ-Post-Request']=requestKey;if(uaOverride)headers['User-Agent']=uaOverride;if(session){headers.Cookie=session.cookie;headers['X-SJ-CSRF']=csrfOverride??session.csrf;headers['X-CSRF-Token']=session.csrf;}
+  const headers={...extraHeaders};if(requestKey!==undefined)headers['X-SJ-Post-Request']=requestKey;if(uaOverride)headers['User-Agent']=uaOverride;if(session){headers.Cookie=session.cookie;headers['X-SJ-CSRF']=csrfOverride??session.csrf;headers['X-CSRF-Token']=csrfOverride??session.csrf;}
   if(method!=='GET')headers.Origin=originOverride??origin;if(forwardTls)headers['X-Forwarded-Proto']='https';
   if(body!==undefined&&!(body instanceof FormData))headers['Content-Type']='application/json';
   const r=await fetch(base+route,{method,headers,...(body!==undefined?{body:body instanceof FormData?body:JSON.stringify(body)}:{})});const text=await r.text();let json;try{json=JSON.parse(text);}catch{json=text;}return {status:r.status,data:json,cookie:r.headers.get('set-cookie'),headers:r.headers};
@@ -361,4 +361,16 @@ test('multiplayer drawing uses real login and CSRF, preserves answer privacy, an
  assert.equal((await f.call(base,{session:a})).data.room.turn.answer,null);assert.equal((await f.call(base+'/stroke',{method:'POST',session:a,body:{round:1,epoch:0}})).status,403);
  assert.equal((await f.call(base+'/guess',{method:'POST',session:a,originOverride:'https://evil.example',body:{round:1,text:answer}})).status,403);
  await f.call(base+'/guess',{method:'POST',session:a,body:{round:1,text:answer}});const all=await f.call(base+'/guess',{method:'POST',session:b,body:{round:1,text:answer}});assert.equal(all.data.room.turn.reason,'all');assert.ok(all.data.room.members.every(m=>m.score===0));assert.equal((await f.call(base)).status,401);
+});
+
+test('game suggestions require real login, stay private, retry once and expose admin replies to their author',async t=>{
+ const f=await fixture(t),owner=await f.register('feedback_owner'),other=await f.register('feedback_other'),body={title:'双人合作解谜',details:'两个人各拿一半线索',mode:'two',requestKey:'a'.repeat(32)};
+ for(const route of ['/feedback','/feedback/','/game-feedback.js','/game-feedback.css'])assert.equal((await f.call(route)).status,200);
+ assert.equal((await f.call('/api/game-feedback')).status,401);assert.equal((await f.call('/api/game-feedback',{method:'POST',body})).status,401);assert.equal((await f.call('/api/game-feedback',{method:'POST',session:owner,csrfOverride:'bad',body})).status,403);assert.equal((await f.call('/api/game-feedback',{method:'POST',session:owner,originOverride:'https://evil.example',body})).status,403);
+ const sent=await f.call('/api/game-feedback',{method:'POST',session:owner,body:{...body,user_id:other.user.id,status:'done'}});assert.equal(sent.status,200);assert.equal(sent.data.item.status,'new');const id=sent.data.item.id;
+ assert.equal((await f.call('/api/game-feedback',{method:'POST',session:owner,body})).data.item.id,id);const mine=await f.call('/api/game-feedback',{session:owner});assert.equal(mine.data.total,1);assert.match(mine.headers.get('cache-control'),/no-store/);assert.equal((await f.call('/api/game-feedback',{session:other})).data.total,0);assert.equal((await f.call('/api/game-feedback/'+id,{session:other})).status,404);
+ assert.equal((await f.call('/api/admin/game-feedback',{session:owner})).status,401);assert.equal((await f.call('/api/admin/game-feedback')).status,401);const admin=await f.admin(),list=await f.call('/api/admin/game-feedback',{session:admin});assert.equal(list.data.items[0].username,'feedback_owner');
+ const edit={status:'planned',reply:'这个已列入计划。',version:list.data.items[0].version};assert.equal((await f.call('/api/admin/game-feedback/'+id,{method:'POST',session:admin,csrfOverride:'bad',body:edit})).status,403);assert.equal((await f.call('/api/admin/game-feedback/'+id,{method:'POST',session:admin,body:edit})).status,200);assert.equal((await f.call('/api/game-feedback',{session:owner})).data.items[0].reply,edit.reply);assert.equal((await f.call('/api/game-feedback',{session:other})).data.total,0);
+ const publicPosts=await f.call('/api/posts');assert.ok(!JSON.stringify(publicPosts.data).includes(body.title));assert.ok(!JSON.stringify(mine.data).includes('request_key'));assert.equal((await f.call('/api/game-feedback?page=wrong',{session:owner})).status,400);
+ f.db.prepare('UPDATE site_users SET disabled=1 WHERE id=?').run(owner.user.id);assert.equal((await f.call('/api/game-feedback',{session:owner})).status,401);
 });

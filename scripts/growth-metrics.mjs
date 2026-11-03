@@ -12,6 +12,7 @@ const rawCookie = (req, local) => {
 // Store categories only: never retain a room token, username, full URL or referrer.
 export function growthEntry(path) {
   if (['/', '/index.html'].includes(path)) return 'home';
+  if (['/feedback', '/feedback/', '/game-feedback.html'].includes(path)) return 'feedback';
   if (/^\/games\/?$/.test(path) || path === '/games.html') return 'games';
   if (/^\/draw\/[a-f0-9]{32}\/?$/.test(path)) return 'draw_invite';
   if (['/draw', '/draw/', '/draw-game.html'].includes(path)) return 'draw';
