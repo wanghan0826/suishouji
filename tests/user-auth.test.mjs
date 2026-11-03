@@ -350,3 +350,15 @@ test('growth connects real page entries to registration, counts successful guess
  await f.call('/play',{session:guest});assert.equal(f.db.prepare('SELECT COUNT(*) n FROM growth_visits').get().n,1);
  f.db.prepare('UPDATE site_users SET disabled=1 WHERE id=?').run(guest.user.id);assert.equal((await f.call('/api/admin/growth',{session:admin})).data.registrations.played,0);
 });
+
+test('multiplayer drawing uses real login and CSRF, preserves answer privacy, and settles all-correct at zero',async t=>{
+ const f=await fixture(t),host=await f.register('draw_host'),a=await f.register('draw_friend_a'),b=await f.register('draw_friend_b');
+ for(const route of ['/draw','/draw/','/draw-game.js','/draw-game.css'])assert.equal((await f.call(route)).status,200);
+ assert.equal((await f.call('/api/draw-game',{method:'POST',body:{}})).status,401);assert.equal((await f.call('/api/draw-game',{method:'POST',session:host,csrfOverride:'invalid',body:{}})).status,403);
+ const created=await f.call('/api/draw-game',{method:'POST',session:host,body:{}});assert.equal(created.status,200);const token=created.data.room.token,base='/api/draw-game/'+token;
+ for(const session of [a,b])assert.equal((await f.call(base+'/join',{method:'POST',session,body:{}})).status,200);
+ const started=await f.call(base+'/start',{method:'POST',session:host,body:{}});assert.equal(started.status,200);const answer=started.data.room.turn.answer;
+ assert.equal((await f.call(base,{session:a})).data.room.turn.answer,null);assert.equal((await f.call(base+'/stroke',{method:'POST',session:a,body:{round:1,epoch:0}})).status,403);
+ assert.equal((await f.call(base+'/guess',{method:'POST',session:a,originOverride:'https://evil.example',body:{round:1,text:answer}})).status,403);
+ await f.call(base+'/guess',{method:'POST',session:a,body:{round:1,text:answer}});const all=await f.call(base+'/guess',{method:'POST',session:b,body:{round:1,text:answer}});assert.equal(all.data.room.turn.reason,'all');assert.ok(all.data.room.members.every(m=>m.score===0));assert.equal((await f.call(base)).status,401);
+});

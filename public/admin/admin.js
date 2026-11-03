@@ -51,19 +51,19 @@
     try{
       const d=await api('growth?days='+$('growthPeriod').value);if(id!==requestId||view!=='growth')return;
       const n=d.registrations,pct=(a,b)=>b?(100*a/b).toFixed(1)+'%':'暂无样本';
-      const labels={home:'弹幕首页',games:'游戏大厅',word:'同频猜词大厅',word_invite:'猜词房间 / 邀请入口',plaza:'讨论广场',post:'帖子详情',space:'个人空间',friends:'朋友动态',unknown:'未记录'};
+      const labels={home:'弹幕首页',games:'游戏大厅',word:'同频猜词大厅',word_invite:'猜词房间 / 邀请入口',draw:'你画我猜大厅',draw_invite:'你画我猜房间 / 邀请入口',plaza:'讨论广场',post:'帖子详情',space:'个人空间',friends:'朋友动态',unknown:'未记录'};
       const channels={qq:'QQ',wechat:'微信',xiaohongshu:'小红书',campus:'校园',github:'GitHub',direct:'普通链接',other:'其他',search:'搜索引擎'};
       const channelLabel=value=>{if(value==='unknown')return '直接或未识别';const [kind,key]=value.split(':');return (channels[key]||'其他')+' · '+(kind==='link'?'链接标记':'外站来源');};
       const rows=(id,items,empty='还没有记录')=>{const target=$(id);target.replaceChildren(...(items.length?items.map(cells=>{const row=node('tr');for(const value of cells)row.append(node('td','',value));return row;}):[(()=>{const row=node('tr'),cell=node('td','',empty);cell.colSpan=4;row.append(cell);return row;})()]));};
       $('growthStarted').textContent='来源和精确行为开始记录：'+new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',dateStyle:'medium',timeStyle:'short'}).format(new Date(d.startedAt));
       $('growthUsers').textContent=n.total;$('growthPlayers').textContent=n.played;$('growthPlayerRate').textContent='占新增账号 '+pct(n.played,n.total)+' · 含可确认的历史记录';$('growthGameSignups').textContent=n.gamePage;$('growthInviteSignups').textContent=n.inviteEntry;
-      $('growthSummary').textContent=n.total?'近'+d.days+'天注册了'+n.total+'个可用账号，其中'+n.played+'人实际提交过猜词。游戏参与不等于注册原因，请结合入口和后续回访判断。':'这个范围内还没有新增账号。新数据会从真实访问、注册和成功操作中积累。';
+      $('growthSummary').textContent=n.total?'近'+d.days+'天注册了'+n.total+'个可用账号，其中'+n.played+'人实际参与过游戏。游戏参与不等于注册原因，请结合入口和后续回访判断。':'这个范围内还没有新增账号。新数据会从真实访问、注册和成功操作中积累。';
       rows('growthParticipation',[
-        ['注册当天提交过猜词',n.firstDayPlayers,'本次记录后新增账号 '+n.observed+' 人'],
+        ['注册当天实际参与游戏',n.firstDayPlayers,'本次记录后新增账号 '+n.observed+' 人'],
         ['玩过后在社区发言',n.communityAfter,'本次记录后的新用户；发帖、评论、空间动态或留弹'],
         ['玩过且目前有互关朋友',n.mutual,'全部新增账号中确认玩过的 '+n.played+' 人']
       ]);
-      $('growthCoverage').textContent='这个范围有'+n.observed+'个新账号在开始记录后注册；'+n.unattributed+'个新账号没有可归属的首次来源。历史来源不补造。“玩过后在社区发言”须在本次记录到的实际猜词之后成功发布；互关按当前关系计算。';
+      $('growthCoverage').textContent='这个范围有'+n.observed+'个新账号在开始记录后注册；'+n.unattributed+'个新账号没有可归属的首次来源。历史来源不补造。“玩过后在社区发言”须在本次记录到的实际参与游戏之后成功发布；互关按当前关系计算。';
       rows('growthRetention',[['次日再次玩',d.retention.day1],['第7日再次玩',d.retention.day7]].map(([title,r])=>[title,r.returned+' / '+r.eligible,r.rate===null?'待观察':pct(r.returned,r.eligible),r.pending]));
       rows('growthEntries',d.entries.map(r=>[labels[r.entry]||'其他',r.visitors,r.registrations,pct(r.registrations,r.visitors)]));
       rows('growthChannels',d.channels.map(r=>[channelLabel(r.channel),r.visitors,r.registrations,pct(r.registrations,r.visitors)]));

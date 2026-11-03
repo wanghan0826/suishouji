@@ -24,6 +24,7 @@ jobs:
           node --check scripts/xiaoji.mjs
           node --check scripts/growth-metrics.mjs
           node --check scripts/word-game.mjs
+          node --check scripts/draw-game.mjs
           node --check scripts/community.mjs
           node --check scripts/wall-titles.mjs
           node --check scripts/profile-details.mjs
@@ -36,6 +37,7 @@ jobs:
           node --check public/attachment-picker.js
           node --check public/demo-mode.js
           node --check public/word-game.js
+          node --check public/draw-game.js
           node --check public/app.js
           node --check public/wall.js
           node --check public/appearance.js
