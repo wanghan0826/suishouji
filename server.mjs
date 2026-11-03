@@ -5,6 +5,7 @@ import {ensurePostRequests,postRequestKey,postFingerprint,findPostRequest,commit
 import http from 'node:http';
 import {ensureCommunity,channelInput,readCommunity} from './scripts/community.mjs';
 import {createWordGame} from './scripts/word-game.mjs';
+import {createGrowthTracking} from './scripts/growth-metrics.mjs';
 import {createXiaoji} from './scripts/xiaoji.mjs';
 import {createFriendFeed} from './scripts/friend-feed.mjs';
 import {recordSocialActivity} from './scripts/social-metrics.mjs';
@@ -381,6 +382,7 @@ const friends=createFriendFeed({db,users});
 const wordGame=createWordGame({db,users});
 const socialInbox=createSocialInbox({db,users});
 const analytics=createAnalytics({db,origin:SITE_ORIGIN,localHttp});
+const growth=createGrowthTracking({db,users,origin:SITE_ORIGIN,localHttp});
 /* ---------- 服务 ---------- */
 async function handler(req, res) {
   try {
@@ -398,6 +400,8 @@ async function handler(req, res) {
   if (!users.authorizeWrite(req, res)) return;
   if (admin.handlePublic(req, res)) return;
   const url = new URL(req.url, 'http://x');
+  // Attribute real public page entries, excluding missing/archived posts and lab frames.
+  if(!/^\/post\//.test(url.pathname)||db.prepare("SELECT 1 FROM posts p WHERE p.id=? AND NOT EXISTS(SELECT 1 FROM admin_archive a WHERE a.kind='post' AND a.item_id=p.id)").get(Number(url.pathname.split('/')[2])||0))growth.capture(req,res,url);
   if(['/mobile-lab','/mobile-lab/'].includes(url.pathname)&&['GET','HEAD'].includes(req.method))return serveFile(res,path.join(PUBLIC,'mobile-lab.html'));
   if(['/wall-demo','/wall-demo/'].includes(url.pathname)&&['GET','HEAD'].includes(req.method))return serveFile(res,path.join(PUBLIC,'wall-demo.html'));
   if(/^\/play(?:\/[a-f0-9]{32})?\/?$/.test(url.pathname)&&['GET','HEAD'].includes(req.method))return serveFile(res,path.join(PUBLIC,'word-game.html'));

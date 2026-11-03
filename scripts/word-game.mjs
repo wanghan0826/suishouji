@@ -1,9 +1,11 @@
 import crypto from 'node:crypto';
+import {ensureGrowthMetrics,recordGrowthGuess} from './growth-metrics.mjs';
 const week=7*86400000;
 const fail=(status,message)=>Object.assign(Error(message),{status});
 export function normalizeWord(word){return word.normalize('NFKC').replace(/\s/gu,'').toLowerCase();}
 export function validateWord(value){if(typeof value!=='string')throw fail(400,'请写下一个词');const word=value.trim();if(!word||Array.from(word).length>12||/[\p{Cc}\p{Cf}]/u.test(word))throw fail(400,'请输入1–12字的词，不要包含换行或隐藏字符');return word;}
 export function createWordGame({db,users}){
+ ensureGrowthMetrics(db);
  db.exec(`CREATE TABLE IF NOT EXISTS word_rooms(token TEXT PRIMARY KEY,host_id INTEGER NOT NULL,guest_id INTEGER,status TEXT NOT NULL DEFAULT 'waiting',round INTEGER NOT NULL DEFAULT 1,version INTEGER NOT NULL DEFAULT 1,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,expires_at INTEGER NOT NULL,CHECK(host_id<>guest_id));CREATE INDEX IF NOT EXISTS word_room_host ON word_rooms(host_id,updated_at);CREATE INDEX IF NOT EXISTS word_room_guest ON word_rooms(guest_id,updated_at);CREATE TABLE IF NOT EXISTS word_rounds(room_token TEXT NOT NULL,round INTEGER NOT NULL,host_word TEXT,guest_word TEXT,matched INTEGER NOT NULL DEFAULT 0,completed_at INTEGER,PRIMARY KEY(room_token,round));`);
  const buckets=new Map();let lastClean=0;
  function limit(id,create=false){const key=id+':'+create,now=Date.now(),r=buckets.get(key);if(buckets.size>2000)for(const [k,v]of buckets)if(v.until<now)buckets.delete(k);const value=r&&r.until>now?r:{n:0,until:now+(create?3600000:60000)};buckets.set(key,value);if(++value.n>(create?6:60))throw fail(429,create?'新建房间有点多，先和朋友玩完已有的吧。':'操作太快，稍等片刻再试。');}
@@ -27,7 +29,7 @@ export function createWordGame({db,users}){
    const word=validateWord(input.word);if(!Number.isSafeInteger(input.round)||input.round<1)throw fail(400,'轮次无效，请刷新后再试');const prior=db.prepare('SELECT * FROM word_rounds WHERE room_token=? AND round=?').get(token,input.round);
    if(prior?.[mine+'_word']){if(normalizeWord(prior[mine+'_word'])===normalizeWord(word))return;throw fail(409,'本轮已经提交，不能修改。等双方揭晓后继续吧。');}
    if(r.status!=='playing')throw fail(409,r.status==='waiting'?'朋友还没加入，先把邀请链接发给TA吧':'本局已经结束，可以重新开一局');if(input.round!==r.round)throw fail(409,'已进入下一轮，请刷新后再提交');
-   db.prepare('UPDATE word_rounds SET '+mine+'_word=? WHERE room_token=? AND round=?').run(word,token,r.round);const round=db.prepare('SELECT * FROM word_rounds WHERE room_token=? AND round=?').get(token,r.round);
+   db.prepare('UPDATE word_rounds SET '+mine+'_word=? WHERE room_token=? AND round=?').run(word,token,r.round);recordGrowthGuess(db,user.id,now);const round=db.prepare('SELECT * FROM word_rounds WHERE room_token=? AND round=?').get(token,r.round);
    if(round.host_word&&round.guest_word){const matched=normalizeWord(round.host_word)===normalizeWord(round.guest_word);db.prepare('UPDATE word_rounds SET matched=?,completed_at=? WHERE room_token=? AND round=?').run(matched?1:0,now,token,r.round);if(matched)db.prepare("UPDATE word_rooms SET status='matched' WHERE token=?").run(token);else{db.prepare('UPDATE word_rooms SET round=round+1 WHERE token=?').run(token);db.prepare('INSERT INTO word_rounds(room_token,round) VALUES(?,?)').run(token,r.round+1);}}
    db.prepare('UPDATE word_rooms SET version=version+1,updated_at=?,expires_at=? WHERE token=?').run(now,now+week,token);
   });return send(200,state(room(token),user.id));

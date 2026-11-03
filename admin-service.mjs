@@ -2,6 +2,7 @@ import {ensureWallTitles,attachWallTitles} from './scripts/wall-titles.mjs';
 import {ensureCommunity,channelFilter} from './scripts/community.mjs';
 import {visibleSpaceMessage} from './scripts/space-threads.mjs';
 import {ensureSocialMetrics,readSocialMetrics} from './scripts/social-metrics.mjs';
+import {readGrowthMetrics} from './scripts/growth-metrics.mjs';
 import {ensureInvitationSchema,readInvitationAnalytics} from './scripts/invitations.mjs';
 import {ensureSpaces} from './scripts/spaces.mjs';
 import {ensureAnalytics,readAnalytics} from './scripts/analytics.mjs';
@@ -100,6 +101,7 @@ export function createAdminService({db,dataDir,publicDir,origin='https://example
       const spaceAction=/^\/api\/admin\/space-updates\/(\d+)\/(archive|restore)$/.exec(p);
       if(spaceAction&&req.method==='POST'){const id=checkId(spaceAction[1]);const r=db.prepare('UPDATE space_updates SET hidden=? WHERE id=?').run(spaceAction[2]==='archive'?1:0,id);if(!r.changes)throw failure(404,'动态不存在');audit(s.username,'space_'+spaceAction[2],id);json(res,200,{ok:true});return true;}
       if(p==='/api/admin/social-metrics'&&req.method==='GET'){json(res,200,readSocialMetrics(db));return true;}
+      if(p==='/api/admin/growth'&&req.method==='GET'){json(res,200,readGrowthMetrics(db,Number(url.searchParams.get('days')||7)));return true;}
       if(p==='/api/admin/invitations'&&req.method==='GET'){json(res,200,readInvitationAnalytics(db));return true;}
       if(p==='/api/admin/analytics'&&req.method==='GET'){json(res,200,readAnalytics(db));return true;}
       if(p==='/api/admin/overview'&&req.method==='GET'){

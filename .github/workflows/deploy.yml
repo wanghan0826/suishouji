@@ -22,6 +22,7 @@ jobs:
           node --check server.mjs
           node --check deploy/prepare-release.mjs
           node --check scripts/xiaoji.mjs
+          node --check scripts/growth-metrics.mjs
           node --check scripts/word-game.mjs
           node --check scripts/community.mjs
           node --check scripts/wall-titles.mjs

@@ -1,4 +1,5 @@
 import {ensureSocialMetrics} from './social-metrics.mjs';
+import {recordGrowthRegistration} from './growth-metrics.mjs';
 import {ensureInvitationSchema,claimInvitation} from './invitations.mjs';
 import crypto from 'node:crypto';import {promisify} from 'node:util';
 const scrypt=promisify(crypto.scrypt),digest=s=>crypto.createHash('sha256').update(s).digest('hex');
@@ -47,7 +48,7 @@ export function createUserAuth({db,origin,localHttp=false,trustProxy=false}){
      throttle('register:'+ip(req),5,86400000);if(user)throw error(409,'用户名已被使用');
      const salt=crypto.randomBytes(16).toString('hex'),hash=await derive(input.password,salt),now=Date.now();
      let id;try{id=Number(db.prepare('INSERT INTO site_users(username,salt,password_hash,created_at,last_login,registration_ip) VALUES(?,?,?,?,?,?)').run(username,salt,hash,now,now,ip(req)).lastInsertRowid);}catch(e){if(String(e.message).includes('UNIQUE'))throw error(409,'用户名已被使用');throw e;}
-     db.prepare('INSERT INTO user_access(user_id,event,ip,created_at) VALUES(?,?,?,?)').run(id,'register',ip(req),now);claimInvitation(db,req,id,localHttp);issue({id,username},res);return true;
+     db.prepare('INSERT INTO user_access(user_id,event,ip,created_at) VALUES(?,?,?,?)').run(id,'register',ip(req),now);claimInvitation(db,req,id,localHttp);recordGrowthRegistration(db,req,id,{origin,localHttp},now);issue({id,username},res);return true;
     }
     const hash=await derive(input.password,user?.salt||'0'.repeat(32));
     if(!user||!equal(hash,user.password_hash))throw error(401,'用户名或密码不正确');if(user.disabled)throw error(403,'账号已被封禁，请联系站主');

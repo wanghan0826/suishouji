@@ -2,12 +2,12 @@
   'use strict';
   const $=id=>document.getElementById(id),local=['localhost','127.0.0.1','[::1]'].includes(location.hostname);
   const themes={mood:'心情',daily:'日常',scene:'风景',food:'美食',vent:'吐槽',secret:'树洞',game:'游戏',campus:'校园',life:'生活',music:'音乐',travel:'旅行',tech:'科技'};
-  const titles={users:['ACCOUNT MANAGEMENT','账号管理'],overview:['SITE OVERVIEW','数据概览'],posts:['POST MANAGEMENT','帖子管理'],comments:['COMMENT MANAGEMENT','评论管理'],topics:['DAILY TOPICS','每日话题']};
+  const titles={growth:['USER GROWTH','用户增长'],users:['ACCOUNT MANAGEMENT','账号管理'],overview:['SITE OVERVIEW','数据概览'],posts:['POST MANAGEMENT','帖子管理'],comments:['COMMENT MANAGEMENT','评论管理'],topics:['DAILY TOPICS','每日话题']};
   let csrf='',view='overview',page=1,totalPages=1,requestId=0,toastTimer;
   const fmt=value=>new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(value));
   const node=(tag,className,text)=>{const e=document.createElement(tag);if(className)e.className=className;if(text!==undefined)e.textContent=String(text);return e;};
   const toast=text=>{clearTimeout(toastTimer);$('toast').textContent=text;$('toast').classList.add('show');toastTimer=setTimeout(()=>$('toast').classList.remove('show'),3000);};
-  function showLogin(){csrf='';$('appView').classList.add('hidden');$('loginView').classList.remove('hidden');$('password').value='';}
+  function showLogin(){csrf='';requestId++;$('growthData').hidden=true;$('growthStatus').textContent='';$('appView').classList.add('hidden');$('loginView').classList.remove('hidden');$('password').value='';}
   async function api(route,{method='GET',body}={}){
     const response=await fetch('/api/admin/'+route,{method,credentials:'same-origin',cache:'no-store',headers:method==='GET'?{}:{'Content-Type':'application/json','X-CSRF-Token':csrf},...(body!==undefined?{body:JSON.stringify(body)}:{})});
     let data;try{data=await response.json();}catch{throw Error('服务器暂时没有返回有效内容，请稍后重试');}
@@ -46,6 +46,33 @@
   let campaignRevision=0;function invalidateCampaign(){campaignRevision++;$('campaignURL').value='';$('campaignCopy').disabled=true;$('campaignStatus').textContent='';}for(const id of ['campaignHost','campaignChannel','campaignVariant'])$(id).addEventListener('input',invalidateCampaign);
   $('campaignForm').onsubmit=async event=>{event.preventDefault();invalidateCampaign();const current=campaignRevision,button=event.submitter;button.disabled=true;const name=$('campaignHost').value.trim().toLowerCase();try{if(!/^[a-z0-9_]{3,20}$/.test(name))throw Error('请填写有效用户名');const r=await fetch('/api/spaces/'+encodeURIComponent(name),{cache:'no-store'});if(!r.ok)throw Error('没有找到可用空间，请检查用户名');if(current!==campaignRevision)return;const url=new URL('/u/'+name,location.origin);url.search=new URLSearchParams({from:'invite',source:$('campaignChannel').value,variant:$('campaignVariant').value,format:'link'}).toString();$('campaignURL').value=url.href;$('campaignCopy').disabled=false;$('campaignStatus').textContent='链接已生成。对方注册后，请及时回应关注。';}catch(e){if(current===campaignRevision)$('campaignStatus').textContent=e.message;}finally{button.disabled=false;}};
   $('campaignCopy').onclick=async()=>{const text=$('campaignURL').value;if(!text)return;try{await navigator.clipboard.writeText(text);$('campaignStatus').textContent='推广邀请已复制';}catch{$('campaignURL').focus();$('campaignURL').select();$('campaignStatus').textContent='链接已选中，可以手动复制';}};
+  async function loadGrowth(id){
+    $('growthData').hidden=true;$('growthStatus').textContent='正在读取用户增长数据…';
+    try{
+      const d=await api('growth?days='+$('growthPeriod').value);if(id!==requestId||view!=='growth')return;
+      const n=d.registrations,pct=(a,b)=>b?(100*a/b).toFixed(1)+'%':'暂无样本';
+      const labels={home:'弹幕首页',games:'游戏大厅',word:'同频猜词大厅',word_invite:'猜词房间 / 邀请入口',plaza:'讨论广场',post:'帖子详情',space:'个人空间',friends:'朋友动态',unknown:'未记录'};
+      const channels={qq:'QQ',wechat:'微信',xiaohongshu:'小红书',campus:'校园',github:'GitHub',direct:'普通链接',other:'其他',search:'搜索引擎'};
+      const channelLabel=value=>{if(value==='unknown')return '直接或未识别';const [kind,key]=value.split(':');return (channels[key]||'其他')+' · '+(kind==='link'?'链接标记':'外站来源');};
+      const rows=(id,items,empty='还没有记录')=>{const target=$(id);target.replaceChildren(...(items.length?items.map(cells=>{const row=node('tr');for(const value of cells)row.append(node('td','',value));return row;}):[(()=>{const row=node('tr'),cell=node('td','',empty);cell.colSpan=4;row.append(cell);return row;})()]));};
+      $('growthStarted').textContent='来源和精确行为开始记录：'+new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',dateStyle:'medium',timeStyle:'short'}).format(new Date(d.startedAt));
+      $('growthUsers').textContent=n.total;$('growthPlayers').textContent=n.played;$('growthPlayerRate').textContent='占新增账号 '+pct(n.played,n.total)+' · 含可确认的历史记录';$('growthGameSignups').textContent=n.gamePage;$('growthInviteSignups').textContent=n.inviteEntry;
+      $('growthSummary').textContent=n.total?'近'+d.days+'天注册了'+n.total+'个可用账号，其中'+n.played+'人实际提交过猜词。游戏参与不等于注册原因，请结合入口和后续回访判断。':'这个范围内还没有新增账号。新数据会从真实访问、注册和成功操作中积累。';
+      rows('growthParticipation',[
+        ['注册当天提交过猜词',n.firstDayPlayers,'本次记录后新增账号 '+n.observed+' 人'],
+        ['玩过后在社区发言',n.communityAfter,'本次记录后的新用户；发帖、评论、空间动态或留弹'],
+        ['玩过且目前有互关朋友',n.mutual,'全部新增账号中确认玩过的 '+n.played+' 人']
+      ]);
+      $('growthCoverage').textContent='这个范围有'+n.observed+'个新账号在开始记录后注册；'+n.unattributed+'个新账号没有可归属的首次来源。历史来源不补造。“玩过后在社区发言”须在本次记录到的实际猜词之后成功发布；互关按当前关系计算。';
+      rows('growthRetention',[['次日再次玩',d.retention.day1],['第7日再次玩',d.retention.day7]].map(([title,r])=>[title,r.returned+' / '+r.eligible,r.rate===null?'待观察':pct(r.returned,r.eligible),r.pending]));
+      rows('growthEntries',d.entries.map(r=>[labels[r.entry]||'其他',r.visitors,r.registrations,pct(r.registrations,r.visitors)]));
+      rows('growthChannels',d.channels.map(r=>[channelLabel(r.channel),r.visitors,r.registrations,pct(r.registrations,r.visitors)]));
+      rows('growthRegisterEntries',d.registrationEntries.map(r=>[labels[r.entry]||'未记录',r.users]));
+      rows('growthTrend',d.trend.map(r=>[r.day,r.registrations,r.played]));
+      $('growthData').hidden=false;$('growthStatus').textContent='';
+    }catch(e){if(id===requestId&&view==='growth')$('growthStatus').textContent='增长数据暂时无法加载：'+e.message;}
+  }
+  $('growthPeriod').onchange=()=>{if(view==='growth')load();};
   async function loadTraffic(){
     try{const data=await api('analytics');$('trafficError').textContent='';for(const [key,id]of [['views','trafficViews'],['visitors','trafficVisitors'],['shares','trafficShares'],['cards','trafficCards']])$(id).textContent=data.today[key];
     $('trafficDays').replaceChildren(...data.days.map(d=>{const row=node('tr');for(const key of ['day','views','visitors','shares','cards'])row.append(node('td','',d[key]));return row;}));
@@ -113,8 +140,8 @@
     }):[node('div','empty-state','暂未安排手动话题，系统正在自动轮换')]));
   }
   function showError(message){$('pageError').textContent=message;$('pageError').classList.remove('hidden');}
-  async function load(){const id=++requestId;$('pageError').classList.add('hidden');$('refreshButton').disabled=true;try{if(view==='overview')await loadOverview(id);else if(view==='users')await loadUsers(id);else if(view==='topics')await loadTopics(id);else await loadContent(id);}catch(e){if(id===requestId)showError(e.message);}finally{if(id===requestId)$('refreshButton').disabled=false;}}
-  function navigate(next){if(!titles[next])return;view=next;page=1;document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===next));$('pageEyebrow').textContent=titles[next][0];$('pageTitle').textContent=titles[next][1];$('overviewView').classList.toggle('hidden',next!=='overview');$('contentView').classList.toggle('hidden',!['posts','comments'].includes(next));$('topicsView').classList.toggle('hidden',next!=='topics');$('usersView').classList.toggle('hidden',next!=='users');$('themeFilter').classList.toggle('hidden',next!=='posts');$('listTitle').textContent=next==='comments'?'评论列表':'帖子列表';$('searchInput').value='';$('stateFilter').value='visible';$('themeFilter').value='';load();}
+  async function load(){const id=++requestId;$('pageError').classList.add('hidden');$('refreshButton').disabled=true;try{if(view==='overview')await loadOverview(id);else if(view==='growth')await loadGrowth(id);else if(view==='users')await loadUsers(id);else if(view==='topics')await loadTopics(id);else await loadContent(id);}catch(e){if(id===requestId)showError(e.message);}finally{if(id===requestId)$('refreshButton').disabled=false;}}
+  function navigate(next){if(!titles[next])return;view=next;page=1;document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===next));$('pageEyebrow').textContent=titles[next][0];$('pageTitle').textContent=titles[next][1];$('overviewView').classList.toggle('hidden',next!=='overview');$('growthView').classList.toggle('hidden',next!=='growth');$('contentView').classList.toggle('hidden',!['posts','comments'].includes(next));$('topicsView').classList.toggle('hidden',next!=='topics');$('usersView').classList.toggle('hidden',next!=='users');$('themeFilter').classList.toggle('hidden',next!=='posts');$('listTitle').textContent=next==='comments'?'评论列表':'帖子列表';$('searchInput').value='';$('stateFilter').value='visible';$('themeFilter').value='';load();}
   function enter(data){csrf=data.csrf;$('accountName').textContent=data.username;$('loginView').classList.add('hidden');$('appView').classList.remove('hidden');$('previewBadge').classList.toggle('hidden',!local);$('password').value='';navigate('overview');}
   function updateChars(){$('topicCharCount').textContent=$('topicInput').value.length+' / 80';}
   for(const [value,label] of Object.entries(themes)){const option=node('option','',label);option.value=value;$('themeFilter').append(option);}

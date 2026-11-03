@@ -149,8 +149,8 @@ async function fixture(t,{secure=false}={}){
  const child=spawn(process.execPath,['server.mjs'],{env:{...process.env,PORT:String(port),EXTRA_PORTS:'',DATA_DIR:data,SITE_ORIGIN:origin,HOST:'127.0.0.1'},stdio:['ignore','pipe','pipe']});let logs='';child.stdout.on('data',x=>logs+=x);child.stderr.on('data',x=>logs+=x);
  let db;t.after(async()=>{db?.close();child.kill();await new Promise(r=>child.exitCode!==null?r():child.once('exit',r));await fs.rm(data,{recursive:true,force:true});});
  let ready=false;for(let i=0;i<100;i++){try{if((await fetch(base+'/api/topic')).ok){ready=true;break;}}catch{}await delay(50);}assert.ok(ready,logs);db=new DatabaseSync(path.join(data,'wall.db'));
- async function call(route,{method='GET',body,session,originOverride,csrfOverride,forwardTls=false,uaOverride,requestKey}={}){
-  const headers={};if(requestKey!==undefined)headers['X-SJ-Post-Request']=requestKey;if(uaOverride)headers['User-Agent']=uaOverride;if(session){headers.Cookie=session.cookie;headers['X-SJ-CSRF']=csrfOverride??session.csrf;headers['X-CSRF-Token']=session.csrf;}
+ async function call(route,{method='GET',body,session,originOverride,csrfOverride,forwardTls=false,uaOverride,requestKey,extraHeaders={}}={}){
+  const headers={...extraHeaders};if(requestKey!==undefined)headers['X-SJ-Post-Request']=requestKey;if(uaOverride)headers['User-Agent']=uaOverride;if(session){headers.Cookie=session.cookie;headers['X-SJ-CSRF']=csrfOverride??session.csrf;headers['X-CSRF-Token']=session.csrf;}
   if(method!=='GET')headers.Origin=originOverride??origin;if(forwardTls)headers['X-Forwarded-Proto']='https';
   if(body!==undefined&&!(body instanceof FormData))headers['Content-Type']='application/json';
   const r=await fetch(base+route,{method,headers,...(body!==undefined?{body:body instanceof FormData?body:JSON.stringify(body)}:{})});const text=await r.text();let json;try{json=JSON.parse(text);}catch{json=text;}return {status:r.status,data:json,cookie:r.headers.get('set-cookie'),headers:r.headers};
@@ -323,4 +323,30 @@ test('word-game join races admit one partner; expiry, bans and close prevent fur
 
 test('word-game responses bound revealed history and do not expose a later pending answer',async t=>{
  const f=await fixture(t),a=await f.register('history_a'),b=await f.register('history_b'),token=(await f.call('/api/word-game',{method:'POST',session:a,body:{}})).data.room.token,base='/api/word-game/'+token;await f.call(base+'/join',{method:'POST',session:b,body:{}});f.db.prepare('UPDATE word_rooms SET round=61 WHERE token=?').run(token);f.db.prepare('DELETE FROM word_rounds WHERE room_token=?').run(token);const insert=f.db.prepare('INSERT INTO word_rounds(room_token,round,host_word,guest_word,completed_at) VALUES(?,?,?,?,?)');for(let i=1;i<=60;i++)insert.run(token,i,'左词','右词',Date.now());insert.run(token,61,'未揭晓的秘密',null,null);const room=(await f.call(base,{session:b})).data.room;assert.equal(room.history.length,50);assert.equal(room.history[0].round,11);assert.equal(room.completedRounds,60);assert.ok(!JSON.stringify(room).includes('未揭晓的秘密'));
+});
+
+test('growth connects real page entries to registration, counts successful guesses once, and keeps aggregates admin-only',async t=>{
+ const f=await fixture(t),host=await f.register('growth_host');
+ const created=await f.call('/api/word-game',{method:'POST',session:host,body:{}}),token=created.data.room.token,room='/api/word-game/'+token;
+ assert.equal(f.db.prepare('SELECT COUNT(*) n FROM growth_game_users').get().n,0);
+ for(const [route,options]of [['/play',{uaOverride:'Googlebot'}],['/play',{method:'HEAD'}],['/play',{extraHeaders:{'Sec-Fetch-Dest':'iframe'}}],['/post/999999',{}],['/mobile-lab',{}],['/wall-demo',{}]])await f.call(route,options);
+ assert.equal(f.db.prepare('SELECT COUNT(*) n FROM growth_visits').get().n,0);
+ const landing=await f.call('/play/'+token+'?utm_source=qq'),cookie=landing.cookie.split(';')[0];assert.match(cookie,/^sj_growth_local=/);
+ await f.call('/plaza?utm_source=wechat',{extraHeaders:{Cookie:cookie}});assert.equal(f.db.prepare('SELECT COUNT(*) n FROM growth_visits').get().n,1);
+ const registered=await f.call('/api/auth/register',{method:'POST',extraHeaders:{Cookie:cookie,Referer:f.origin+'/play/'+token},body:{username:'growth_guest',password,accept:true}});assert.equal(registered.status,200);
+ const guest={...registered.data,cookie:registered.cookie.split(';')[0]};
+ const attribution=f.db.prepare('SELECT * FROM growth_registrations WHERE user_id=?').get(guest.user.id);assert.equal(attribution.entry,'word_invite');assert.equal(attribution.registration_entry,'word_invite');assert.equal(attribution.channel,'link:qq');
+ await f.call(room+'/join',{method:'POST',session:guest,body:{}});assert.equal(f.db.prepare('SELECT COUNT(*) n FROM growth_game_users').get().n,0);
+ assert.equal((await f.call(room+'/guess',{method:'POST',session:guest,csrfOverride:'bad',body:{round:1,word:'guess-secret'}})).status,403);
+ assert.equal((await f.call(room+'/guess',{method:'POST',session:guest,body:{round:1,word:''}})).status,400);
+ for(let i=0;i<2;i++)assert.equal((await f.call(room+'/guess',{method:'POST',session:guest,body:{round:1,word:'guess-secret'}})).status,200);
+ assert.equal(f.db.prepare('SELECT guesses FROM growth_game_daily WHERE user_id=?').get(guest.user.id).guesses,1);
+ const form=new FormData();form.set('text','growth-community-content');form.set('theme','daily');assert.equal((await f.call('/api/posts',{method:'POST',session:guest,body:form})).status,200);
+ assert.ok(f.db.prepare('SELECT community_after_at FROM growth_game_users WHERE user_id=?').get(guest.user.id).community_after_at);
+ assert.equal((await f.call('/api/admin/growth')).status,401);assert.equal((await f.call('/api/admin/growth',{session:guest})).status,401);
+ const admin=await f.admin(),stats=await f.call('/api/admin/growth?days=7',{session:admin});assert.equal(stats.status,200);assert.match(stats.headers.get('cache-control'),/no-store/);assert.equal(stats.data.registrations.total,2);assert.equal(stats.data.registrations.played,1);assert.equal(stats.data.registrations.inviteEntry,1);assert.equal(stats.data.registrations.gamePage,1);assert.equal(stats.data.registrations.communityAfter,1);assert.equal(stats.data.entries[0].registrations,1);assert.equal(stats.data.retention.day1.pending,1);
+ for(const secret of ['guess-secret','growth-community-content',token,'registration_ip','password_hash','growth_guest'])assert.ok(!JSON.stringify(stats.data).includes(secret));
+ assert.equal((await f.call('/api/admin/growth?days=8',{session:admin})).status,400);
+ await f.call('/play',{session:guest});assert.equal(f.db.prepare('SELECT COUNT(*) n FROM growth_visits').get().n,1);
+ f.db.prepare('UPDATE site_users SET disabled=1 WHERE id=?').run(guest.user.id);assert.equal((await f.call('/api/admin/growth',{session:admin})).data.registrations.played,0);
 });
