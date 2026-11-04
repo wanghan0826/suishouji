@@ -355,7 +355,7 @@ test('multiplayer drawing uses real login and CSRF, preserves answer privacy, an
  const f=await fixture(t),host=await f.register('draw_host'),a=await f.register('draw_friend_a'),b=await f.register('draw_friend_b');
  for(const route of ['/draw','/draw/','/draw-game.js','/draw-game.css'])assert.equal((await f.call(route)).status,200);
  assert.equal((await f.call('/api/draw-game',{method:'POST',body:{}})).status,401);assert.equal((await f.call('/api/draw-game',{method:'POST',session:host,csrfOverride:'invalid',body:{}})).status,403);
- const created=await f.call('/api/draw-game',{method:'POST',session:host,body:{}});assert.equal(created.status,200);const token=created.data.room.token,base='/api/draw-game/'+token;
+ const created=await f.call('/api/draw-game',{method:'POST',session:host,body:{mode:'party'}});assert.equal(created.status,200);const token=created.data.room.token,base='/api/draw-game/'+token;
  for(const session of [a,b])assert.equal((await f.call(base+'/join',{method:'POST',session,body:{}})).status,200);
  const started=await f.call(base+'/start',{method:'POST',session:host,body:{}});assert.equal(started.status,200);const answer=started.data.room.turn.answer;
  assert.equal((await f.call(base,{session:a})).data.room.turn.answer,null);assert.equal((await f.call(base+'/stroke',{method:'POST',session:a,body:{round:1,epoch:0}})).status,403);

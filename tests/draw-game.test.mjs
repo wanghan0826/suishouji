@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {DatabaseSync} from 'node:sqlite';
-import {createDrawingGame,drawingScores,validStroke} from '../scripts/draw-game.mjs';
+import {createDrawingGame,drawingScores,studioScores,validStroke} from '../scripts/draw-game.mjs';
 const fail=(status,message)=>Object.assign(Error(message),{status});
 async function fixture(t){
   const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE site_users(id INTEGER PRIMARY KEY,username TEXT,disabled INTEGER DEFAULT 0);');for(let id=1;id<=12;id++)db.prepare('INSERT INTO site_users VALUES(?,?,0)').run(id,'player_'+id);
@@ -10,11 +10,44 @@ async function fixture(t){
   let now=Date.parse('2026-11-03T12:00:00+08:00');const game=createDrawingGame({db,users,clock:()=>now}),server=http.createServer(async(req,res)=>{if(!await game.handle(req,res)){res.writeHead(404);res.end();}});await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
   t.after(async()=>{game.close();server.closeAllConnections();await new Promise(r=>server.close(r));db.close();});
   async function call(route='',{user=1,data,csrf='valid',method=data===undefined?'GET':'POST'}={}){const r=await fetch(base+'/api/draw-game'+route,{method,headers:{'X-Test-User':String(user),'X-Test-CSRF':csrf,'Content-Type':'application/json'},...(data!==undefined?{body:JSON.stringify(data)}:{})});return {status:r.status,data:await r.json(),headers:r.headers};}
-  const create=async()=>{const r=await call('',{data:{}});assert.equal(r.status,200);return r.data.room.token;};
+  const create=async()=>{const r=await call('',{data:{mode:'party'}});assert.equal(r.status,200);return r.data.room.token;};
   const start=async(count=3)=>{const token=await create();for(let user=2;user<=count;user++)assert.equal((await call('/'+token+'/join',{user,data:{}})).status,200);assert.equal((await call('/'+token+'/start',{data:{}})).status,200);return token;};
   const advance=ms=>now+=ms;return {db,base,call,create,start,advance};
 }
 const stroke=(round=1,epoch=0,op='a'.repeat(32),path='b'.repeat(32))=>({round,epoch,opId:op,strokeId:path,color:'#25352d',size:6,points:[[10,20],[100,200]]});
+
+test('free studio starts solo, accepts late viewers and awards all correct guesses without cancellation',async t=>{
+ const f=await fixture(t),created=await f.call('',{data:{canvasHeight:1280}}),base='/'+created.data.room.token;
+ assert.equal(created.data.room.mode,'studio');assert.equal(created.data.room.canvasHeight,1280);
+ let r=(await f.call(base+'/start',{data:{}})).data.room;assert.equal(r.phase,'playing');assert.equal(r.turn.eligibleCount,0);assert.equal(r.turn.drawerId,1);
+ assert.equal((await f.call(base+'/stroke',{data:{...stroke(),points:[[20,1000],[60,1200]]}})).status,200);assert.equal((await f.call(base+'/stroke',{data:{...stroke(1,0,'c'.repeat(32)),points:[[20,1281]]}})).status,400);
+ const joined=(await f.call(base+'/join',{user:2,data:{}})).data.room;assert.equal(joined.turn.answer,null);assert.equal(joined.turn.eligibleCount,1);
+ const answer=r.turn.answer;const correct=await f.call(base+'/guess',{user:2,data:{round:1,text:answer}});r=correct.data.room;
+ assert.equal(r.phase,'between');assert.equal(r.turn.reason,'all');assert.equal(r.members.find(m=>m.id===1).score,10);assert.equal(r.members.find(m=>m.id===2).score,100);
+ assert.equal((await f.call(base+'/guess',{user:2,data:{round:1,text:answer}})).status,409);
+ await f.call(base+'/join',{user:3,data:{}});f.advance(8001);r=(await f.call(base)).data.room;assert.equal(r.round,2);assert.equal(r.turn.drawerId,1);assert.equal(r.turn.eligibleCount,2);
+ await f.call(base+'/leave',{user:2,data:{}});r=(await f.call(base)).data.room;assert.equal(r.phase,'playing');assert.equal(r.turn.reason,'');
+ await f.call(base+'/join',{user:2,data:{}});assert.equal((await f.call(base)).data.room.turn.eligibleCount,2);
+ await f.call(base+'/leave',{data:{}});assert.equal((await f.call(base,{user:3})).data.room.phase,'closed');
+});
+
+test('solo studio times out without points and continues with the same artist; closing is host-only',async t=>{
+ const f=await fixture(t),created=await f.call('',{data:{mode:'studio'}}),base='/'+created.data.room.token;await f.call(base+'/start',{data:{}});f.advance(90001);
+ let r=(await f.call(base)).data.room;assert.equal(r.phase,'between');assert.deepEqual(r.turn.scores,[]);assert.equal(r.members[0].score,0);
+ f.advance(8001);r=(await f.call(base)).data.room;assert.equal(r.round,2);assert.equal(r.turn.drawerId,1);
+ await f.call(base+'/join',{user:2,data:{}});assert.equal((await f.call(base+'/close',{user:2,data:{}})).status,403);assert.equal((await f.call(base+'/close',{data:{}})).data.room.phase,'closed');
+});
+
+test('studio rank scores are fixed under late arrivals and ten-seat cap still applies mid-game',async t=>{
+ assert.deepEqual(studioScores([2,3,4],[3,2],1),[{userId:1,points:20},{userId:3,points:100},{userId:2,points:80}]);assert.deepEqual(studioScores([],[],1),[]);
+ const f=await fixture(t);for(const data of [{mode:'other'},{canvasHeight:1},{canvasHeight:1601},{canvasHeight:640.5}])assert.equal((await f.call('',{data})).status,400);
+ const created=await f.call('',{data:{mode:'studio'}}),base='/'+created.data.room.token;await f.call(base+'/start',{data:{}});for(let user=2;user<=9;user++)await f.call(base+'/join',{user,data:{}});
+ const results=await Promise.all([10,11].map(user=>f.call(base+'/join',{user,data:{}})));assert.deepEqual(results.map(r=>r.status).sort(),[200,409]);assert.equal((await f.call(base)).data.room.turn.eligibleCount,9);
+});
+
+test('an inactive studio closes after ten minutes and does not create endless unattended rounds',async t=>{
+ const f=await fixture(t),created=await f.call('',{data:{mode:'studio'}}),base='/'+created.data.room.token;await f.call(base+'/start',{data:{}});f.advance(600001);assert.equal((await f.call(base)).data.room.phase,'closed');assert.equal(f.db.prepare('SELECT COUNT(*) n FROM draw_rounds').get().n,1);
+});
 
 test('drawing score order is deterministic and all-correct cancels every provisional score',()=>{
   assert.deepEqual(drawingScores([2,3,4],[3,2],1),[{userId:1,points:2},{userId:3,points:3},{userId:2,points:2}]);assert.deepEqual(drawingScores([2,3],[2,3],1),[]);assert.deepEqual(drawingScores([2,3],[],1),[]);assert.deepEqual(drawingScores([2,3],[2,2,99],1),[{userId:1,points:1},{userId:2,points:2}]);
