@@ -6,11 +6,17 @@ export function ensurePostHearts(db){
  // Old counters never recorded identities; preserve them without inventing people.
  db.exec('INSERT OR IGNORE INTO post_heart_history SELECT p.id,MAX(0,COALESCE(p.hearts,0)-(SELECT COUNT(*) FROM post_hearts h WHERE h.post_id=p.id)) FROM posts p');
 }
+export function readPostHeartPeople(db,id,before=Number.MAX_SAFE_INTEGER){
+ if(!Number.isSafeInteger(before)||before<1)throw fail(400,'无效分页编号');
+ const accountHearts=db.prepare('SELECT COUNT(*) n FROM post_hearts WHERE post_id=?').get(id).n,legacyHearts=db.prepare('SELECT count FROM post_heart_history WHERE post_id=?').get(id)?.count||0;
+ const rows=db.prepare('SELECT h.id,u.username FROM post_hearts h JOIN site_users u ON u.id=h.user_id WHERE h.post_id=? AND h.id<? ORDER BY h.id DESC LIMIT 31').all(id,before),items=rows.slice(0,30);
+ return {hearts:accountHearts+legacyHearts,accountHearts,legacyHearts,items:items.map(r=>({username:r.username})),nextBefore:rows.length>30?items.at(-1).id:null};
+}
 export function createPostHearts({db,users}){
  ensurePostHearts(db);
- const visible=id=>db.prepare("SELECT p.id,p.hearts FROM posts p WHERE p.id=? AND NOT EXISTS(SELECT 1 FROM admin_archive a WHERE a.kind='post' AND a.item_id=p.id)").get(id);
+ const visible=id=>db.prepare("SELECT p.id,p.hearts,p.user_id FROM posts p WHERE p.id=? AND NOT EXISTS(SELECT 1 FROM admin_archive a WHERE a.kind='post' AND a.item_id=p.id)").get(id);
  const valid=value=>{const n=Number(value);if(!/^\d+$/.test(String(value))||!Number.isSafeInteger(n)||n<1)throw fail(400,'帖子编号无效');return n;};
- function summary(id,userId){const accounts=db.prepare('SELECT COUNT(*) n FROM post_hearts WHERE post_id=?').get(id).n,history=db.prepare('SELECT count FROM post_heart_history WHERE post_id=?').get(id)?.count||0;return {id,hearts:accounts+history,accountHearts:accounts,legacyHearts:history,liked:!!userId&&!!db.prepare('SELECT 1 FROM post_hearts WHERE post_id=? AND user_id=?').get(id,userId)};}
+ function summary(id,userId){const accounts=db.prepare('SELECT COUNT(*) n FROM post_hearts WHERE post_id=?').get(id).n,history=db.prepare('SELECT count FROM post_heart_history WHERE post_id=?').get(id)?.count||0;return {id,hearts:accounts+history,accountHearts:accounts,legacyHearts:history,canViewLikes:!!userId&&db.prepare('SELECT user_id FROM posts WHERE id=?').get(id)?.user_id===userId,liked:!!userId&&!!db.prepare('SELECT 1 FROM post_hearts WHERE post_id=? AND user_id=?').get(id,userId)};}
  return {handle(req,res){const url=new URL(req.url,'http://local'),batch=url.pathname==='/api/post-hearts',match=/^\/api\/posts\/(\d+)\/(heart|likes)$/.exec(url.pathname);if(!batch&&!match)return false;
  const send=(status,value)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','Vary':'Cookie','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(value));return true;};
  try{if(batch){if(req.method!=='GET')throw fail(405,'仅支持读取');const raw=(url.searchParams.get('ids')||'').split(',');if(!raw.length||raw.length>100)throw fail(400,'一次最多查询100条帖子');const ids=[...new Set(raw.map(valid))],user=users.currentUser(req);return send(200,{items:ids.filter(visible).map(id=>summary(id,user?.id))});}
@@ -22,9 +28,9 @@ export function createPostHearts({db,users}){
   return send(200,{...summary(id,user.id),added});
  }
  if(match[2]!=='likes'||req.method!=='GET')throw fail(405,'请求方法无效');
+ const user=users.currentUser(req);if(!user)throw fail(401,'登录后查看自己的帖子点赞名单');if(visible(id).user_id!==user.id)throw fail(403,'仅帖子作者可查看点赞名单');
  const before=url.searchParams.has('before')?valid(url.searchParams.get('before')):Number.MAX_SAFE_INTEGER;
- const rows=db.prepare('SELECT h.id,u.username FROM post_hearts h JOIN site_users u ON u.id=h.user_id WHERE h.post_id=? AND h.id<? ORDER BY h.id DESC LIMIT 31').all(id,before),items=rows.slice(0,30);
- return send(200,{...summary(id,users.currentUser(req)?.id),items:items.map(r=>({username:r.username})),nextBefore:rows.length>30?items.at(-1).id:null});
+ return send(200,{...summary(id,user.id),...readPostHeartPeople(db,id,before)});
  }catch(e){return send(e.status||500,{error:e.status?e.message:'点赞暂时无法完成，请稍后重试'});}
  }};
 }

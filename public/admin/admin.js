@@ -7,7 +7,16 @@
   const fmt=value=>new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(value));
   const node=(tag,className,text)=>{const e=document.createElement(tag);if(className)e.className=className;if(text!==undefined)e.textContent=String(text);return e;};
   const toast=text=>{clearTimeout(toastTimer);$('toast').textContent=text;$('toast').classList.add('show');toastTimer=setTimeout(()=>$('toast').classList.remove('show'),3000);};
-  function showLogin(){csrf='';requestId++;resetFeedbackEditor();$('adminFeedbackList').replaceChildren();$('feedbackNotice').textContent='查看游戏建议 →';$('growthData').hidden=true;$('growthStatus').textContent='';$('appView').classList.add('hidden');$('loginView').classList.remove('hidden');$('password').value='';}
+  let likesRevision=0,likesPost=null,likesBefore=null,likesBusy=false;
+  function clearLikes(){likesRevision++;likesPost=null;likesBefore=null;likesBusy=false;for(const id of ['adminLikesList','adminLikesCount','adminLikesLegacy','adminLikesStatus'])$(id).replaceChildren();}
+  function showLogin(){clearLikes();if($('adminLikesDialog').open)$('adminLikesDialog').close();csrf='';requestId++;resetFeedbackEditor();$('adminFeedbackList').replaceChildren();$('feedbackNotice').textContent='查看游戏建议 →';$('growthData').hidden=true;$('growthStatus').textContent='';$('appView').classList.add('hidden');$('loginView').classList.remove('hidden');$('password').value='';}
+  function openLikes(id){clearLikes();likesPost=id;$('adminLikesTitle').textContent='帖子 #'+id+' · 点赞名单';$('adminLikesMore').hidden=true;if(!$('adminLikesDialog').open)$('adminLikesDialog').showModal();loadLikes();}
+  async function loadLikes(){if(likesBusy||!likesPost||!csrf)return;likesBusy=true;const version=likesRevision,account=csrf,id=likesPost,before=likesBefore;$('adminLikesMore').disabled=true;$('adminLikesStatus').textContent='正在加载…';
+    try{const data=await api('posts/'+id+'/likes'+(before?'?before='+before:''));if(version!==likesRevision||account!==csrf||!$('adminLikesDialog').open)return;$('adminLikesCount').textContent=data.accountHearts+' 位用户点赞';$('adminLikesLegacy').textContent=data.legacyHearts?'另有 '+data.legacyHearts+' 次历史点赞未记录账号，无法展示名单。':'';for(const item of data.items){const a=node('a','','@'+item.username);a.href='/u/'+encodeURIComponent(item.username);a.target='_blank';a.rel='noopener';$('adminLikesList').append(a);}likesBefore=data.nextBefore;$('adminLikesMore').hidden=!likesBefore;$('adminLikesMore').textContent='加载更多';$('adminLikesStatus').textContent=data.accountHearts?'':'还没有账号点赞。';}
+    catch(e){if(version!==likesRevision||account!==csrf)return;$('adminLikesStatus').textContent='名单暂时无法加载：'+e.message;$('adminLikesMore').hidden=false;$('adminLikesMore').textContent='重试';}
+    finally{if(version===likesRevision&&account===csrf){likesBusy=false;$('adminLikesMore').disabled=false;}}
+  }
+  $('adminLikesClose').onclick=()=>$('adminLikesDialog').close();$('adminLikesMore').onclick=loadLikes;$('adminLikesDialog').addEventListener('close',clearLikes);
   async function api(route,{method='GET',body}={}){
     const response=await fetch('/api/admin/'+route,{method,credentials:'same-origin',cache:'no-store',headers:method==='GET'?{}:{'Content-Type':'application/json','X-CSRF-Token':csrf},...(body!==undefined?{body:JSON.stringify(body)}:{})});
     let data;try{data=await response.json();}catch{throw Error('服务器暂时没有返回有效内容，请稍后重试');}
@@ -23,6 +32,7 @@
     if(post.media&&/^[A-Za-z0-9._-]+$/.test(post.media)){
       const e=node(post.media_type==='video'?'video':'img');e.src='/uploads/'+encodeURIComponent(post.media);if(e.tagName==='VIDEO')e.controls=true;else e.alt='帖子配图';$('detailMedia').append(e);
     }
+    if(!post.post_id){const likes=node('button','secondary','查看点赞');likes.onclick=()=>openLikes(post.id);$('detailMedia').append(likes);}
     $('postDialog').showModal();$('postDialog').scrollTop=0;
   }
   function confirmAction(title,text){
@@ -108,7 +118,7 @@
       action.disabled=true;
       try{await api(view+'/'+post.id+'/'+(restore?'restore':'archive'),{method:'POST',body:{}});toast(restore?'已恢复展示':'已移入回收站');await load();}catch(e){showError(e.message);}finally{action.disabled=false;}
     };
-    if(post.user_id){const account=node('button','text-button','账号 #'+post.user_id);account.onclick=()=>traceUser(post.user_id);actions.append(account);}else actions.append(node('span','muted','历史匿名记录'));actions.append(open,action);item.append(copy,actions);return item;
+    if(post.user_id){const account=node('button','text-button','账号 #'+post.user_id);account.onclick=()=>traceUser(post.user_id);actions.append(account);}else actions.append(node('span','muted','历史匿名记录'));if(view==='posts'){const likes=node('button','text-button','查看点赞');likes.dataset.adminLikesId=String(post.id);likes.onclick=()=>openLikes(post.id);actions.append(likes);}actions.append(open,action);item.append(copy,actions);return item;
   }
   async function loadContent(id){
     const params=new URLSearchParams({page:String(page),limit:'20',state:$('stateFilter').value,q:$('searchInput').value.trim()});if(view==='posts'&&$('themeFilter').value)params.set('theme',$('themeFilter').value);

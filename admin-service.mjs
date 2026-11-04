@@ -1,4 +1,5 @@
 import {ensureWallTitles,attachWallTitles} from './scripts/wall-titles.mjs';
+import {ensurePostHearts,readPostHeartPeople} from './scripts/post-hearts.mjs';
 import {ensureCommunity,channelFilter} from './scripts/community.mjs';
 import {visibleSpaceMessage} from './scripts/space-threads.mjs';
 import {ensureSocialMetrics,readSocialMetrics} from './scripts/social-metrics.mjs';
@@ -35,6 +36,7 @@ export function createAdminService({db,dataDir,publicDir,origin='https://example
   ensureAnalytics(db);
   ensureCommentThreads(db);
   ensureGameFeedback(db);
+  ensurePostHearts(db);
   const expectedOrigin=new URL(origin).origin;
   if(new URL(expectedOrigin).protocol!=='https:'&&!allowLocalHttp)throw Error('Admin origin must use HTTPS');
   const cookieName=allowLocalHttp?'sj_admin_local':'__Host-sj_admin';
@@ -94,6 +96,8 @@ export function createAdminService({db,dataDir,publicDir,origin='https://example
       const s=session(req);if(!s)throw failure(401,'登录已失效，请重新登录');
       if(!['GET','HEAD'].includes(req.method)){mutationOrigin(req);if(!constant(req.headers['x-csrf-token']||'',s.csrf))throw failure(403,'页面凭据已失效，请刷新重试');}
       if(p==='/api/admin/logout'&&req.method==='POST'){db.prepare('DELETE FROM admin_sessions WHERE token_hash=?').run(s.token_hash);audit(s.username,'logout','session');json(res,200,{ok:true},{'Set-Cookie':cookie('',0)});return true;}
+      const likesMatch=/^\/api\/admin\/posts\/(\d+)\/likes$/.exec(p);
+      if(likesMatch&&req.method==='GET'){const id=checkId(likesMatch[1]);if(!db.prepare('SELECT id FROM posts WHERE id=?').get(id))throw failure(404,'帖子不存在');const before=url.searchParams.has('before')?checkId(url.searchParams.get('before')):Number.MAX_SAFE_INTEGER;json(res,200,{id,...readPostHeartPeople(db,id,before)});return true;}
       if(p==='/api/admin/assistant'&&req.method==='GET'){json(res,200,assistant?.status()||{enabled:false,name:'小记',model:'deepseek-flash'});return true;}
       if(p==='/api/admin/assistant'&&req.method==='POST'){if(!assistant)throw failure(503,'助手暂时不可用');const result=await assistant.configure(await body(req));audit(s.username,'assistant_config','小记');json(res,200,result);return true;}
       if(p==='/api/admin/space-updates'&&req.method==='GET'){json(res,200,{items:db.prepare('SELECT s.id,s.text,s.created_at,s.hidden,u.username FROM space_updates s JOIN site_users u ON u.id=s.user_id ORDER BY s.id DESC LIMIT 30').all()});return true;}
