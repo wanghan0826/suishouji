@@ -1,0 +1,104 @@
+/* Signal / 原创几何视觉。只改变外观，不改变弹幕轨迹和游戏画布布局。 */
+:root{--edge-line:color-mix(in srgb,var(--text) 32%,var(--border));--edge-soft:color-mix(in srgb,var(--text) 12%,var(--border));--radius:5px}
+html[data-appearance=paper]{--bg:#f5f5ef;--surface:#fffffa;--surface2:#e9ece3;--text:#1c2827;--text2:#5b6861;--border:#c2c9bf;--accent:#305342;--wall:#eef0e7;--wall-text:#1c2827;--wall-muted:#536259;--wall-border:#a2b19e;--wall-accent:#305342;--wall-accent-text:#fffffa;--wall-pill:#fffffaf5;--wall-pill-alt:#e5eadff5;--wall-pill-third:#e4e8edf5;--wall-shade:#eef0e7}
+body{font-feature-settings:"ss01" on;--action-shadow:0 2px 0 color-mix(in srgb,var(--text) 18%,transparent)}
+body .brand-icon{border-radius:3px;font-family:inherit;font-weight:800;transform:none}
+body .brand-name{font-weight:750;letter-spacing:-.8px}
+body .eyebrow,body .account-kicker,body .appearance-kicker{font-family:ui-monospace,"SFMono-Regular",Consolas,monospace;letter-spacing:1.7px;font-weight:600}
+body :is(h1,h2,h3){text-wrap:balance}
+body :is(.plaza-header,.header){border-bottom:1px solid var(--edge-line)}
+body .plaza-header nav a{border-radius:0;text-decoration:none;border-bottom:2px solid transparent}
+body .plaza-header nav a[aria-current]{border-bottom-color:var(--accent);font-weight:650}
+body .plaza-header nav a:hover{border-bottom-color:var(--edge-line)}
+body :is(.btn-post,.btn-ghost,button.text-button,.account-primary,.space-game-link),body .plaza-header .btn-ghost{border-radius:4px}
+body :is(.appearance-dialog,.account-dialog,.discussion-dialog,.article-dialog,.modal-box,.share-dialog,.space-bullet-dialog,.heart-people-dialog){border-radius:6px;border-color:var(--edge-line);box-shadow:8px 8px 0 color-mix(in srgb,var(--text) 13%,transparent)}
+body :is(.appearance-choice,.appearance-preview,.appearance-state,.appearance-close,.account-close,.article-close,.modal-close){border-radius:4px}
+body :is(.post-form,.discussion-dialog,.account-dialog,.feedback-fields,.space-edit-form) :is(input:not([type=checkbox]):not([type=radio]),textarea,select){border-radius:4px}
+body :is(.community-sections button,.plaza-categories button,.plaza-sort button,.space-tabs button,.theme-tag,.wall-channel nav,.wall-channel button,.friends-sort button){border-radius:3px}
+body :is(.plaza-tools form,.plaza-topic,.topic-banner,.discussion-item,.plaza-guide,.card,.editorial-card,.editorial-photo,.community-photo,.space-update,.space-member,.space-compose,.space-gate,.space-public-note,.space-wall,.friends-card,.feedback-card,.feedback-item,.feedback-reply,.game-guide,.game-recent,.game-room,.game-join,.game-word-card,.game-history-row,.word-game-entry){border-radius:5px;border-color:var(--edge-line)}
+body :is(.profile-facts>span,.profile-tag,.profile-fieldset,.profile-upload-button,.profile-avatar-choice,.profile-game-options>label){border-radius:4px}
+body .space-hero,body .profile-hero{border-radius:5px}
+body .profile-hero .space-avatar,body .space-avatar,body .profile-avatar-preview{border-radius:8px;box-shadow:none}
+body .game-form input,body .game-invite input{border-radius:4px}
+body :is(.conversation-prompts,.friends-stage,.friend-card,.friend-card>img){border-radius:5px}
+body :is(.conversation-prompts button,.friends-tools [data-friends-scope],.friend-bullet,.space-wall-pill){border-radius:3px}
+body .profile-cover{background:var(--surface2)}
+body .profile-cover>img{mask-image:none;border-left:1px solid var(--edge-line)}
+body .profile-cover>span{color:var(--text2)}
+body .draw-mode-picker label,body .draw-choice-button{border-radius:4px}
+body:not(.draw-immersive) .draw-card{border-radius:5px;border-color:var(--edge-line)}
+body .draw-result{border-radius:4px}
+body .wall-intro h1{font-weight:800;letter-spacing:-1px}
+body .wall-stage .wall-post,.portrait-wall .wall-stage .wall-post{border-radius:5px!important;box-shadow:2px 2px 0 color-mix(in srgb,var(--wall-text) 8%,transparent)}
+body .wall-avatar{border-radius:3px}
+body .wall-actions .btn-post,body .wall-actions .text-button,body .reader-bar button{border-radius:4px}
+body:not(.reader-expanded) .reader-panel{border-radius:5px}
+.wall-geometry{position:absolute;inset:0;pointer-events:none;z-index:1;overflow:hidden;color:var(--wall-muted);opacity:.21}
+.wall-geometry i{position:absolute;display:block}
+.wall-geometry i:nth-child(1){width:150px;height:150px;right:7%;top:19%;border:1px solid currentColor;transform:rotate(24deg)}
+.wall-geometry i:nth-child(2){width:100px;height:100px;left:3%;bottom:20%;background:currentColor;clip-path:polygon(50% 0,59% 33%,85% 15%,67% 42%,100% 50%,67% 58%,85% 85%,59% 67%,50% 100%,41% 67%,15% 85%,33% 58%,0 50%,33% 42%,15% 15%,41% 33%)}
+.wall-geometry i:nth-child(3){width:190px;height:20px;right:-25px;bottom:17%;border-top:1px solid currentColor;border-bottom:1px solid currentColor;transform:rotate(-36deg)}
+body .wall-recommendation{border-radius:5px;border-color:#8a9a73;background:#f3f6e9;color:#1c2827;box-shadow:6px 6px 0 #14281e35}
+body .wall-recommendation:hover{box-shadow:6px 6px 0 #14281e35}
+body .wall-recommendation-link,body .wall-recommendation-action,body .wall-recommendation-close{border-radius:3px}
+body .wall-recommendation-action{background:#305342}
+body .wall-recommendation strong{font-weight:800}
+
+/* Geometric artwork supplies color; surrounding content stays crisp and quiet. */
+body :is(.platform-game-entry,.platform-zones a,.game-feedback-entry),.games-page .games-launch-card{border-radius:5px;border-color:var(--edge-line);background:var(--surface);box-shadow:3px 3px 0 var(--edge-soft)}
+body .platform-game-entry{gap:26px}
+body .entry-chibi{width:180px;height:180px;border-radius:0;transform:none;object-fit:cover}
+body .platform-zones a{background:var(--surface)}
+body .platform-zones a:nth-child(1){border-left:3px solid var(--accent)}
+body .platform-zones a:nth-child(2){border-left:3px solid #4f6eb6}
+body .platform-zones a:nth-child(3){border-left:3px solid #bd7145}
+body :is(.entry-action,.games-launch-action),.games-launch-card .games-launch-action,.game-feedback-entry>.entry-action,.platform-game-entry .entry-action,.word-game-entry .entry-action,.platform-zones a .entry-action{border-radius:3px}
+.games-page .games-launch-heading{border-bottom:1px solid var(--edge-line);padding-bottom:18px}
+.games-page .games-launch-heading h1{font-weight:800;letter-spacing:-1px}
+.games-page .games-launch-card{grid-template-columns:minmax(0,1fr) 43%;padding:24px;position:relative}
+.games-page .games-launch-card h2{font-weight:800;letter-spacing:-.5px}
+.games-page .games-launch-art{border-radius:0;transform:none;background:#101827;aspect-ratio:1}
+.games-page .games-launch-art img{object-fit:cover}
+.games-page .games-launch-word{border-top:3px solid var(--accent)}
+.games-page .games-launch-draw{border-top:3px solid #b76338}
+body .community-welcome{gap:32px}
+body .chibi-figure,body .community-welcome .chibi-figure{border-radius:0;transform:none;box-shadow:5px 5px 0 var(--edge-soft);padding:0;background:var(--surface);border:1px solid var(--edge-line);overflow:hidden}
+body .chibi-figure img{border-radius:0;object-fit:cover;max-height:none}
+body .chibi-figure figcaption{margin:0;padding:11px 15px;border-top:1px solid var(--edge-line);text-align:left;color:var(--text2);font-family:ui-monospace,Consolas,monospace;font-size:11px;letter-spacing:.5px}
+body .community-welcome h1{font-weight:800;letter-spacing:-1px}
+body .guess-chibi{border-radius:0;object-fit:cover;aspect-ratio:1;max-width:225px;max-height:225px}
+body .signal-draw-figure{padding:0;margin:0;border-radius:0;border:1px solid var(--edge-line);background:#101827;overflow:hidden;display:flex;flex-direction:column;justify-content:stretch}
+.signal-draw-figure img{display:block;width:100%;height:auto;aspect-ratio:1;object-fit:cover}
+body .signal-draw-figure figcaption{display:grid;gap:6px;padding:16px;background:var(--surface);color:var(--text);font-size:14px;text-align:left}
+body .signal-draw-figure small{color:var(--text2);font-size:11px}
+body .draw-intro h1,body .game-intro h1,body .feedback-intro h1{font-weight:800;letter-spacing:-1px}
+body .feedback-intro{border-left:3px solid var(--accent);padding-left:22px}
+body .feedback-card h2,body .games-community h2{font-weight:750}
+body .site-footer,body .games-footer{border-top-color:var(--edge-line)}
+@media(hover:hover) and (pointer:fine){
+ body :is(.platform-game-entry,.platform-zones a,.game-feedback-entry,.games-launch-card):hover{box-shadow:5px 5px 0 var(--edge-soft);border-color:var(--accent);transform:translate(-1px,-1px)}
+}
+@media(max-width:760px){
+ body .entry-chibi{width:100px;height:110px}
+ body .platform-game-entry{gap:16px}
+ .games-page .games-launch-heading{margin-bottom:16px;padding-bottom:14px}
+ .games-page .games-launch-card{grid-template-columns:minmax(0,1fr) 105px;padding:16px 19px}
+ .games-page .games-launch-card h2{font-size:23px}
+ body .community-welcome{gap:22px}
+ body .chibi-figure{max-width:100%;width:100%}
+ body .community-welcome .chibi-figure img{max-height:220px}
+ body .guess-chibi{float:right;width:105px;height:105px;margin:0 0 12px 14px}
+ body .signal-draw-figure{max-width:420px;justify-self:center;width:100%}
+ .signal-draw-figure img{aspect-ratio:16/9;object-position:50% 43%}
+ body .wall-intro h1{font-size:24px}
+ .wall-geometry i:nth-child(1){width:95px;height:95px;right:-30px}
+ .wall-geometry i:nth-child(2){width:65px;height:65px;left:-22px}
+ body .mobile-nav[data-touch-layout=main]>*{border-radius:3px}
+ body .feedback-intro{padding-left:16px}
+}
+@media(max-width:360px){
+ .games-page .games-launch-card{grid-template-columns:minmax(0,1fr) 78px;padding:13px;gap:10px}
+ .games-page .games-launch-card h2{font-size:21px}
+ body .entry-chibi{width:80px;height:100px}
+}
+@media(prefers-reduced-motion:reduce){body :is(.platform-game-entry,.platform-zones a,.game-feedback-entry,.games-launch-card):hover{transform:none}}

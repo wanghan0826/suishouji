@@ -7,7 +7,7 @@
 <meta name="description" content="随手记，一个以互动小游戏为入口的弹幕社区。玩同频猜词，交流游戏、分享资讯，也记录生活。">
 <meta name="theme-color" content="#236451">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2718%27 fill=%27%23236451%27/%3E%3Ctext x=%2732%27 y=%2745%27 text-anchor=%27middle%27 font-size=%2742%27 fill=%27white%27%3E记%3C/text%3E%3C/svg%3E">
-<link rel="preload" as="image" href="/assets/lake.jpg">
+<link rel="preload" as="image" href="/assets/signal-community-v1.webp">
 <link rel="stylesheet" href="/style.css?v=20261029-compact-wall">
 <link rel="stylesheet" href="/appearance.css?v=20261029-light-full">
 <script src="/appearance.js?v=20261029-light-full"></script>
@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="/mobile.css?v=20261029-compact-wall">
 <link rel="stylesheet" href="/post.css?v=20261029-reader">
 <link rel="stylesheet" href="/reader.css?v=20261029-light-full">
-<link rel="stylesheet" href="/social-inbox.css"><link rel="stylesheet" href="/platform.css"><link rel="stylesheet" href="/portrait-wall.css"><link rel="stylesheet" href="/touch-ui.css"><link rel="stylesheet" href="/image-viewer.css"><link rel="stylesheet" href="/interaction.css"><link rel="stylesheet" href="/post-likes.css"></head>
+<link rel="stylesheet" href="/social-inbox.css"><link rel="stylesheet" href="/platform.css"><link rel="stylesheet" href="/portrait-wall.css"><link rel="stylesheet" href="/touch-ui.css"><link rel="stylesheet" href="/image-viewer.css"><link rel="stylesheet" href="/interaction.css"><link rel="stylesheet" href="/post-likes.css"><link rel="stylesheet" href="/graphic.css"></head>
 <body>
 
 <!-- 顶栏 -->
@@ -36,11 +36,11 @@
 
 <main>
 <section id="wall" class="wall-stage" aria-labelledby="wallTitle">
-  <div class="danmaku-area" id="danmakuArea" aria-label="实时帖子弹幕，点击任意弹幕打开帖子"><div class="danmaku-bg show" id="danmakuBg" style="background-image:url('/assets/lake.jpg')"></div><div class="danmaku-bg-mask"></div></div>
+  <div class="danmaku-area" id="danmakuArea" aria-label="实时帖子弹幕，点击任意弹幕打开帖子"><div class="danmaku-bg show" id="danmakuBg" style="background-image:url('/assets/signal-community-v1.webp')"></div><div class="danmaku-bg-mask"></div><div class="wall-geometry" aria-hidden="true"><i></i><i></i><i></i></div></div>
   <div class="wall-intro"><div><p class="eyebrow">PLAY TOGETHER / STAY CONNECTED</p><h1 id="wallTitle"><span class="live-dot"></span>一起玩，聊到一起。</h1></div><div class="wall-channel"><nav id="wallChannels" aria-label="弹幕分区"><button type="button" data-section="" aria-pressed="true">全部</button><button type="button" data-section="game" aria-pressed="false">游戏</button><button type="button" data-section="news" aria-pressed="false">资讯</button><button type="button" data-section="life" aria-pressed="false">生活</button></nav><a href="/games">去玩游戏 ↗</a></div></div>
   <div class="wall-toolbar"><p class="wall-status" id="wallStatus" role="status">正在加载大家的分享…</p><div class="wall-actions"><button id="toggleDanmaku" class="text-button" aria-pressed="false">Ⅱ 暂停弹幕</button><button class="btn-post" id="wallPost">＋ 发一条弹幕</button></div><a class="wall-browse" href="#shares">往下看帖子 <span aria-hidden="true">↓</span></a></div>
 </section>
-<section class="platform-entry page-width" aria-label="一起玩，接着聊"><a class="platform-game-entry" href="/games"><img class="entry-chibi" src="/assets/chibi-word-game-v1.webp" width="1536" height="1024" alt="" loading="lazy"><div><small>GAME LOBBY / 游戏大厅</small><h2>从一局同频猜词开始。</h2><p>各写一个词，慢慢想到一起。邀请朋友来玩 ↗</p><span class="entry-action">进入游戏大厅 <b aria-hidden="true">↗</b></span></div></a><div class="platform-zones"><a href="/plaza?section=game"><strong>游戏交流 ↗</strong><span>找搭子、聊攻略、分享游戏瞬间</span><span class="entry-action">进入分区 <b aria-hidden="true">↗</b></span></a><a href="/plaza?section=news"><strong>游戏资讯 ↗</strong><span>版本、赛事和新鲜消息</span><span class="entry-action">进入分区 <b aria-hidden="true">↗</b></span></a><a href="/plaza?section=life"><strong>生活日常 ↗</strong><span>生活记录，也值得被回应</span><span class="entry-action">进入分区 <b aria-hidden="true">↗</b></span></a></div></section>
+<section class="platform-entry page-width" aria-label="一起玩，接着聊"><a class="platform-game-entry" href="/games"><img class="entry-chibi" alt="" loading="lazy" src="/assets/signal-word-v1.webp" srcset="/assets/signal-word-v1-small.webp 320w, /assets/signal-word-v1.webp 768w" sizes="(max-width:760px) 100px, 180px" width="768" height="768"><div><small>GAME LOBBY / 游戏大厅</small><h2>游戏开场，话题继续。</h2><p>同频猜词、灵魂画手，选一局和朋友一起玩。</p><span class="entry-action">进入游戏大厅 <b aria-hidden="true">↗</b></span></div></a><div class="platform-zones"><a href="/plaza?section=game"><strong>游戏交流 ↗</strong><span>找搭子、聊攻略、分享游戏瞬间</span><span class="entry-action">进入分区 <b aria-hidden="true">↗</b></span></a><a href="/plaza?section=news"><strong>游戏资讯 ↗</strong><span>版本、赛事和新鲜消息</span><span class="entry-action">进入分区 <b aria-hidden="true">↗</b></span></a><a href="/plaza?section=life"><strong>生活日常 ↗</strong><span>生活记录，也值得被回应</span><span class="entry-action">进入分区 <b aria-hidden="true">↗</b></span></a></div></section>
 <!-- 每日话题 -->
 <div class="topic-banner" id="topicBanner">
   <span class="topic-label">今日话题</span>
