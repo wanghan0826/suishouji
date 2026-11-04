@@ -354,10 +354,10 @@ function setupCheckin() {
     try {
       const data = await apiGet('/api/checkin');
       if (data.checkedToday) {
-        btn.textContent = `📅 已签 ${data.streak}天`;
+        if(window.SJIcons)window.SJIcons.setLabel(btn,`已签 ${data.streak}天`);else btn.textContent = `已签 ${data.streak}天`;
         btn.classList.add('checked');
       } else {
-        btn.textContent = '📅 签到';
+        if(window.SJIcons)window.SJIcons.setLabel(btn,'签到');else btn.textContent = '签到';
         btn.classList.remove('checked');
       }
     } catch {}

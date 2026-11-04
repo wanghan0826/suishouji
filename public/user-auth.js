@@ -2,7 +2,7 @@
  const $=id=>document.getElementById(id),dialog=$('accountDialog'),description=dialog.querySelector('.account-description'),defaultDescription=description.textContent;let register=false,pending=null,flow=0,authRevision=0;
  const state={user:null,csrf:'',ready:null,open,render,refresh};window.SJAuth=state;
  function render(){
-  $('btnAccount').textContent=state.user?state.user.username:'登录 / 注册';$('btnAccount').title=state.user?'账号：'+state.user.username:'登录或注册';
+  const demo=document.body.classList.contains('demo-page'),accountLabel=demo?'演示模式':state.user?state.user.username:'登录 / 注册';if(window.SJIcons)window.SJIcons.setLabel($('btnAccount'),accountLabel);else $('btnAccount').textContent=accountLabel;$('btnAccount').title=demo?'演示页不提供账号操作':state.user?'账号：'+state.user.username:'登录或注册';$('btnAccount').setAttribute('aria-label',$('btnAccount').title);
   $('accountSignedOut').hidden=!!state.user;$('accountSignedIn').hidden=!state.user;
   $('accountIdentity').textContent=state.user?state.user.username+' · 账号 #'+state.user.id:'';
   document.dispatchEvent(new Event('sj:auth-change'));

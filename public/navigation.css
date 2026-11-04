@@ -1,0 +1,69 @@
+/* Quiet utility actions and one primary compose action, using our own SVG grid. */
+body{--action-shadow:none}
+body .btn-post:not(:disabled):hover{box-shadow:none;transform:none}
+.ui-icon{display:block;width:20px;height:20px;flex:0 0 20px;pointer-events:none;overflow:visible}
+.ui-control{display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;vertical-align:middle}
+.ui-label{min-width:0;overflow:hidden;text-overflow:ellipsis;line-height:1.4}
+body .header-actions,body .plaza-header>div{display:flex;align-items:center;gap:4px;flex-shrink:0;min-width:0}
+body .header .header-top{gap:20px}
+body .header .main-nav{gap:24px;margin-left:20px;white-space:nowrap}
+body .header-actions :is(.btn-ghost,.btn-post),body .plaza-header>div .btn-ghost{display:inline-flex;align-items:center;justify-content:center;gap:7px;position:relative;min-height:40px;padding:8px 11px;border:1px solid transparent;border-radius:5px;background:transparent;color:var(--text);box-shadow:none;font-size:13px;line-height:1.4;font-weight:500;transform:none;transition:background .15s,border-color .15s,color .15s}
+body .header .header-actions .btn-ghost{color:var(--wall-text)}
+body .header-actions #btnAppearance,body .plaza-header>div #btnAppearance{color:var(--text2)}
+body .header .header-actions #btnAppearance{color:var(--wall-muted)}
+body .header-actions #btnAccount,body .plaza-header>div #btnAccount{border-color:var(--edge-soft);background:color-mix(in srgb,var(--surface) 45%,transparent);max-width:150px;margin-left:4px}
+body .header .header-actions #btnAccount{border-color:color-mix(in srgb,var(--wall-text) 18%,transparent);background:color-mix(in srgb,var(--wall-pill) 40%,transparent)}
+body .header-actions #btnHot{margin-left:13px}
+body .header-actions #btnHot::before{content:'';position:absolute;left:-8px;top:11px;bottom:11px;width:1px;background:color-mix(in srgb,var(--wall-text) 20%,transparent)}
+body .header-actions #btnOpenPost{margin-left:9px;padding-left:15px;padding-right:15px;background:var(--wall-accent);border-color:var(--wall-accent);color:var(--wall-accent-text);font-weight:650}
+body .header-actions #btnCheckin.checked{color:var(--wall-accent);font-weight:650}
+body .header-actions #btnCheckin{max-width:140px}
+body :is(.header-actions,.plaza-header>div) .ui-control:focus-visible{outline:2px solid currentColor;outline-offset:3px}
+body :is(.header-actions,.plaza-header>div) .ui-control:active{transform:none;background:var(--surface2);box-shadow:none}
+.ui-unread{display:grid;place-items:center;min-width:17px;height:17px;padding:0 4px;border-radius:4px;background:var(--accent);color:var(--surface);font:600 10px/1 ui-monospace,Consolas,monospace;flex-shrink:0}
+body .header .ui-unread{background:var(--wall-accent);color:var(--wall-accent-text)}
+body .mobile-nav.ui-navigation .ui-icon{width:22px;height:22px;flex:0 0 22px;stroke-width:1.6}
+body .mobile-nav.ui-navigation .ui-control{gap:4px}
+body .mobile-nav.ui-navigation .ui-label{font-size:11px;line-height:1.3}
+body .mobile-nav.ui-navigation[data-touch-layout=reader] .ui-control{flex-direction:row;gap:8px}
+body .mobile-nav.ui-navigation[data-touch-layout=reader] .ui-label{font-size:13px}
+@media(hover:hover) and (pointer:fine){
+ body :is(.header-actions,.plaza-header>div) .btn-ghost:hover{background:color-mix(in srgb,var(--text) 6%,transparent);border-color:transparent;box-shadow:none;transform:none;color:var(--text)}
+ body .header .header-actions .btn-ghost:hover{background:color-mix(in srgb,var(--wall-text) 7%,transparent);color:var(--wall-text)}
+ body .header-actions #btnAccount:hover,body .plaza-header>div #btnAccount:hover{border-color:var(--edge-line)}
+ body .header .header-actions #btnAccount:hover{border-color:var(--wall-border)}
+ body .header-actions #btnOpenPost:hover{filter:brightness(.94);box-shadow:none;transform:none}
+}
+@media(min-width:761px) and (max-width:1140px){
+ body .header .header-top{gap:12px}
+ body .header .main-nav{gap:14px;margin-left:4px;font-size:13px}
+ body .header .brand-name small{display:none}
+ body .header-actions :is(.btn-ghost,.btn-post){padding:8px;gap:5px;font-size:12px}
+ body .header-actions #btnAppearance .ui-label{display:none}
+ body .header-actions #btnAppearance{width:40px;padding:8px}
+ body .header-actions #btnAccount{max-width:110px}
+ body .header-actions #btnHot{margin-left:7px}
+ body .header-actions #btnOpenPost{margin-left:3px;padding:8px 10px}
+}
+@media(max-width:760px){
+ body .header .header-top{gap:8px}
+ body .header-actions,body .plaza-header>div{gap:3px}
+ body .header-actions :is(.btn-ghost,.btn-post),body .plaza-header>div .btn-ghost{min-width:44px;min-height:44px;padding:8px;gap:6px;font-size:12px}
+ body .header-actions #btnAppearance,body .plaza-header>div #btnAppearance{width:44px;padding:8px}
+ body :is(.header-actions,.plaza-header>div) #btnAppearance .ui-label,body :is(.header-actions,.plaza-header>div) .sj-inbox-button .ui-label{display:none}
+ body .header-actions #btnAccount,body .plaza-header>div #btnAccount{max-width:120px;min-width:44px;margin-left:0;padding:8px}
+ body .header-actions :is(#btnHot,#btnCheckin,#btnOpenPost){display:none}
+ body .header-actions .sj-inbox-button,body .plaza-header>div .sj-inbox-button{width:44px;padding:8px}
+ body :is(.header-actions,.plaza-header>div) .sj-inbox-button .ui-unread{position:absolute;right:0;top:0;min-width:14px;height:14px;font-size:9px;padding:0 3px}
+ body .mobile-nav.ui-navigation{box-shadow:none;padding-top:7px;padding-bottom:calc(7px + env(safe-area-inset-bottom,0px))}
+ body .mobile-nav.ui-navigation[data-touch-layout=main] .ui-control{min-height:48px;border-radius:5px;background:transparent}
+ body .mobile-nav.ui-navigation[data-touch-layout=main] [aria-current]{background:var(--surface2)}
+ body .mobile-nav.ui-navigation[data-touch-layout=main] [data-mobile-compose],body .mobile-nav.ui-navigation[data-touch-layout=main] [data-touch-compose]{color:var(--accent);background:var(--surface2)}
+ body .mobile-nav.ui-navigation [data-mobile-compose] .ui-icon,body .mobile-nav.ui-navigation [data-touch-compose] .ui-icon{stroke-width:1.9}
+}
+@media(max-width:360px){
+ body .header-actions #btnAccount,body .plaza-header>div #btnAccount{max-width:87px;padding:8px 6px;gap:5px;font-size:11px}
+ body .header .brand-name{font-size:18px}
+ body .plaza-header{gap:6px}
+}
+@media(prefers-reduced-motion:reduce){body :is(.header-actions,.plaza-header>div) .ui-control{transition:none}}
