@@ -14,10 +14,10 @@
   async function load(){
     await SJAuth.ready;const id=SJAuth.user?.id,version=epoch;if(!id)return;read?.abort();const controller=new AbortController();read=controller;const timeout=setTimeout(()=>controller.abort(),10000);$('feedbackMineStatus').textContent='正在读取你的建议…';
     try{const data=await call(undefined,controller.signal);if(version!==epoch||SJAuth.user?.id!==id||read!==controller)return;pages=Math.max(1,Math.ceil(data.total/data.limit));if(page>pages){page=pages;read=null;return load();}
-      $('feedbackItems').replaceChildren(...data.items.map(card));$('feedbackMineStatus').textContent=data.total?'共 '+data.total+' 条建议 · 仅你和站主可见':'你还没有提交过建议，有想法或遇到问题都可以告诉我。';$('feedbackQuota').textContent='今天还可以提交 '+data.remaining+' 条建议（北京时间每天最多5条）。';$('feedbackPagination').hidden=pages<=1;$('feedbackPage').textContent=page+' / '+pages;$('feedbackPrev').disabled=page<=1;$('feedbackNext').disabled=page>=pages;
+      $('feedbackItems').replaceChildren(...data.items.map(card));$('feedbackMineStatus').textContent=data.total?'共 '+data.total+' 条建议 · 仅你和站主可见':'你还没有提交过建议，有想法或遇到问题都可以告诉站主。';$('feedbackQuota').textContent='今天还可以提交 '+data.remaining+' 条建议（北京时间每天最多5条）。';$('feedbackPagination').hidden=pages<=1;$('feedbackPage').textContent=page+' / '+pages;$('feedbackPrev').disabled=page<=1;$('feedbackNext').disabled=page>=pages;
     }catch(e){if(version!==epoch||SJAuth.user?.id!==id||read!==controller)return;$('feedbackMineStatus').textContent='暂时无法更新建议：'+e.message;if([401,403].includes(e.status))SJAuth.refresh();}finally{clearTimeout(timeout);if(read===controller)read=null;}
   }
-  function login(){SJAuth.open({purpose:'登录后把建议告诉我，内容仅你和站主可见；登录不会自动提交。',resume:()=>{$('feedbackTitle').focus();load();}});}
+  function login(){SJAuth.open({purpose:'登录后提交建议，内容仅你和站主可见；登录不会自动提交。',resume:()=>{$('feedbackTitle').focus();load();}});}
   $('feedbackLogin').onclick=login;$('feedbackRefresh').onclick=load;$('feedbackPrev').onclick=()=>{if(page>1){page--;load();}};$('feedbackNext').onclick=()=>{if(page<pages){page++;load();}};
   $('feedbackForm').onsubmit=async e=>{
     e.preventDefault();await SJAuth.ready;if(!SJAuth.user){login();return;}if(posting)return;const id=SJAuth.user.id,version=epoch,body=draft(),signature=JSON.stringify({...body,userId:id});
