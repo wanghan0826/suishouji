@@ -220,6 +220,16 @@ test('personal details and avatars follow space access, remain owner-managed and
  await f.call(base+'/profile',{method:'POST',body:{...legacy,visibility:'mutual',details:{...details,avatar:'cat',avatarData:undefined}},session:owner});assert.equal((await f.call(base+'/avatar',{session:owner})).status,404);assert.equal((await f.call(base)).data.details,null);
 });
 
+test('post likes use real account identities, reject CSRF and remain unique across sessions and reloads',async t=>{
+ const f=await fixture(t),a=await f.register('like_alice'),b=await f.register('like_bob'),form=new FormData();form.set('text','Account-based likes');const created=await f.call('/api/posts',{method:'POST',session:a,body:form}),id=created.data.post.id,base='/api/posts/'+id;
+ assert.equal((await f.call(base+'/heart',{method:'POST',body:{}})).status,401);assert.equal((await f.call(base+'/heart',{method:'POST',session:a,csrfOverride:'bad',body:{}})).status,403);assert.equal((await f.call(base+'/heart',{method:'POST',session:a,originOverride:'https://evil.example',body:{}})).status,403);
+ const first=await f.call(base+'/heart',{method:'POST',session:a,body:{username:'fake',user_id:b.user.id}});assert.equal(first.data.hearts,1);assert.equal(first.data.liked,true);assert.equal(first.data.added,true);
+ const again=await f.login('like_alice');assert.equal((await f.call(base+'/heart',{method:'POST',session:again,body:{}})).data.added,false);assert.equal((await f.call('/api/post-hearts?ids='+id,{session:again})).data.items[0].liked,true);assert.equal((await f.call(base)).data.post.hearts,1);
+ await f.call(base+'/heart',{method:'POST',session:b,body:{}});const list=await f.call(base+'/likes');assert.equal(list.data.hearts,2);assert.deepEqual(list.data.items.map(x=>x.username),['like_bob','like_alice']);assert.ok(!JSON.stringify(list.data).includes('registration_ip'));assert.equal((await f.call('/api/post-hearts?ids='+id)).data.items[0].liked,false);
+ const admin=await f.admin();await f.call('/api/admin/posts/'+id+'/archive',{method:'POST',session:admin,body:{}});assert.equal((await f.call(base+'/likes')).status,404);assert.equal((await f.call(base+'/heart',{method:'POST',session:a,body:{}})).status,404);assert.deepEqual((await f.call('/api/post-hearts?ids='+id)).data.items,[]);
+ await f.call('/api/admin/posts/'+id+'/restore',{method:'POST',session:admin,body:{}});assert.equal((await f.call(base+'/likes')).data.hearts,2);await f.call('/api/admin/users/'+b.user.id+'/ban',{method:'POST',session:admin,body:{}});assert.equal((await f.call(base+'/heart',{method:'POST',session:b,body:{}})).status,401);
+});
+
 test('registration establishes hashed sessions; posting and comments use the account, never a supplied nickname',async t=>{
  const f=await fixture(t);assert.equal((await f.call('/api/auth/status')).data.user,null);
  assert.equal((await f.call('/api/posts',{method:'POST'})).status,401);assert.equal((await f.call('/api/checkin',{method:'POST',body:{}})).status,401);

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import {createPostHearts} from './scripts/post-hearts.mjs';
 import {ensureWallTitles,wallTitleInput,attachWallTitles} from './scripts/wall-titles.mjs';
 import {ensurePostRequests,postRequestKey,postFingerprint,findPostRequest,commitPostRequest} from './scripts/post-requests.mjs';
 /* 随手记 · 弹幕分享站：零依赖 Node 后端（SQLite + 媒体上传 + 评论 + 签到 + 话题 + 静态托管） */
@@ -292,17 +293,6 @@ async function api(req, res, url) {
     return published(result.id,result.replayed);
   }
 
-  /* 点赞 */
-  const heartM = /^\/api\/posts\/(\d+)\/heart$/.exec(url.pathname);
-  if (req.method === 'POST' && heartM) {
-    if (limited('h' + ip, 30, 60_000)) return send(res, 429, { error: '慢一点～' });
-    const id = Number(heartM[1]);
-    db.prepare('UPDATE posts SET hearts=hearts+1 WHERE id=?').run(id);
-    const row = db.prepare('SELECT hearts FROM posts WHERE id=?').get(id);
-    if (!row) return send(res, 404, { error: '不存在' });
-    return send(res, 200, { hearts: row.hearts });
-  }
-
   /* 评论列表 */
   const commentsGetM = /^\/api\/posts\/(\d+)\/comments$/.exec(url.pathname);
   if (req.method === 'GET' && commentsGetM) {
@@ -384,6 +374,7 @@ const friends=createFriendFeed({db,users});
 const wordGame=createWordGame({db,users});
 const drawGame=createDrawingGame({db,users});
 const gameFeedback=createGameFeedback({db,users});
+const postHearts=createPostHearts({db,users});
 const socialInbox=createSocialInbox({db,users});
 const analytics=createAnalytics({db,origin:SITE_ORIGIN,localHttp});
 const growth=createGrowthTracking({db,users,origin:SITE_ORIGIN,localHttp});
@@ -404,6 +395,7 @@ async function handler(req, res) {
   if(await drawGame.handle(req,res))return;
   if(await gameFeedback.handle(req,res))return;
   if (!users.authorizeWrite(req, res)) return;
+  if (postHearts.handle(req,res)) return;
   if (admin.handlePublic(req, res)) return;
   const url = new URL(req.url, 'http://x');
   // Attribute real public page entries, excluding missing/archived posts and lab frames.

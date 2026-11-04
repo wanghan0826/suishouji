@@ -245,13 +245,7 @@ let allPosts = [];
 
 function bindCardEvents(container) {
   hydrateMedia(container);
-  container.querySelectorAll('.card-heart:not([data-bound])').forEach(h => {
-    h.setAttribute('data-bound', '1');
-    h.addEventListener('click', (e) => {
-      e.stopPropagation();
-      heartPost(Number(h.dataset.heartId), h);
-    });
-  });
+  window.SJLikes.bind(container);
 }
 
 function appendCards(posts) {
@@ -469,20 +463,6 @@ function setupCommentForm() {
       loadComments(currentDetailPost.id);
     } catch (err) { toast(err.message); }
   });
-}
-
-async function heartPost(id, btn, postObj) {
-  try {
-    const data = await apiPost(`/api/posts/${id}/heart`);
-    if (data.hearts !== undefined) {
-      btn.innerHTML = `❤️ ${data.hearts}`;
-      btn.classList.add('liked');
-      if (postObj) postObj.hearts = data.hearts;
-      document.querySelectorAll(`[data-heart-id="${id}"]`).forEach(el => {
-        el.innerHTML = `❤️ ${data.hearts}`;
-      });
-    }
-  } catch (e) { toast('点赞失败：' + e.message); }
 }
 
 /* ---------- 发布 ---------- */

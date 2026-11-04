@@ -15,7 +15,7 @@
 <link rel="stylesheet" href="/mobile.css?v=20261029-compact-wall">
 <link rel="stylesheet" href="/post.css?v=20261029-reader">
 <link rel="stylesheet" href="/reader.css?v=20261029-light-full">
-<link rel="stylesheet" href="/social-inbox.css"><link rel="stylesheet" href="/platform.css"><link rel="stylesheet" href="/portrait-wall.css"><link rel="stylesheet" href="/touch-ui.css"><link rel="stylesheet" href="/image-viewer.css"><link rel="stylesheet" href="/interaction.css"></head>
+<link rel="stylesheet" href="/social-inbox.css"><link rel="stylesheet" href="/platform.css"><link rel="stylesheet" href="/portrait-wall.css"><link rel="stylesheet" href="/touch-ui.css"><link rel="stylesheet" href="/image-viewer.css"><link rel="stylesheet" href="/interaction.css"><link rel="stylesheet" href="/post-likes.css"></head>
 <body>
 
 <!-- 顶栏 -->
@@ -131,7 +131,7 @@
  <div class="detail-header"><span class="card-theme-badge" id="postTheme"></span><a id="postAuthor" class="detail-name"></a><time id="postDate" class="detail-time"></time></div>
  <h1 id="postTitle"></h1><p class="post-topic" id="postTopic" hidden></p>
  <div id="postMedia" class="post-media"></div><div id="postBody" class="post-body"></div>
- <div class="post-actions"><button class="heart-btn" id="postHeart" type="button">♡ 点赞 <span id="postHearts">0</span></button><button class="post-share" id="postShare" type="button" aria-haspopup="dialog" aria-controls="shareDialog">分享帖子 ↗</button></div>
+ <div class="post-actions"><button class="heart-btn" id="postHeart" type="button"><span data-heart-label>♡ 点赞</span> <span id="postHearts">0</span></button><button class="post-share" id="postShare" type="button" aria-haspopup="dialog" aria-controls="shareDialog">分享帖子 ↗</button></div>
  <div id="postShareFallback" hidden><label for="postShareUrl">帖子链接</label><input id="postShareUrl" readonly aria-label="帖子链接"></div>
  <section class="post-comments" aria-labelledby="commentsTitle"><h2 id="commentsTitle">聊聊这条分享 <span id="postCommentCount"></span></h2><div id="postComments" aria-live="polite"></div>
  <p id="xiaojiHint" class="xiaoji-hint" hidden>小记 · AI 助手会回应新公开帖子。评论中 @小记，或点回复与它继续聊。帖子文字及相关公开评论会发送至模型服务。</p><form class="comment-form" id="postCommentForm"><div class="comment-reply-banner" id="commentReplyBanner" hidden><span id="commentReplyLabel" role="status"></span><button type="button" id="commentReplyCancel">取消回复</button></div><label for="commentName">评论账号</label><input id="commentName" type="text" readonly placeholder="登录后显示账号"><label for="postCommentText" id="commentTextLabel">你的评论</label><textarea id="postCommentText" maxlength="200" required placeholder="友善交流，说说你的想法…"></textarea><button type="button" id="mentionXiaoji" class="text-button" hidden>＠小记</button><div class="post-comment-bottom"><span>200 字以内 · 登录后可评论和回复</span><button type="submit" class="btn-post" id="postCommentSubmit">发表评论 →</button></div></form>
@@ -144,7 +144,7 @@
 <div class="toast" role="status" aria-live="polite" id="toast"></div>
 
 <script src="/user-auth.js?v=20261028-user"></script>
-<script src="/wall-copy.js"></script><script src="/attachment-picker.js"></script><script src="/post-request.js"></script><script src="/app.js?v=20261029-reader"></script>
+<script src="/post-likes.js"></script><script src="/wall-copy.js"></script><script src="/attachment-picker.js"></script><script src="/post-request.js"></script><script src="/app.js?v=20261029-reader"></script>
 <script src="/wall.js?v=20261029-reader"></script>
 <script src="/wall-recommendation.js"></script>
 <script src="/enhance.js?v=20261019-wall-4"></script>
