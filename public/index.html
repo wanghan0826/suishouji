@@ -36,7 +36,7 @@
 
 <main>
 <section id="wall" class="wall-stage" aria-labelledby="wallTitle">
-  <a class="wall-recommendation" href="/feedback" aria-labelledby="feedbackRecommendationTitle"><span class="wall-recommendation-label">✦ 站主推荐 · 游戏建议</span><strong id="feedbackRecommendationTitle">想玩什么？你提，我来做！</strong><span class="wall-recommendation-copy">新游戏点子、玩法建议，都可以告诉我。提交后还能查看处理进度。</span><span class="wall-recommendation-action">去提建议 <b aria-hidden="true">↗</b></span></a>
+  <aside class="wall-recommendation" aria-label="站主推荐" hidden><button id="closeWallRecommendation" class="wall-recommendation-close" type="button" aria-label="关闭推荐">×</button><a class="wall-recommendation-link" href="/feedback" aria-labelledby="feedbackRecommendationTitle"><span class="wall-recommendation-label">✦ 站主推荐 · 游戏建议</span><strong id="feedbackRecommendationTitle">想玩什么？你提，我来做！</strong><span class="wall-recommendation-copy">新游戏点子、玩法建议，都可以告诉我。提交后还能查看处理进度。</span><span class="wall-recommendation-action">去提建议 <b aria-hidden="true">↗</b></span></a></aside>
   <div class="danmaku-area" id="danmakuArea" aria-label="实时帖子弹幕，点击任意弹幕打开帖子"><div class="danmaku-bg show" id="danmakuBg" style="background-image:url('/assets/lake.jpg')"></div><div class="danmaku-bg-mask"></div></div>
   <div class="wall-intro"><div><p class="eyebrow">PLAY TOGETHER / STAY CONNECTED</p><h1 id="wallTitle"><span class="live-dot"></span>一起玩，聊到一起。</h1></div><div class="wall-channel"><nav id="wallChannels" aria-label="弹幕分区"><button type="button" data-section="" aria-pressed="true">全部</button><button type="button" data-section="game" aria-pressed="false">游戏</button><button type="button" data-section="news" aria-pressed="false">资讯</button><button type="button" data-section="life" aria-pressed="false">生活</button></nav><a href="/games">去玩游戏 ↗</a></div></div>
   <div class="wall-toolbar"><p class="wall-status" id="wallStatus" role="status">正在加载大家的分享…</p><div class="wall-actions"><button id="toggleDanmaku" class="text-button" aria-pressed="false">Ⅱ 暂停弹幕</button><button class="btn-post" id="wallPost">＋ 发一条弹幕</button></div><a class="wall-browse" href="#shares">往下看帖子 <span aria-hidden="true">↓</span></a></div>
@@ -146,6 +146,7 @@
 <script src="/user-auth.js?v=20261028-user"></script>
 <script src="/wall-copy.js"></script><script src="/attachment-picker.js"></script><script src="/post-request.js"></script><script src="/app.js?v=20261029-reader"></script>
 <script src="/wall.js?v=20261029-reader"></script>
+<script src="/wall-recommendation.js"></script>
 <script src="/enhance.js?v=20261019-wall-4"></script>
 <nav class="mobile-nav" id="mobileNav" data-touch-layout="main" aria-label="手机导航"><a href="#wall" aria-current="location"><span aria-hidden="true">◌</span><span>弹幕</span></a><a href="/games"><span aria-hidden="true">◉</span><span>游戏</span></a><button type="button" data-mobile-compose aria-label="发布弹幕帖子"><span aria-hidden="true">＋</span><span>发布</span></button><a href="/plaza"><span aria-hidden="true">◫</span><span>社区</span></a><a href="/space"><span aria-hidden="true">♧</span><span>我的</span></a></nav>
 <script src="/analytics.js"></script>
