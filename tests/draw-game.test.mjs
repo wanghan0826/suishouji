@@ -3,36 +3,57 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import {DatabaseSync} from 'node:sqlite';
 import {createDrawingGame,drawingScores,studioScores,validStroke} from '../scripts/draw-game.mjs';
+import {DRAW_WORDS,DRAW_WORD_STATS,pickDrawChoices} from '../scripts/draw-words.mjs';
 const fail=(status,message)=>Object.assign(Error(message),{status});
 async function fixture(t){
   const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE site_users(id INTEGER PRIMARY KEY,username TEXT,disabled INTEGER DEFAULT 0);');for(let id=1;id<=12;id++)db.prepare('INSERT INTO site_users VALUES(?,?,0)').run(id,'player_'+id);
   const current=req=>db.prepare('SELECT id,username FROM site_users WHERE id=? AND disabled=0').get(Number(req.headers['x-test-user'])||0),users={currentUser:current,requireUser(req){const user=current(req);if(!user)throw fail(401,'登录后操作');if(req.headers['x-test-csrf']!=='valid')throw fail(403,'无效凭据');return user;}};
-  let now=Date.parse('2026-11-03T12:00:00+08:00');const game=createDrawingGame({db,users,clock:()=>now}),server=http.createServer(async(req,res)=>{if(!await game.handle(req,res)){res.writeHead(404);res.end();}});await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
+  let now=Date.parse('2026-11-03T12:00:00+08:00');let game=createDrawingGame({db,users,clock:()=>now}),server=http.createServer(async(req,res)=>{if(!await game.handle(req,res)){res.writeHead(404);res.end();}});await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
   t.after(async()=>{game.close();server.closeAllConnections();await new Promise(r=>server.close(r));db.close();});
   async function call(route='',{user=1,data,csrf='valid',method=data===undefined?'GET':'POST'}={}){const r=await fetch(base+'/api/draw-game'+route,{method,headers:{'X-Test-User':String(user),'X-Test-CSRF':csrf,'Content-Type':'application/json'},...(data!==undefined?{body:JSON.stringify(data)}:{})});return {status:r.status,data:await r.json(),headers:r.headers};}
   const create=async()=>{const r=await call('',{data:{mode:'party'}});assert.equal(r.status,200);return r.data.room.token;};
-  const start=async(count=3)=>{const token=await create();for(let user=2;user<=count;user++)assert.equal((await call('/'+token+'/join',{user,data:{}})).status,200);assert.equal((await call('/'+token+'/start',{data:{}})).status,200);return token;};
-  const advance=ms=>now+=ms;return {db,base,call,create,start,advance};
+  const start=async(count=3)=>{const token=await create();for(let user=2;user<=count;user++)assert.equal((await call('/'+token+'/join',{user,data:{}})).status,200);assert.equal((await call('/'+token+'/start',{data:{}})).status,200);await call('/'+token+'/choose',{data:{round:1,choice:0}});return token;};
+  const choose=async(token,user=1,choice=0)=>{const r=await call('/'+token,{user});return call('/'+token+'/choose',{user,data:{round:r.data.room.round,choice}});};const restart=()=>{game.close();game=createDrawingGame({db,users,clock:()=>now});};const advance=ms=>now+=ms;return {db,base,call,create,start,choose,restart,advance};
 }
 const stroke=(round=1,epoch=0,op='a'.repeat(32),path='b'.repeat(32))=>({round,epoch,opId:op,strokeId:path,color:'#25352d',size:6,points:[[10,20],[100,200]]});
+
+test('word bank has thousands of unique curated prompts, with three difficulty choices and no avoidable repeats',()=>{
+ assert.ok(DRAW_WORD_STATS.total>=2000);assert.equal(new Set(DRAW_WORDS.map(w=>w.text.normalize('NFKC'))).size,DRAW_WORDS.length);assert.ok(DRAW_WORD_STATS.difficulties.every(n=>n>=400));assert.ok(DRAW_WORDS.every(w=>w.category&&w.text.length<=12&&w.text.trim()===w.text));
+ const used=new Set();for(let i=0;i<100;i++){const choices=pickDrawChoices(used);assert.deepEqual(choices.map(w=>w.difficulty),[0,1,2]);for(const w of choices){assert.ok(!used.has(w.text));used.add(w.text);}}assert.equal(used.size,300);
+});
+
+test('only the artist sees three persisted candidates; selection is round-bound, retry-safe and starts a full drawing timer',async t=>{
+ const f=await fixture(t),token=await f.create(),base='/'+token;for(const user of [2,3])await f.call(base+'/join',{user,data:{}});
+ let state=(await f.call(base+'/start',{data:{}})).data.room;assert.equal(state.phase,'choosing');const choices=state.turn.choices;assert.equal(choices.length,3);assert.equal(state.turn.answer,null);const guest=(await f.call(base,{user:2})).data;assert.equal(guest.room.turn.choices,undefined);for(const c of choices)assert.ok(!JSON.stringify(guest).includes(c.text));
+ assert.equal((await f.call(base+'/guess',{user:2,data:{round:1,text:choices[0].text}})).status,409);assert.equal((await f.call(base+'/stroke',{data:stroke()})).status,409);assert.equal((await f.call(base+'/choose',{user:2,data:{round:1,choice:0}})).status,403);for(const choice of [-1,3,'0'])assert.equal((await f.call(base+'/choose',{data:{round:1,choice}})).status,400);assert.equal((await f.call(base+'/choose',{data:{round:99,choice:0}})).status,409);
+ f.restart();assert.deepEqual((await f.call(base)).data.room.turn.choices,choices);
+ const controller=new AbortController(),stream=await fetch(f.base+'/api/draw-game'+base+'/events',{headers:{'X-Test-User':'2'},signal:controller.signal}),reader=stream.body.getReader();t.after(()=>controller.abort());let event=new TextDecoder().decode((await reader.read()).value);for(const c of choices)assert.ok(!event.includes(c.text));
+ f.advance(5000);state=(await f.call(base+'/choose',{data:{round:1,choice:1}})).data.room;assert.equal(state.phase,'playing');assert.equal(state.turn.answer,choices[1].text);assert.equal(state.turn.deadline-state.serverNow,90000);assert.equal(state.turn.choices,undefined);event=new TextDecoder().decode((await reader.read()).value);for(const c of choices)assert.ok(!event.includes(c.text));controller.abort();await reader.cancel().catch(()=>{});const deadline=state.turn.deadline;f.advance(1000);assert.equal((await f.call(base+'/choose',{data:{round:1,choice:1}})).data.room.turn.deadline,deadline);assert.equal((await f.call(base+'/choose',{data:{round:1,choice:2}})).status,409);
+ f.advance(89001);assert.equal((await f.call(base)).data.room.phase,'between');f.advance(8001);state=(await f.call(base,{user:2})).data.room;assert.equal(state.phase,'choosing');assert.equal(state.turn.drawerId,2);assert.equal((await f.call(base+'/choose',{user:2,data:{round:1,choice:1}})).status,409);
+});
+
+test('selection timeout chooses a candidate without revealing alternatives, and legacy in-progress drawings still resume',async t=>{
+ const f=await fixture(t),token=await f.create(),base='/'+token;for(const user of [2,3])await f.call(base+'/join',{user,data:{}});const picking=(await f.call(base+'/start',{data:{}})).data.room;f.advance(20001);let state=(await f.call(base)).data.room;assert.equal(state.phase,'playing');assert.ok(picking.turn.choices.some(w=>w.text===state.turn.answer));assert.equal(state.turn.deadline-state.serverNow,90000);const guest=(await f.call(base,{user:2})).data.room;assert.equal(guest.turn.answer,null);assert.equal(guest.turn.choices,undefined);
+ const answer=state.turn.answer;f.db.prepare("UPDATE draw_rounds SET choices='[]',selected_choice=-1 WHERE room_token=?").run(token);f.restart();state=(await f.call(base)).data.room;assert.equal(state.phase,'playing');assert.equal(state.turn.answer,answer);assert.equal((await f.call(base+'/choose',{data:{round:1,choice:0}})).status,409);
+});
 
 test('free studio starts solo, accepts late viewers and awards all correct guesses without cancellation',async t=>{
  const f=await fixture(t),created=await f.call('',{data:{canvasHeight:1280}}),base='/'+created.data.room.token;
  assert.equal(created.data.room.mode,'studio');assert.equal(created.data.room.canvasHeight,1280);
- let r=(await f.call(base+'/start',{data:{}})).data.room;assert.equal(r.phase,'playing');assert.equal(r.turn.eligibleCount,0);assert.equal(r.turn.drawerId,1);
+ let r=(await f.call(base+'/start',{data:{}})).data.room;assert.equal(r.phase,'choosing');r=(await f.choose(created.data.room.token)).data.room;assert.equal(r.phase,'playing');assert.equal(r.turn.eligibleCount,0);assert.equal(r.turn.drawerId,1);
  assert.equal((await f.call(base+'/stroke',{data:{...stroke(),points:[[20,1000],[60,1200]]}})).status,200);assert.equal((await f.call(base+'/stroke',{data:{...stroke(1,0,'c'.repeat(32)),points:[[20,1281]]}})).status,400);
  const joined=(await f.call(base+'/join',{user:2,data:{}})).data.room;assert.equal(joined.turn.answer,null);assert.equal(joined.turn.eligibleCount,1);
  const answer=r.turn.answer;const correct=await f.call(base+'/guess',{user:2,data:{round:1,text:answer}});r=correct.data.room;
  assert.equal(r.phase,'between');assert.equal(r.turn.reason,'all');assert.equal(r.members.find(m=>m.id===1).score,10);assert.equal(r.members.find(m=>m.id===2).score,100);
  assert.equal((await f.call(base+'/guess',{user:2,data:{round:1,text:answer}})).status,409);
- await f.call(base+'/join',{user:3,data:{}});f.advance(8001);r=(await f.call(base)).data.room;assert.equal(r.round,2);assert.equal(r.turn.drawerId,1);assert.equal(r.turn.eligibleCount,2);
+ await f.call(base+'/join',{user:3,data:{}});f.advance(8001);r=(await f.call(base)).data.room;assert.equal(r.round,2);assert.equal(r.turn.drawerId,1);assert.equal(r.turn.eligibleCount,2);await f.choose(created.data.room.token);
  await f.call(base+'/leave',{user:2,data:{}});r=(await f.call(base)).data.room;assert.equal(r.phase,'playing');assert.equal(r.turn.reason,'');
  await f.call(base+'/join',{user:2,data:{}});assert.equal((await f.call(base)).data.room.turn.eligibleCount,2);
  await f.call(base+'/leave',{data:{}});assert.equal((await f.call(base,{user:3})).data.room.phase,'closed');
 });
 
 test('solo studio times out without points and continues with the same artist; closing is host-only',async t=>{
- const f=await fixture(t),created=await f.call('',{data:{mode:'studio'}}),base='/'+created.data.room.token;await f.call(base+'/start',{data:{}});f.advance(90001);
+ const f=await fixture(t),created=await f.call('',{data:{mode:'studio'}}),base='/'+created.data.room.token;await f.call(base+'/start',{data:{}});await f.choose(created.data.room.token);f.advance(90001);
  let r=(await f.call(base)).data.room;assert.equal(r.phase,'between');assert.deepEqual(r.turn.scores,[]);assert.equal(r.members[0].score,0);
  f.advance(8001);r=(await f.call(base)).data.room;assert.equal(r.round,2);assert.equal(r.turn.drawerId,1);
  await f.call(base+'/join',{user:2,data:{}});assert.equal((await f.call(base+'/close',{user:2,data:{}})).status,403);assert.equal((await f.call(base+'/close',{data:{}})).data.room.phase,'closed');
@@ -79,7 +100,7 @@ test('partial guesses settle in server-arrival order at the deadline and rotate 
   await f.call(base+'/guess',{user:3,data:{round:1,text:answer}});await f.call(base+'/guess',{user:2,data:{round:1,text:answer}});f.advance(90001);
   const ended=(await f.call(base,{user:2})).data.room;assert.equal(ended.turn.reason,'time');assert.deepEqual(ended.turn.scores,[{userId:1,points:2},{userId:3,points:3},{userId:2,points:2}]);assert.equal(ended.members.find(m=>m.id===3).score,3);
   await f.call(base);assert.equal((await f.call(base)).data.room.members.find(m=>m.id===3).score,3);
-  for(const [round,drawer]of [[2,2],[3,3],[4,4]]){f.advance(8001);let next=(await f.call(base,{user:drawer})).data.room;assert.equal(next.round,round);assert.equal(next.turn.drawerId,drawer);assert.ok(next.turn.answer);f.advance(90001);await f.call(base);}
+  for(const [round,drawer]of [[2,2],[3,3],[4,4]]){f.advance(8001);let next=(await f.call(base,{user:drawer})).data.room;assert.equal(next.round,round);assert.equal(next.turn.drawerId,drawer);next=(await f.choose(token,drawer)).data.room;assert.ok(next.turn.answer);f.advance(90001);await f.call(base);}
   assert.equal((await f.call(base)).data.room.phase,'finished');assert.equal(f.db.prepare('SELECT COUNT(DISTINCT drawer_id) n FROM draw_rounds').get().n,4);
 });
 

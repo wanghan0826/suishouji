@@ -1,11 +1,11 @@
 import crypto from 'node:crypto';
+import {pickDrawChoices,DRAW_WORD_STATS} from './draw-words.mjs';
 import {normalizeWord} from './word-game.mjs';
 import {ensureGrowthMetrics,recordGrowthGuess} from './growth-metrics.mjs';
 
-const DAY=86400000,TURN=90000,BREAK=8000;
+const DAY=86400000,TURN=90000,BREAK=8000,CHOOSING=20000;
 const fail=(status,message)=>Object.assign(Error(message),{status});
 export const DRAW_COLORS=['#25352d','#ef606c','#efaa44','#63a77d','#5c90dc','#a982d6','#ffffff'];
-const WORDS=[['动物','大熊猫'],['动物','长颈鹿'],['动物','企鹅'],['动物','章鱼'],['动物','蜗牛'],['动物','袋鼠'],['动物','猫头鹰'],['动物','刺猬'],['动物','蝴蝶'],['动物','海豚'],['动物','水母'],['动物','小白兔'],['美食','火锅'],['美食','冰淇淋'],['美食','汉堡包'],['美食','西瓜'],['美食','蛋糕'],['美食','棒棒糖'],['美食','奶茶'],['美食','煎鸡蛋'],['美食','饺子'],['美食','烤串'],['生活','雨伞'],['生活','牙刷'],['生活','闹钟'],['生活','自行车'],['生活','电风扇'],['生活','洗衣机'],['生活','书包'],['生活','眼镜'],['生活','拖鞋'],['生活','台灯'],['自然','彩虹'],['自然','火山'],['自然','雪人'],['自然','向日葵'],['自然','仙人掌'],['自然','月亮'],['自然','瀑布'],['自然','龙卷风'],['自然','闪电'],['运动','打篮球'],['运动','踢足球'],['运动','游泳'],['运动','跳绳'],['运动','滑雪'],['运动','乒乓球'],['出行','热气球'],['出行','宇宙飞船'],['出行','直升机'],['出行','潜水艇'],['出行','过山车'],['出行','摩天轮'],['动作','放风筝'],['动作','钓鱼'],['动作','刷牙'],['动作','打喷嚏'],['动作','睡懒觉'],['动作','拍照片'],['想象','恐龙'],['想象','机器人'],['想象','外星人'],['想象','美人鱼']];
 
 export function drawingScores(eligible,correct,drawer){
   const unique=[...new Set(correct)].filter(id=>eligible.includes(id));
@@ -32,6 +32,11 @@ export function createDrawingGame({db,users,clock=Date.now}){
   if(!columns.includes('mode'))db.exec("ALTER TABLE draw_rooms ADD COLUMN mode TEXT NOT NULL DEFAULT 'party'");
   if(!columns.includes('canvas_height'))db.exec('ALTER TABLE draw_rooms ADD COLUMN canvas_height INTEGER NOT NULL DEFAULT 640');
   if(!columns.includes('last_activity'))db.exec('ALTER TABLE draw_rooms ADD COLUMN last_activity INTEGER NOT NULL DEFAULT 0');
+  const roundColumns=db.prepare('PRAGMA table_info(draw_rounds)').all().map(c=>c.name);
+  if(!roundColumns.includes('choices'))db.exec("ALTER TABLE draw_rounds ADD COLUMN choices TEXT NOT NULL DEFAULT '[]'");
+  if(!roundColumns.includes('choose_deadline'))db.exec('ALTER TABLE draw_rounds ADD COLUMN choose_deadline INTEGER NOT NULL DEFAULT 0');
+  if(!roundColumns.includes('selected_choice'))db.exec('ALTER TABLE draw_rounds ADD COLUMN selected_choice INTEGER NOT NULL DEFAULT -1');
+  if(!roundColumns.includes('difficulty'))db.exec('ALTER TABLE draw_rounds ADD COLUMN difficulty INTEGER NOT NULL DEFAULT 0');
   const score=(r,eligible,guessed,drawer)=>r.mode==='studio'?studioScores(eligible,guessed,drawer):drawingScores(eligible,guessed,drawer);
   const streams=new Map(),buckets=new Map();let cleanupAt=0;
   const transaction=fn=>{db.exec('BEGIN IMMEDIATE');try{const result=fn();db.exec('COMMIT');return result;}catch(e){db.exec('ROLLBACK');throw e;}};
@@ -53,18 +58,21 @@ export function createDrawingGame({db,users,clock=Date.now}){
     const active=members(r.token),roster=JSON.parse(r.roster);let index=r.round;
     while(index<roster.length&&!active.some(m=>m.user_id===roster[index]))index++;
     if(r.mode==='studio'?!active.some(m=>m.user_id===r.host_id):(index>=roster.length||active.length<3)){db.prepare("UPDATE draw_rooms SET phase='finished',version=version+1 WHERE token=?").run(r.token);return;}
-    const drawer=r.mode==='studio'?r.host_id:roster[index],eligible=active.filter(m=>m.user_id!==drawer).map(m=>m.user_id),used=new Set(db.prepare('SELECT answer FROM draw_rounds WHERE room_token=?').all(r.token).map(v=>v.answer)),unused=WORDS.filter(v=>!used.has(v[1])),pool=unused.length?unused:WORDS,[category,answer]=pool[crypto.randomInt(pool.length)];
-    db.prepare('INSERT INTO draw_rounds(room_token,round,drawer_id,answer,category,eligible,deadline) VALUES(?,?,?,?,?,?,?)').run(r.token,index+1,drawer,answer,category,JSON.stringify(eligible),clock()+TURN);
-    db.prepare("UPDATE draw_rooms SET phase='playing',round=?,next_at=0,version=version+1 WHERE token=?").run(index+1,r.token);
+    const drawer=r.mode==='studio'?r.host_id:roster[index],eligible=active.filter(m=>m.user_id!==drawer).map(m=>m.user_id),used=new Set();
+    for(const old of db.prepare('SELECT answer,choices FROM draw_rounds WHERE room_token=?').all(r.token)){if(old.answer)used.add(old.answer);for(const word of JSON.parse(old.choices))used.add(word.text);}
+    const choices=pickDrawChoices(used);
+    db.prepare('INSERT INTO draw_rounds(room_token,round,drawer_id,answer,category,eligible,deadline,choices,choose_deadline) VALUES(?,?,?,?,?,?,?,?,?)').run(r.token,index+1,drawer,'','选题中',JSON.stringify(eligible),0,JSON.stringify(choices),clock()+CHOOSING);
+    db.prepare("UPDATE draw_rooms SET phase='choosing',round=?,next_at=0,version=version+1 WHERE token=?").run(index+1,r.token);
   }
-  function advance(token){const r=room(token);if(r.mode==='studio'&&['playing','between'].includes(r.phase)&&clock()-r.last_activity>=600000){transaction(()=>{if(r.phase==='playing')settle(r,'skip');db.prepare("UPDATE draw_rooms SET phase='closed',version=version+1 WHERE token=?").run(token);});return true;}if(r.phase==='playing'&&turn(r).deadline<=clock()){transaction(()=>settle(r));return true;}if(r.phase==='between'&&r.next_at<=clock()){transaction(()=>next(r));return true;}return false;}
+  function choose(r,index){const t=turn(r),word=JSON.parse(t.choices)[index];if(!word)throw fail(400,'请选择给出的三个词之一');db.prepare('UPDATE draw_rounds SET answer=?,category=?,difficulty=?,selected_choice=?,choose_deadline=0,deadline=? WHERE room_token=? AND round=?').run(word.text,word.category,word.difficulty,index,clock()+TURN,r.token,r.round);db.prepare("UPDATE draw_rooms SET phase='playing',version=version+1 WHERE token=?").run(r.token);}
+  function advance(token){const r=room(token);if(r.mode==='studio'&&['choosing','playing','between'].includes(r.phase)&&clock()-r.last_activity>=600000){transaction(()=>{if(['choosing','playing'].includes(r.phase))settle(r,'skip');db.prepare("UPDATE draw_rooms SET phase='closed',version=version+1 WHERE token=?").run(token);});return true;}if(r.phase==='choosing'&&turn(r).choose_deadline<=clock()){transaction(()=>choose(r,crypto.randomInt(3)));return true;}if(r.phase==='playing'&&turn(r).deadline<=clock()){transaction(()=>settle(r));return true;}if(r.phase==='between'&&r.next_at<=clock()){transaction(()=>next(r));return true;}return false;}
   function board(r){return db.prepare('SELECT seq,op_id opId,stroke_id strokeId,color,size,points FROM draw_strokes WHERE room_token=? AND round=? ORDER BY seq').all(r.token,r.round).map(s=>({...s,points:JSON.parse(s.points)}));}
   function state(token,id,includeBoard=false){
     const r=room(token),list=members(token),mine=list.find(m=>m.user_id===id);
-    if(!mine){const host=list.find(m=>m.user_id===r.host_id);return {preview:{host:host?.username||'朋友',count:list.length,phase:r.phase,canJoin:(r.phase==='lobby'||r.mode==='studio'&&['playing','between'].includes(r.phase))&&list.length<10}};}
+    if(!mine){const host=list.find(m=>m.user_id===r.host_id);return {preview:{host:host?.username||'朋友',count:list.length,phase:r.phase,canJoin:(r.phase==='lobby'||r.mode==='studio'&&['choosing','playing','between'].includes(r.phase))&&list.length<10}};}
     const t=turn(r),guessed=correct(r),eligible=t?JSON.parse(t.eligible):[],done=t?.settled_at!==null,rank=guessed.find(v=>v.user_id===id)?.rank||0;
     const scores=t&&done&&!['left','skip'].includes(t.reason)?score(r,eligible,guessed.map(v=>v.user_id),t.drawer_id):[];
-    const result={room:{token,mode:r.mode,canvasHeight:r.canvas_height,phase:r.phase,round:r.round,totalRounds:JSON.parse(r.roster).length,version:r.version,hostId:r.host_id,me:id,serverNow:clock(),nextAt:r.next_at,members:list.map(m=>({id:m.user_id,name:m.username,score:m.score,seat:m.seat,guessed:guessed.some(g=>g.user_id===m.user_id),rank:guessed.find(g=>g.user_id===m.user_id)?.rank||0})),turn:t?{drawerId:t.drawer_id,answer:t.drawer_id===id||done?t.answer:null,category:t.category,length:Array.from(t.answer).length,deadline:t.deadline,epoch:t.canvas_epoch,correctCount:guessed.length,eligibleCount:eligible.length,myRank:rank,provisional:rank?(r.mode==='studio'?Math.max(20,100-(rank-1)*20):eligible.length-rank+1):0,reason:t.reason,scores}:null,messages:t?db.prepare('SELECT m.id,m.user_id userId,u.username name,m.text FROM draw_messages m JOIN site_users u ON u.id=m.user_id WHERE m.room_token=? AND m.round=? AND u.disabled=0 ORDER BY m.id DESC LIMIT 30').all(token,r.round).reverse():[]}};
+    const result={room:{token,mode:r.mode,canvasHeight:r.canvas_height,phase:r.phase,round:r.round,totalRounds:JSON.parse(r.roster).length,version:r.version,hostId:r.host_id,me:id,serverNow:clock(),nextAt:r.next_at,members:list.map(m=>({id:m.user_id,name:m.username,score:m.score,seat:m.seat,guessed:guessed.some(g=>g.user_id===m.user_id),rank:guessed.find(g=>g.user_id===m.user_id)?.rank||0})),turn:t?{drawerId:t.drawer_id,answer:t.answer&&(t.drawer_id===id||done)?t.answer:null,category:t.answer?t.category:'选题中',length:t.answer?Array.from(t.answer).length:0,difficulty:t.answer?t.difficulty:null,choices:r.phase==='choosing'&&t.drawer_id===id?JSON.parse(t.choices).map((w,index)=>({...w,index})):undefined,chooseDeadline:t.choose_deadline,deadline:t.deadline,epoch:t.canvas_epoch,correctCount:guessed.length,eligibleCount:eligible.length,myRank:rank,provisional:rank?(r.mode==='studio'?Math.max(20,100-(rank-1)*20):eligible.length-rank+1):0,reason:t.reason,scores}:null,messages:t?db.prepare('SELECT m.id,m.user_id userId,u.username name,m.text FROM draw_messages m JOIN site_users u ON u.id=m.user_id WHERE m.room_token=? AND m.round=? AND u.disabled=0 ORDER BY m.id DESC LIMIT 30').all(token,r.round).reverse():[]}};
     if(includeBoard)result.room.board=t?board(r):[];return result;
   }
   function write(stream,event,data){if(stream.res.destroyed)return;if(stream.res.writableLength>512*1024){stream.res.end();return;}stream.res.write('event: '+event+'\ndata: '+JSON.stringify(data)+'\n\n');}
@@ -73,16 +81,16 @@ export function createDrawingGame({db,users,clock=Date.now}){
   }
   async function body(req){if(!String(req.headers['content-type']||'').startsWith('application/json'))throw fail(415,'请求格式无效');const chunks=[];let size=0;for await(const c of req){size+=c.length;if(size>16384)throw fail(413,'这次画笔数据太大，请分段绘画');chunks.push(c);}try{const value=JSON.parse(Buffer.concat(chunks).toString());if(!value||typeof value!=='object'||Array.isArray(value))throw 0;return value;}catch{throw fail(400,'请求数据无效');}}
   function clean(){if(clock()-cleanupAt<DAY)return;cleanupAt=clock();const old=db.prepare('SELECT token FROM draw_rooms WHERE expires_at<?').all(clock()-30*DAY);for(const r of old){for(const table of ['draw_strokes','draw_correct','draw_rounds','draw_messages','draw_activity','draw_members'])db.prepare('DELETE FROM '+table+' WHERE room_token=?').run(r.token);db.prepare('DELETE FROM draw_rooms WHERE token=?').run(r.token);}}
-  const timer=setInterval(()=>{for(const row of db.prepare("SELECT token FROM draw_rooms WHERE phase IN ('playing','between') AND expires_at>?").all(clock())){try{if(advance(row.token))broadcast(row.token,'snapshot');}catch{}}},1000);timer.unref();
+  const timer=setInterval(()=>{for(const row of db.prepare("SELECT token FROM draw_rooms WHERE phase IN ('choosing','playing','between') AND expires_at>?").all(clock())){try{if(advance(row.token))broadcast(row.token,'snapshot');}catch{}}},1000);timer.unref();
   const heartbeat=setInterval(()=>{for(const[token,list]of streams){const valid=db.prepare('SELECT 1 FROM draw_rooms WHERE token=? AND expires_at>?').get(token,clock());for(const s of list){const user=users.currentUser(s.req);if(!valid||!user||!members(token).some(m=>m.user_id===user.id)){write(s,'revoked',{error:'登录或画室权限已变化'});s.res.end();}else s.res.write(': keepalive\n\n');}}},15000);heartbeat.unref();
   return {close(){clearInterval(timer);clearInterval(heartbeat);for(const list of streams.values())for(const s of list)s.res.end();},async handle(req,res){
     const url=new URL(req.url,'http://local');if(!url.pathname.startsWith('/api/draw-game'))return false;
     const send=(status,value)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','Vary':'Cookie','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(value));return true;};
     try{
-      const root=url.pathname==='/api/draw-game',match=/^\/api\/draw-game\/([a-f0-9]{32})(?:\/(join|start|guess|stroke|clear|undo|leave|skip|next|close|events))?$/.exec(url.pathname);if(!root&&!match)throw fail(404,'画室地址无效');
+      const root=url.pathname==='/api/draw-game',match=/^\/api\/draw-game\/([a-f0-9]{32})(?:\/(join|start|choose|guess|stroke|clear|undo|leave|skip|next|close|events))?$/.exec(url.pathname);if(!root&&!match)throw fail(404,'画室地址无效');
       const user=req.method==='GET'?users.currentUser(req):users.requireUser(req);if(!user)throw fail(401,'登录后加入你画我猜');
       if(req.method==='GET'){
-        if(root){const items=db.prepare('SELECT r.token,r.phase,r.round,r.created_at FROM draw_rooms r JOIN draw_members m ON m.room_token=r.token WHERE m.user_id=? AND m.active=1 AND r.expires_at>? ORDER BY r.created_at DESC LIMIT 10').all(user.id,clock());return send(200,{items});}
+        if(root){const items=db.prepare('SELECT r.token,r.phase,r.round,r.created_at FROM draw_rooms r JOIN draw_members m ON m.room_token=r.token WHERE m.user_id=? AND m.active=1 AND r.expires_at>? ORDER BY r.created_at DESC LIMIT 10').all(user.id,clock());return send(200,{items,wordCount:DRAW_WORD_STATS.total});}
         const token=match[1];if(advance(token))broadcast(token,'snapshot');
         if(match[2]==='events'){
           const data=state(token,user.id,true);if(!data.room)throw fail(403,'加入画室后才能实时查看');
@@ -97,20 +105,21 @@ export function createDrawingGame({db,users,clock=Date.now}){
       transaction(()=>{
         const r=room(token),list=members(token),mine=list.find(m=>m.user_id===user.id),host=r.host_id===user.id,t=turn(r);
         if(action==='join'){
-          if(mine)return;if(r.phase!=='lobby'&&!(r.mode==='studio'&&['playing','between'].includes(r.phase)))throw fail(409,'本局已开始或结束，等待朋友重新开房');if(list.length>=10)throw fail(409,'画室已满10人');
+          if(mine)return;if(r.phase!=='lobby'&&!(r.mode==='studio'&&['choosing','playing','between'].includes(r.phase)))throw fail(409,'本局已开始或结束，等待朋友重新开房');if(list.length>=10)throw fail(409,'画室已满10人');
           const old=db.prepare('SELECT seat FROM draw_members WHERE room_token=? AND user_id=?').get(token,user.id),seat=old?.seat??(db.prepare('SELECT COALESCE(MAX(seat),-1)+1 n FROM draw_members WHERE room_token=?').get(token).n);
-          db.prepare('INSERT INTO draw_members(room_token,user_id,seat) VALUES(?,?,?) ON CONFLICT(room_token,user_id) DO UPDATE SET active=1').run(token,user.id,seat);if(r.mode==='studio'&&r.phase==='playing'){const eligible=JSON.parse(t.eligible);if(!eligible.includes(user.id)){eligible.push(user.id);db.prepare('UPDATE draw_rounds SET eligible=? WHERE room_token=? AND round=?').run(JSON.stringify(eligible),token,r.round);}}changed=true;return;
+          db.prepare('INSERT INTO draw_members(room_token,user_id,seat) VALUES(?,?,?) ON CONFLICT(room_token,user_id) DO UPDATE SET active=1').run(token,user.id,seat);if(r.mode==='studio'&&['choosing','playing'].includes(r.phase)){const eligible=JSON.parse(t.eligible);if(!eligible.includes(user.id)){eligible.push(user.id);db.prepare('UPDATE draw_rounds SET eligible=? WHERE room_token=? AND round=?').run(JSON.stringify(eligible),token,r.round);}}changed=true;return;
         }
         if(!mine)throw fail(403,'只有画室内的玩家可以操作');
         if(action==='start'){if(!host)throw fail(403,'请等房主开始');if(r.phase!=='lobby')throw fail(409,'本局已经开始');if(r.mode==='party'&&list.length<3)throw fail(409,'轮流挑战至少3人，自由画室1人可开');db.prepare('UPDATE draw_rooms SET roster=? WHERE token=?').run(JSON.stringify(list.map(m=>m.user_id)),token);next(room(token));changed=true;reset=true;return;}
-        if(action==='close'){if(!host)throw fail(403,'只有房主可以结束整局');if(r.phase==='playing')settle(r,'skip');db.prepare("UPDATE draw_rooms SET phase='closed',version=version+1 WHERE token=?").run(token);changed=true;return;}
+        if(action==='close'){if(!host)throw fail(403,'只有房主可以结束整局');if(['choosing','playing'].includes(r.phase))settle(r,'skip');db.prepare("UPDATE draw_rooms SET phase='closed',version=version+1 WHERE token=?").run(token);changed=true;return;}
         if(action==='leave'){
-          if(r.phase==='playing'&&(r.mode!=='studio'||host))settle(r,'left');db.prepare('UPDATE draw_members SET active=0 WHERE room_token=? AND user_id=?').run(token,user.id);
+          if(['choosing','playing'].includes(r.phase)&&(r.mode!=='studio'||host))settle(r,'left');db.prepare('UPDATE draw_members SET active=0 WHERE room_token=? AND user_id=?').run(token,user.id);
           const remaining=members(token);if(host&&remaining.length)db.prepare('UPDATE draw_rooms SET host_id=? WHERE token=?').run(remaining[0].user_id,token);
           if(r.mode==='studio'&&host)db.prepare("UPDATE draw_rooms SET phase='closed',version=version+1 WHERE token=?").run(token);else if(!remaining.length)db.prepare("UPDATE draw_rooms SET phase='closed' WHERE token=?").run(token);else if(r.mode!=='studio'&&r.phase!=='lobby'&&remaining.length<3)db.prepare("UPDATE draw_rooms SET phase='finished' WHERE token=?").run(token);changed=true;reset=true;return;
         }
         if(action==='next'){if(!host||r.phase!=='between'||input.round!==r.round||clock()<r.next_at-BREAK+2000)throw fail(409,'等待本轮结算后继续');next(r);changed=true;reset=true;return;}
-        if(action==='skip'){if(!host||r.phase!=='playing')throw fail(403,'只有房主可以跳过正在进行的回合');if(input.round!==r.round)throw fail(409,'已经进入下一轮，请确认后再操作');settle(r,'skip');changed=true;reset=true;return;}
+        if(action==='skip'){if(!host||!['choosing','playing'].includes(r.phase))throw fail(403,'只有房主可以跳过正在进行的回合');if(input.round!==r.round)throw fail(409,'已经进入下一轮，请确认后再操作');settle(r,'skip');changed=true;reset=true;return;}
+        if(action==='choose'){if(!t||user.id!==t.drawer_id)throw fail(403,'只有本轮画手可以选题');if(input.round!==r.round)throw fail(409,'已经进入新的回合');if(!Number.isInteger(input.choice)||input.choice<0||input.choice>2)throw fail(400,'请选择给出的三个词之一');if(r.phase==='playing'&&t.selected_choice===input.choice)return;if(r.phase!=='choosing'||t.settled_at!==null)throw fail(409,'本轮题目已确定，不能重新选择');choose(r,input.choice);changed=true;reset=true;return;}
         if(!t||r.phase!=='playing'||t.settled_at!==null||input.round!==r.round)throw fail(409,'已进入新的回合，画板会自动同步');
         if(action==='guess'){
           if(user.id===t.drawer_id)throw fail(403,'这一轮你是画者');if(!JSON.parse(t.eligible).includes(user.id))throw fail(403,'你不在本轮猜题名单中');
