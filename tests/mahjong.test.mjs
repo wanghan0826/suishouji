@@ -1,6 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';import http from 'node:http';import crypto from 'node:crypto';import {DatabaseSync} from 'node:sqlite';
 import {DEFAULT_RULES,normalizeRules,winningHand,newRoom,startHand,available,playAction,tick,roomView,botDiscard} from '../scripts/mahjong-engine.mjs';
 import {createMahjongGame} from '../scripts/mahjong-game.mjs';
+import fs from 'node:fs';import os from 'node:os';import path from 'node:path';
 const win=[0,1,2,9,10,11,18,19,20,27,27,27,31,31],op=()=>crypto.randomBytes(16).toString('hex');
 function table(rules={}){const r=newRoom({id:1,username:'one'},1000,rules);for(let s=1;s<4;s++)r.seats[s]={userId:s+1,name:'player'+s,bot:false,away:false,ready:true,score:0};startHand(r,1000);return r;}
 function force(r,hands,{turn=0,melds=[[],[],[],[]],rivers=[[],[],[],[]]}={}){r.hands=hands.map(h=>[...h]);r.melds=structuredClone(melds);r.rivers=structuredClone(rivers);const used=Array(34).fill(0);for(const t of [...hands.flat(),...melds.flatMap(ms=>ms.flatMap(m=>Array(m.type==='pong'?3:4).fill(m.tile))),...rivers.flat()])used[t]++;assert.ok(used.every(n=>n<=4));r.wall=[];used.forEach((n,t)=>{for(let i=n;i<4;i++)r.wall.push(t);});r.turn=turn;r.drawn=hands[turn].at(-1);r.phase='playing';r.canKong=true;r.afterKong=false;r.pending=null;return r;}
@@ -80,4 +81,14 @@ test('leaving transfers hosting, uses bot takeover, supports reclaim and closes 
 });
 test('server processes response timeouts, bans and expiry without accepting late actions',async t=>{
  const f=await fixture(t),token=await f.start();f.advance(61000);const r=(await f.call('/'+token)).data.room;assert.ok(r.version>2);assert.equal(f.read(token).rivers[0].length,1);f.db.prepare('UPDATE site_users SET disabled=1 WHERE id=1').run();assert.equal((await f.call('/'+token)).status,401);f.advance(7*86400000);assert.equal((await f.call('/'+token,{user:2})).status,410);
+});
+test('a real SQLite write lock defers background cleanup and rooms advance once the lock is released',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'sj-mj-lock-')),file=path.join(dir,'test.db'),db=new DatabaseSync(file);let game,writer;
+ try{
+  db.exec('PRAGMA busy_timeout=0; CREATE TABLE site_users(id INTEGER PRIMARY KEY,username TEXT,disabled INTEGER DEFAULT 0); INSERT INTO site_users VALUES(1,\'lock_test\',0)');
+  const now=10000000;game=createMahjongGame({db,users:{},clock:()=>now});const r=newRoom({id:1,username:'lock_test'},now-31*60000);db.prepare('INSERT INTO mahjong_rooms VALUES(?,?,?,?)').run('a'.repeat(32),JSON.stringify(r),now,now+86400000);
+  writer=new DatabaseSync(file);writer.exec('PRAGMA busy_timeout=0; BEGIN EXCLUSIVE');assert.doesNotThrow(()=>game.sweep());writer.exec('ROLLBACK');assert.equal(JSON.parse(db.prepare('SELECT state FROM mahjong_rooms').get().state).phase,'lobby');
+  game.sweep();assert.equal(JSON.parse(db.prepare('SELECT state FROM mahjong_rooms').get().state).phase,'closed');
+  writer.exec('BEGIN IMMEDIATE');assert.doesNotThrow(()=>game.sweep());writer.exec('ROLLBACK');assert.doesNotThrow(()=>game.sweep());
+ }finally{game?.close();writer?.close();db.close();fs.unlinkSync(file);fs.rmdirSync(dir);}
 });
