@@ -75,6 +75,8 @@ function todayTopic() {
 
 /* ---------- 数据库 ---------- */
 const db = new DatabaseSync(path.join(DATA, 'wall.db'));
+// Maintenance and test/administrative connections may briefly share this file.
+db.exec('PRAGMA busy_timeout=5000');
 db.exec(`
 CREATE TABLE IF NOT EXISTS posts(
   id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -96,7 +96,7 @@ export function createMahjongGame({db,users,clock=Date.now}){
   function sweep(){
     try{
     for(const row of db.prepare('SELECT token,state FROM mahjong_rooms WHERE expires_at>? ORDER BY updated_at DESC LIMIT 500').all(clock())){const r=JSON.parse(row.state);if(['playing','respond','lobby'].includes(r.phase))try{advance(row.token);}catch{/* An expired room cannot stop other tables. */}}
-    if(clock()-cleanupAt>3600000){transaction(()=>{db.prepare('DELETE FROM mahjong_ops WHERE token IN (SELECT token FROM mahjong_rooms WHERE expires_at<=?)').run(clock());db.prepare('DELETE FROM mahjong_members WHERE token IN (SELECT token FROM mahjong_rooms WHERE expires_at<=?)').run(clock());db.prepare('DELETE FROM mahjong_rooms WHERE expires_at<=?').run(clock());});cleanupAt=clock();}
+    if(clock()-cleanupAt>3600000){if(db.prepare('SELECT 1 FROM mahjong_rooms WHERE expires_at<=? LIMIT 1').get(clock()))transaction(()=>{db.prepare('DELETE FROM mahjong_ops WHERE token IN (SELECT token FROM mahjong_rooms WHERE expires_at<=?)').run(clock());db.prepare('DELETE FROM mahjong_members WHERE token IN (SELECT token FROM mahjong_rooms WHERE expires_at<=?)').run(clock());db.prepare('DELETE FROM mahjong_rooms WHERE expires_at<=?').run(clock());});cleanupAt=clock();}
     }catch(e){
       // SQLite may be briefly locked by a backup, migration or another writer.
       // Background work must never terminate the HTTP process; retry next tick.
