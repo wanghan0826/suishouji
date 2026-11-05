@@ -13,6 +13,7 @@ function response(){const headers={};return {headers,getHeader:k=>headers[k],set
 test('growth categories retain neither private URLs nor arbitrary channel/referrer values',()=>{
   assert.equal(growthEntry('/play/'+'a'.repeat(32)),'word_invite');assert.equal(growthEntry('/u/taid1'),'space');assert.equal(growthEntry('/post/42'),'post');
   assert.equal(growthEntry('/draw/'+'a'.repeat(32)),'draw_invite');assert.equal(growthEntry('/draw'),'draw');
+  assert.equal(growthEntry('/mahjong/'+'a'.repeat(32)),'mahjong_invite');assert.equal(growthEntry('/mahjong'),'mahjong');assert.equal(growthEntry('/mahjong/private-name'),null);
   for(const path of ['/mobile-lab','/wall-demo','/api/auth/status','/admin','/assets/image.png','/play/not-a-room'])assert.equal(growthEntry(path),null);
   assert.equal(growthChannel(new URL('/play?utm_source=QQ&secret=hidden',origin),'',origin),'link:qq');
   assert.equal(growthChannel(new URL('/?source=private-value',origin),'',origin),'link:other');

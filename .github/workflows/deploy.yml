@@ -25,6 +25,8 @@ jobs:
           node --check scripts/growth-metrics.mjs
           node --check scripts/word-game.mjs
           node --check scripts/draw-game.mjs
+          node --check scripts/mahjong-engine.mjs
+          node --check scripts/mahjong-game.mjs
           node --check scripts/game-feedback.mjs
           node --check scripts/community.mjs
           node --check scripts/wall-titles.mjs
@@ -39,6 +41,7 @@ jobs:
           node --check public/demo-mode.js
           node --check public/word-game.js
           node --check public/draw-game.js
+          node --check public/mahjong.js
           node --check public/game-feedback.js
           node --check public/app.js
           node --check public/wall.js

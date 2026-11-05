@@ -16,6 +16,8 @@ export function growthEntry(path) {
   if (/^\/games\/?$/.test(path) || path === '/games.html') return 'games';
   if (/^\/draw\/[a-f0-9]{32}\/?$/.test(path)) return 'draw_invite';
   if (['/draw', '/draw/', '/draw-game.html'].includes(path)) return 'draw';
+  if (/^\/mahjong\/[a-f0-9]{32}\/?$/.test(path)) return 'mahjong_invite';
+  if (['/mahjong', '/mahjong/', '/mahjong.html'].includes(path)) return 'mahjong';
   if (/^\/play\/[a-f0-9]{32}\/?$/.test(path)) return 'word_invite';
   if (['/play', '/play/', '/word-game.html'].includes(path)) return 'word';
   if (/^\/plaza\/?$/.test(path) || path === '/plaza.html') return 'plaza';
@@ -110,7 +112,7 @@ export function readGrowthMetrics(db, days = 7, now = Date.now()) {
     return {eligible, returned, pending, rate: eligible ? returned / eligible : null};
   };
   const played = cohort.filter(u => u.played).length;
-  const registrations = {total: cohort.length, played, playedRate: cohort.length ? played / cohort.length : null, observed: observed.length, firstDayPlayers: firstDay.length, gamePage: observed.filter(u => ['word', 'word_invite', 'games', 'draw', 'draw_invite'].includes(u.registration_entry)).length, inviteEntry: cohort.filter(u => ['word_invite','draw_invite'].includes(u.entry)).length, unattributed: cohort.filter(u => !u.entry || u.entry === 'unknown').length, communityAfter: observed.filter(u => u.first_at && u.community_after_at >= u.first_at && u.community_after_at <= now).length, mutual: cohort.filter(u => u.played && u.mutual).length};
+  const registrations = {total: cohort.length, played, playedRate: cohort.length ? played / cohort.length : null, observed: observed.length, firstDayPlayers: firstDay.length, gamePage: observed.filter(u => ['word', 'word_invite', 'games', 'draw', 'draw_invite', 'mahjong', 'mahjong_invite'].includes(u.registration_entry)).length, inviteEntry: cohort.filter(u => ['word_invite','draw_invite','mahjong_invite'].includes(u.entry)).length, unattributed: cohort.filter(u => !u.entry || u.entry === 'unknown').length, communityAfter: observed.filter(u => u.first_at && u.community_after_at >= u.first_at && u.community_after_at <= now).length, mutual: cohort.filter(u => u.played && u.mutual).length};
   const batch = `FROM growth_visits v LEFT JOIN growth_registrations r ON r.visitor_hash=v.visitor_hash LEFT JOIN site_users u ON u.id=r.user_id WHERE v.first_at BETWEEN ? AND ?`;
   const entries = db.prepare(`SELECT v.entry,COUNT(*) visitors,SUM(CASE WHEN u.disabled=0 THEN 1 ELSE 0 END) registrations ${batch} GROUP BY v.entry ORDER BY visitors DESC,v.entry`).all(sinceAt, now);
   const channels = db.prepare(`SELECT v.channel,COUNT(*) visitors,SUM(CASE WHEN u.disabled=0 THEN 1 ELSE 0 END) registrations ${batch} GROUP BY v.channel ORDER BY visitors DESC,v.channel`).all(sinceAt, now);

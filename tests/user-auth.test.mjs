@@ -384,3 +384,15 @@ test('game suggestions require real login, stay private, retry once and expose a
  const publicPosts=await f.call('/api/posts');assert.ok(!JSON.stringify(publicPosts.data).includes(body.title));assert.ok(!JSON.stringify(mine.data).includes('request_key'));assert.equal((await f.call('/api/game-feedback?page=wrong',{session:owner})).status,400);
  f.db.prepare('UPDATE site_users SET disabled=1 WHERE id=?').run(owner.user.id);assert.equal((await f.call('/api/game-feedback',{session:owner})).status,401);
 });
+
+test('mahjong integrates real sessions, CSRF, static routes, private hands and immediate ban takeover',async t=>{
+ const f=await fixture(t),host=await f.register('mahjong_host'),friend=await f.register('mahjong_friend');
+ for(const route of ['/mahjong','/mahjong/','/mahjong.js','/mahjong.css','/games-compact.css'])assert.equal((await f.call(route)).status,200);
+ assert.equal((await f.call('/api/mahjong')).status,401);assert.equal((await f.call('/api/mahjong',{method:'POST',session:host,body:{rules:{}},csrfOverride:'bad'})).status,403);assert.equal((await f.call('/api/mahjong',{method:'POST',session:host,body:{rules:{}},originOverride:'https://evil.example'})).status,403);
+ const created=await f.call('/api/mahjong',{method:'POST',session:host,body:{rules:{hands:1}}});assert.equal(created.status,200);const token=created.data.room.token,base='/api/mahjong/'+token;
+ assert.equal((await f.call('/mahjong/'+token)).status,200);assert.equal((await f.call(base,{session:friend})).data.room,undefined);
+ const join=await f.call(base+'/join',{method:'POST',session:friend,body:{version:1,opId:'a'.repeat(32)}});assert.equal(join.status,200);const ready=await f.call(base+'/ready',{method:'POST',session:friend,body:{version:join.data.room.version,opId:'b'.repeat(32),ready:true}});assert.equal(ready.status,200);
+ const start=await f.call(base+'/start',{method:'POST',session:host,body:{version:ready.data.room.version,opId:'c'.repeat(32),fillBots:true}});assert.equal(start.status,200);assert.equal(start.data.room.hand.length,14);assert.ok(start.data.room.seats.every(s=>!Object.hasOwn(s,'hand')));assert.equal(start.data.room.wall,undefined);
+ assert.equal((await f.call(base+'/action',{method:'POST',session:host,body:{version:start.data.room.version,opId:'d'.repeat(32),type:'discard',tile:start.data.room.drawn},csrfOverride:'bad'})).status,403);
+ f.db.prepare('UPDATE site_users SET disabled=1 WHERE id=?').run(host.user.id);assert.equal((await f.call(base,{session:host})).status,401);const continued=(await f.call(base,{session:friend})).data.room;assert.equal(continued.hostId,friend.user.id);assert.equal(continued.seats[0].away,true);assert.equal(continued.hand.length,13);
+});

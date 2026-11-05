@@ -1,0 +1,51 @@
+.games-page .games-main{max-width:1180px;padding:24px 24px 28px}
+.games-page .games-launch-heading{margin-bottom:16px;padding-bottom:12px}
+.games-page .games-launch-heading .eyebrow{margin-bottom:5px}
+.games-page .games-launch-heading h1{font-size:29px}
+.games-page .games-launch-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.games-page .games-launch-card{grid-template-columns:minmax(0,1fr) 84px;padding:18px;gap:12px;box-shadow:none}
+.games-page .games-launch-card h2{font-size:23px;margin:8px 0}
+.games-page .games-launch-card h2 small{display:block;margin:0;font-size:11px}
+.games-page .games-launch-card p{font-size:12px;line-height:1.7;min-height:41px}
+.games-page .games-launch-tags{font-size:10px;gap:6px}
+.games-page .games-launch-tags>span:first-child{padding:2px 6px;border-radius:2px}
+.games-page .games-launch-tags>span:last-child{padding:2px 0}
+.games-page .games-launch-action{font-size:12px;margin-top:8px;min-height:36px;gap:4px}
+.games-page .games-launch-art{width:84px;align-self:center}
+.games-launch-mahjong{border-top:3px solid #356e79!important}
+.games-launch-mahjong .games-launch-art{background:#153d3e;display:grid;place-items:center}
+.games-launch-mahjong svg{width:100%;height:100%}
+.games-page .games-launchpad{margin-bottom:16px}
+.games-page .games-launch-note{margin-top:10px;font-size:11px}
+.games-page .game-feedback-entry{padding:16px 18px;gap:16px;flex-direction:row;align-items:center;box-shadow:none}
+.games-page .game-feedback-entry small{display:none}
+.games-page .game-feedback-entry h2{font-size:18px;margin:0 0 4px;line-height:1.5}
+.games-page .game-feedback-entry p{font-size:12px;margin:0;line-height:1.7}
+.games-page .game-feedback-entry>.entry-action{padding:8px 12px;font-size:12px;min-height:44px;flex-shrink:0}
+.games-page .games-community{display:block;margin-top:24px}
+.games-page .games-community>div:first-child{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+.games-page .games-community .eyebrow{display:none}
+.games-page .games-community h2{font-size:20px;margin:0}
+.games-page .games-community p{font-size:12px;margin:0;line-height:1.6}
+.games-page .games-community .platform-zones{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.games-page .platform-zones a{padding:14px 16px;gap:4px;box-shadow:none}
+.games-page .platform-zones strong{font-size:15px}
+.games-page .platform-zones span{font-size:12px;line-height:1.7}
+.games-page .platform-zones .entry-action{display:none}
+.games-page .games-footer{max-width:1132px;padding:16px 0;margin:0 auto;font-size:11px}
+@media(max-width:1000px) and (min-width:761px){.games-page .games-launch-card{grid-template-columns:minmax(0,1fr);position:relative}.games-page .games-launch-art{position:absolute;right:14px;top:18px;width:50px}.games-page .games-launch-card h2{font-size:21px}.games-page .games-launch-tags>span:last-child{display:none}}
+@media(max-width:760px){
+ .games-page .games-main{padding:16px 14px 22px}.games-page .games-launch-heading h1{font-size:24px}
+ .games-page .games-launch-grid{grid-template-columns:minmax(0,1fr);gap:10px}
+ .games-page .games-launch-card{grid-template-columns:minmax(0,1fr) 78px;padding:12px 14px;gap:12px}
+ .games-page .games-launch-card h2{font-size:21px;margin:5px 0 4px}.games-page .games-launch-card h2 small{display:inline;margin-left:6px}
+ .games-page .games-launch-card p{min-height:0;font-size:12px}.games-page .games-launch-card p br{display:none}
+ .games-page .games-launch-action{min-height:28px;margin-top:4px}.games-page .games-launch-art{width:78px}
+ .games-page .game-feedback-entry{padding:12px;gap:10px}.games-page .game-feedback-entry h2{font-size:15px}.games-page .game-feedback-entry p{font-size:11px}
+ .games-page .game-feedback-entry>.entry-action{font-size:11px;padding:8px;white-space:normal;max-width:95px;line-height:1.6}
+ .games-page .games-community{margin-top:20px}.games-page .games-community>div:first-child{gap:4px;margin-bottom:10px}.games-page .games-community h2{font-size:18px}
+ .games-page .games-community .platform-zones{grid-template-columns:minmax(0,1fr);gap:8px}
+ .games-page .platform-zones a{padding:12px;flex-direction:row;align-items:center;justify-content:space-between;gap:10px;min-height:52px}
+ .games-page .platform-zones strong{font-size:14px;white-space:nowrap}.games-page .platform-zones span{font-size:11px;text-align:right}
+ .games-page .games-footer{margin:0 14px;padding:12px 0;gap:6px}
+}
