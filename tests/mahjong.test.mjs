@@ -82,6 +82,14 @@ test('leaving transfers hosting, uses bot takeover, supports reclaim and closes 
 test('server processes response timeouts, bans and expiry without accepting late actions',async t=>{
  const f=await fixture(t),token=await f.start();f.advance(61000);const r=(await f.call('/'+token)).data.room;assert.ok(r.version>2);assert.equal(f.read(token).rivers[0].length,1);f.db.prepare('UPDATE site_users SET disabled=1 WHERE id=1').run();assert.equal((await f.call('/'+token)).status,401);f.advance(7*86400000);assert.equal((await f.call('/'+token,{user:2})).status,410);
 });
+test('simultaneous valid claims share a response context; another players pass or pong never invalidates hu',async t=>{
+ const f=await fixture(t),token=await f.create({selfDrawOnly:false});for(const user of [2,3,4]){await f.mutate(token,'join',{},user);await f.mutate(token,'ready',{ready:true},user);}await f.mutate(token,'start');
+ const r=force(f.read(token),[[2],[2,2],[0,1,9,10,11,18,19,20,27,27,27,31,31],[]]);f.write(token,r);
+ const discarded=(await f.mutate(token,'action',{type:'discard',tile:2})).data.room,context={version:discarded.version,handNo:discarded.handNo,responseId:discarded.pending.id,type:'claim'};
+ assert.equal((await f.call('/'+token+'/action',{user:3,data:{...context,version:context.version-1,responseId:'old',opId:op(),choice:'hu'}})).status,409);
+ const responses=await Promise.all([f.call('/'+token+'/action',{user:2,data:{...context,choice:'pong',opId:op()}}),f.call('/'+token+'/action',{user:3,data:{...context,choice:'hu',opId:op()}})]);assert.deepEqual(responses.map(x=>x.status),[200,200]);assert.deepEqual(f.read(token).result.winners,[2]);
+ assert.equal((await f.call('/'+token+'/action',{user:3,data:{...context,choice:'hu',opId:op()}})).status,409);
+});
 test('a real SQLite write lock defers background cleanup and rooms advance once the lock is released',()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'sj-mj-lock-')),file=path.join(dir,'test.db'),db=new DatabaseSync(file);let game,writer;
  try{

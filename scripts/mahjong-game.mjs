@@ -16,6 +16,7 @@ export function createMahjongGame({db,users,clock=Date.now}){
   function limit(id,kind){const now=clock(),key=id+':'+kind,max=kind==='create'?6:kind==='read'?180:90,window=kind==='create'?3600000:60000;let b=buckets.get(key);if(!b||b.until<=now){b={n:0,until:now+window};buckets.set(key,b);}if(++b.n>max)throw fail(429,'操作有点快，请稍后再试');if(buckets.size>3000)for(const[k,v]of buckets)if(v.until<now)buckets.delete(k);}
   function active(r){return r.seats.filter(s=>s&&!s.bot&&!s.away);}
   function advance(token){return transaction(()=>{const r=load(token);let changed=false;
+    if(r.pending&&!r.pending.id){r.pending.id=crypto.randomBytes(12).toString('hex');changed=true;}
     for(const s of active(r))if(!db.prepare('SELECT 1 FROM site_users WHERE id=? AND disabled=0').get(s.userId)){s.away=true;changed=true;db.prepare('UPDATE mahjong_members SET active=0 WHERE token=? AND user_id=?').run(token,s.userId);}
     const humans=active(r);
     if(!humans.length||clock()-r.lastActive>30*60000){if(r.phase!=='closed'){r.phase='closed';r.deadline=0;changed=true;}}
@@ -56,7 +57,8 @@ export function createMahjongGame({db,users,clock=Date.now}){
       transaction(()=>{
         r=load(token);const old=db.prepare('SELECT fingerprint FROM mahjong_ops WHERE token=? AND user_id=? AND op_id=?').get(token,user.id,input.opId);
         if(old){if(old.fingerprint!==fingerprint)throw fail(409,'这次操作已使用，请重新操作');return;}
-        if(input.version!==r.version)throw fail(409,'牌桌已更新，正在同步，请重新选择');
+        const sameResponse=action==='action'&&input.type==='claim'&&r.phase==='respond'&&input.handNo===r.handNo&&input.responseId===r.pending.id&&input.version<=r.version;
+        if(input.version!==r.version&&!sameResponse)throw fail(409,'牌桌已更新，正在同步，请重新选择');
         if(r.phase==='closed')throw fail(410,'牌室已关闭，请重新开房');
         const seat=r.seats.findIndex(s=>s?.userId===user.id),mine=seat>=0?r.seats[seat]:null,host=r.hostId===user.id;
         if(action==='join'){

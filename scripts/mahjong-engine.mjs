@@ -101,7 +101,7 @@ function respond(r,tile,from,now,rob=false){
     if(opts.length)eligible[s]=opts;
   }
   if(!Object.keys(eligible).length){if(rob)kong(r,from,tile,'bu',now);else draw(r,(from+1)%4,now);return;}
-  r.phase='respond';r.pending={tile,from,rob,eligible,choices:{}};r.drawn=null;r.deadline=now+r.rules.responseSeconds*1000;r.botAt=now+900;
+  r.phase='respond';r.pending={id:crypto.randomBytes(12).toString('hex'),tile,from,rob,eligible,choices:{}};r.drawn=null;r.deadline=now+r.rules.responseSeconds*1000;r.botAt=now+900;
 }
 function resolve(r,now){
   const p=r.pending;
@@ -162,5 +162,5 @@ export function roomView(r,id,token,now){
   const me=r.seats.findIndex(s=>s?.userId===id&&!s.away),host=r.seats.find(s=>s?.userId===r.hostId);
   if(me<0)return {preview:{host:host?.name||'朋友',count:r.seats.filter(Boolean).length,phase:r.phase,canJoin:r.phase==='lobby'&&r.seats.some(s=>!s)||r.seats.some(s=>s?.userId===id&&s.away)&&!['closed','finished'].includes(r.phase),rules:r.rules}};
   const revealed=['between','finished'].includes(r.phase);
-  return {room:{token,phase:r.phase,version:r.version,handNo:r.handNo,rules:r.rules,me,hostId:r.hostId,dealer:r.dealer,turn:r.turn,remaining:Math.max(0,r.wall.length-r.rules.reserve),wallCount:r.wall.length,deadline:r.deadline,serverNow:now,drawn:r.turn===me&&r.phase==='playing'?r.drawn:null,hand:[...r.hands[me]],seats:r.seats.map((s,i)=>s?{...s,handCount:r.hands[i].length,melds:r.melds[i].map(m=>m.type==='an'&&i!==me&&!revealed?{type:'an',tile:null,from:null}:m),river:r.rivers[i],...(revealed?{hand:r.hands[i]}:{})}:null),actions:available(r,me),pending:r.pending?{tile:r.pending.tile,from:r.pending.from,rob:r.pending.rob,responded:Object.hasOwn(r.pending.choices,me)}:null,result:r.result,log:r.log}};
+  return {room:{token,phase:r.phase,version:r.version,handNo:r.handNo,rules:r.rules,me,hostId:r.hostId,dealer:r.dealer,turn:r.turn,remaining:Math.max(0,r.wall.length-r.rules.reserve),wallCount:r.wall.length,deadline:r.deadline,serverNow:now,drawn:r.turn===me&&r.phase==='playing'?r.drawn:null,hand:[...r.hands[me]],seats:r.seats.map((s,i)=>s?{...s,handCount:r.hands[i].length,melds:r.melds[i].map(m=>m.type==='an'&&i!==me&&!revealed?{type:'an',tile:null,from:null}:m),river:r.rivers[i],...(revealed?{hand:r.hands[i]}:{})}:null),actions:available(r,me),pending:r.pending?{id:r.pending.id,tile:r.pending.tile,from:r.pending.from,rob:r.pending.rob,responded:Object.hasOwn(r.pending.choices,me)}:null,result:r.result,log:r.log}};
 }
