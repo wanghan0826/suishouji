@@ -3,17 +3,27 @@ import {newRoom,startHand,playAction,tick,roomView,normalizeRules} from './mahjo
 import {ensureGrowthMetrics,recordGrowthGuess} from './growth-metrics.mjs';
 
 const fail=(status,message)=>Object.assign(Error(message),{status}),DAY=86400000;
+const CHAT_LIMIT=48,EMOJIS=new Set(['hello','laugh','clap','think','wow','again']);
+function chatInput(input){
+  if(input.kind==='emoji'&&EMOJIS.has(input.text))return {kind:'emoji',text:input.text};
+  if(input.kind!=='text'||typeof input.text!=='string')throw fail(400,'请选择表情或输入文字');
+  const text=input.text.trim().normalize('NFC');
+  if(!text||[...text].length>80||/[\p{Cc}\p{Cs}\u202a-\u202e\u2066-\u2069]/u.test(text)||!text.replace(/[\p{Cf}\s]/gu,''))throw fail(400,'请输入 1–80 个字符的聊天内容');
+  return {kind:'text',text};
+}
 export function createMahjongGame({db,users,clock=Date.now}){
   ensureGrowthMetrics(db);
   db.exec(`CREATE TABLE IF NOT EXISTS mahjong_rooms(token TEXT PRIMARY KEY,state TEXT NOT NULL,updated_at INTEGER NOT NULL,expires_at INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS mahjong_members(token TEXT NOT NULL,user_id INTEGER NOT NULL,active INTEGER NOT NULL DEFAULT 1,PRIMARY KEY(token,user_id));
     CREATE INDEX IF NOT EXISTS mahjong_user_rooms ON mahjong_members(user_id,active);
-    CREATE TABLE IF NOT EXISTS mahjong_ops(token TEXT NOT NULL,user_id INTEGER NOT NULL,op_id TEXT NOT NULL,fingerprint TEXT NOT NULL,created_at INTEGER NOT NULL,PRIMARY KEY(token,user_id,op_id));`);
+    CREATE TABLE IF NOT EXISTS mahjong_ops(token TEXT NOT NULL,user_id INTEGER NOT NULL,op_id TEXT NOT NULL,fingerprint TEXT NOT NULL,created_at INTEGER NOT NULL,PRIMARY KEY(token,user_id,op_id));
+    CREATE TABLE IF NOT EXISTS mahjong_chat(id INTEGER PRIMARY KEY AUTOINCREMENT,token TEXT NOT NULL,user_id INTEGER NOT NULL,seat INTEGER NOT NULL,name TEXT NOT NULL,kind TEXT NOT NULL,text TEXT NOT NULL,created_at INTEGER NOT NULL);
+    CREATE INDEX IF NOT EXISTS mahjong_chat_room ON mahjong_chat(token,id DESC);`);
   const buckets=new Map();let cleanupAt=0;
   const transaction=fn=>{db.exec('BEGIN IMMEDIATE');try{const value=fn();db.exec('COMMIT');return value;}catch(e){db.exec('ROLLBACK');throw e;}};
   const load=token=>{const row=db.prepare('SELECT * FROM mahjong_rooms WHERE token=?').get(token);if(!row)throw fail(404,'没有找到这间牌室');if(row.expires_at<=clock())throw fail(410,'牌室已过期，请重新开房');return JSON.parse(row.state);};
   const save=(token,r)=>db.prepare('UPDATE mahjong_rooms SET state=?,updated_at=? WHERE token=?').run(JSON.stringify(r),clock(),token);
-  function limit(id,kind){const now=clock(),key=id+':'+kind,max=kind==='create'?6:kind==='read'?180:90,window=kind==='create'?3600000:60000;let b=buckets.get(key);if(!b||b.until<=now){b={n:0,until:now+window};buckets.set(key,b);}if(++b.n>max)throw fail(429,'操作有点快，请稍后再试');if(buckets.size>3000)for(const[k,v]of buckets)if(v.until<now)buckets.delete(k);}
+  function limit(id,kind){const now=clock(),key=id+':'+kind,max=kind==='create'?6:kind==='read'?180:kind==='chat'?12:90,window=kind==='create'?3600000:kind==='chat'?10000:60000;let b=buckets.get(key);if(!b||b.until<=now){b={n:0,until:now+window};buckets.set(key,b);}if(++b.n>max)throw fail(429,kind==='chat'?'发得太快了，请稍等再发':'操作有点快，请稍后再试');if(buckets.size>3000)for(const[k,v]of buckets)if(v.until<now)buckets.delete(k);}
   function active(r){return r.seats.filter(s=>s&&!s.bot&&!s.away);}
   function advance(token){return transaction(()=>{const r=load(token);let changed=false;
     if(r.pending&&!r.pending.id){r.pending.id=crypto.randomBytes(12).toString('hex');changed=true;}
@@ -23,16 +33,17 @@ export function createMahjongGame({db,users,clock=Date.now}){
     else {if(!humans.some(s=>s.userId===r.hostId)){r.hostId=humans[0].userId;humans[0].ready=true;changed=true;}if(tick(r,clock()))changed=true;}
     if(changed){r.version++;save(token,r);}return r;
   });}
-  const view=(token,r,id)=>{const v=roomView(r,id,token,clock());if(v.preview)v.preview.version=r.version;return v;};
+  const chatHistory=token=>db.prepare('SELECT id,seat,name,kind,text,created_at AS at FROM mahjong_chat WHERE token=? ORDER BY id DESC LIMIT ?').all(token,CHAT_LIMIT).reverse();
+  const view=(token,r,id)=>{const v=roomView(r,id,token,clock());if(v.preview)v.preview.version=r.version;else v.room.chat=r.phase==='closed'?[]:chatHistory(token);return v;};
   const send=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','Vary':'Cookie','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(data));};
   async function body(req){if(!String(req.headers['content-type']||'').startsWith('application/json'))throw fail(415,'请求格式无效');let size=0;const chunks=[];for await(const c of req){size+=c.length;if(size>8192)throw fail(413,'请求过大');chunks.push(c);}try{const v=JSON.parse(Buffer.concat(chunks).toString());if(!v||typeof v!=='object'||Array.isArray(v))throw 0;return v;}catch{throw fail(400,'请求内容无效');}}
   async function handle(req,res){
     const path=new URL(req.url,'http://local').pathname;if(path!=='/api/mahjong'&&!path.startsWith('/api/mahjong/'))return false;
     try{
-      const match=/^\/api\/mahjong(?:\/([a-f0-9]{32})(?:\/(join|leave|ready|start|rules|next|close|action))?)?\/?$/.exec(path);if(!match)throw fail(404,'未知牌室操作');
+      const match=/^\/api\/mahjong(?:\/([a-f0-9]{32})(?:\/(join|leave|ready|start|rules|next|close|action|chat))?)?\/?$/.exec(path);if(!match)throw fail(404,'未知牌室操作');
       if(!['GET','POST'].includes(req.method))throw fail(405,'不支持此操作');
-      const user=req.method==='POST'?users.requireUser(req):users.currentUser(req);if(!user)throw fail(401,'登录后可以开房或加入牌室');limit(user.id,req.method==='GET'?'read':'write');
       const [,token,action]=match;
+      const user=req.method==='POST'?users.requireUser(req):users.currentUser(req);if(!user)throw fail(401,'登录后可以开房或加入牌室');limit(user.id,req.method==='GET'?'read':action==='chat'?'chat':'write');
       if(!token){
         if(req.method==='GET'){
           const rows=db.prepare('SELECT r.token,r.state,r.expires_at FROM mahjong_rooms r JOIN mahjong_members m ON m.token=r.token WHERE m.user_id=? AND m.active=1 AND r.expires_at>? ORDER BY r.updated_at DESC LIMIT 12').all(user.id,clock());
@@ -52,6 +63,22 @@ export function createMahjongGame({db,users,clock=Date.now}){
       }
       if(!action)throw fail(404,'请选择牌室操作');
       const input=await body(req);
+      if(action==='chat'){
+        if(!/^[a-f0-9]{32}$/.test(input.opId||''))throw fail(400,'聊天凭据无效，请重试');
+        const item=chatInput(input),fingerprint=crypto.createHash('sha256').update(JSON.stringify(['chat',item])).digest('hex');
+        transaction(()=>{
+          r=load(token);const seat=r.seats.findIndex(s=>s?.userId===user.id&&!s.away);
+          if(seat<0)throw fail(403,'入座后才能使用同桌聊天');
+          if(r.phase==='closed')throw fail(410,'牌室已关闭');
+          const old=db.prepare('SELECT fingerprint FROM mahjong_ops WHERE token=? AND user_id=? AND op_id=?').get(token,user.id,input.opId);
+          if(old){if(old.fingerprint!==fingerprint)throw fail(409,'这次消息已发送，请重新编辑');return;}
+          const now=clock(),last=db.prepare('SELECT created_at FROM mahjong_chat WHERE token=? AND user_id=? ORDER BY id DESC LIMIT 1').get(token,user.id);
+          if(last&&now-last.created_at<750)throw fail(429,'发得太快了，请稍等再发');
+          db.prepare('INSERT INTO mahjong_chat(token,user_id,seat,name,kind,text,created_at) VALUES(?,?,?,?,?,?,?)').run(token,user.id,seat,user.username,item.kind,item.text,now);
+          db.prepare('DELETE FROM mahjong_chat WHERE token=? AND id < (SELECT id FROM mahjong_chat WHERE token=? ORDER BY id DESC LIMIT 1 OFFSET ?)').run(token,token,CHAT_LIMIT-1);
+          db.prepare('INSERT INTO mahjong_ops VALUES(?,?,?,?,?)').run(token,user.id,input.opId,fingerprint,now);
+        });send(res,200,{chat:chatHistory(token)});return true;
+      }
       if(!/^[a-f0-9]{32}$/.test(input.opId||'')||!Number.isSafeInteger(input.version))throw fail(400,'操作凭据无效，请刷新后重试');
       const fingerprint=crypto.createHash('sha256').update(JSON.stringify([action,input])).digest('hex');
       transaction(()=>{
@@ -96,7 +123,7 @@ export function createMahjongGame({db,users,clock=Date.now}){
   function sweep(){
     try{
     for(const row of db.prepare('SELECT token,state FROM mahjong_rooms WHERE expires_at>? ORDER BY updated_at DESC LIMIT 500').all(clock())){const r=JSON.parse(row.state);if(['playing','respond','lobby'].includes(r.phase))try{advance(row.token);}catch{/* An expired room cannot stop other tables. */}}
-    if(clock()-cleanupAt>3600000){if(db.prepare('SELECT 1 FROM mahjong_rooms WHERE expires_at<=? LIMIT 1').get(clock()))transaction(()=>{db.prepare('DELETE FROM mahjong_ops WHERE token IN (SELECT token FROM mahjong_rooms WHERE expires_at<=?)').run(clock());db.prepare('DELETE FROM mahjong_members WHERE token IN (SELECT token FROM mahjong_rooms WHERE expires_at<=?)').run(clock());db.prepare('DELETE FROM mahjong_rooms WHERE expires_at<=?').run(clock());});cleanupAt=clock();}
+    if(clock()-cleanupAt>3600000){if(db.prepare('SELECT 1 FROM mahjong_rooms WHERE expires_at<=? LIMIT 1').get(clock()))transaction(()=>{for(const table of ['mahjong_chat','mahjong_ops','mahjong_members'])db.prepare(`DELETE FROM ${table} WHERE token IN (SELECT token FROM mahjong_rooms WHERE expires_at<=?)`).run(clock());db.prepare('DELETE FROM mahjong_rooms WHERE expires_at<=?').run(clock());});cleanupAt=clock();}
     }catch(e){
       // SQLite may be briefly locked by a backup, migration or another writer.
       // Background work must never terminate the HTTP process; retry next tick.

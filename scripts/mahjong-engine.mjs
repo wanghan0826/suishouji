@@ -135,7 +135,11 @@ export function playAction(r,seat,input,now){
     kong(r,seat,k.tile,k.type,now);return;
   }
   if(input.type!=='discard'||!Number.isInteger(input.tile)||!r.hands[seat].includes(input.tile))throw fail('请选择手中的一张牌',400);
-  remove(r.hands[seat],input.tile,1);r.rivers[seat].push(input.tile);log(r,name(r,seat)+'打出'+tileName(input.tile));r.afterKong=false;r.drawn=null;respond(r,input.tile,seat,now);
+  remove(r.hands[seat],input.tile,1);r.rivers[seat].push(input.tile);
+  // A claim may remove the tile from the river before another player polls.
+  // Keep a bounded stream of confirmed public discards, independent of river length.
+  r.discardSeq=(r.discardSeq||0)+1;(r.discards??=[]).push({id:r.discardSeq,seat,tile:input.tile,index:r.rivers[seat].length-1,handNo:r.handNo,at:now});if(r.discards.length>12)r.discards.shift();
+  log(r,name(r,seat)+'打出'+tileName(input.tile));r.afterKong=false;r.drawn=null;respond(r,input.tile,seat,now);
 }
 // The bot uses only its own hand and visible melds. It never reads the wall or other hands.
 export function botDiscard(hand){
@@ -162,5 +166,5 @@ export function roomView(r,id,token,now){
   const me=r.seats.findIndex(s=>s?.userId===id&&!s.away),host=r.seats.find(s=>s?.userId===r.hostId);
   if(me<0)return {preview:{host:host?.name||'朋友',count:r.seats.filter(Boolean).length,phase:r.phase,canJoin:r.phase==='lobby'&&r.seats.some(s=>!s)||r.seats.some(s=>s?.userId===id&&s.away)&&!['closed','finished'].includes(r.phase),rules:r.rules}};
   const revealed=['between','finished'].includes(r.phase);
-  return {room:{token,phase:r.phase,version:r.version,handNo:r.handNo,rules:r.rules,me,hostId:r.hostId,dealer:r.dealer,turn:r.turn,remaining:Math.max(0,r.wall.length-r.rules.reserve),wallCount:r.wall.length,deadline:r.deadline,serverNow:now,drawn:r.turn===me&&r.phase==='playing'?r.drawn:null,hand:[...r.hands[me]],seats:r.seats.map((s,i)=>s?{...s,handCount:r.hands[i].length,melds:r.melds[i].map(m=>m.type==='an'&&i!==me&&!revealed?{type:'an',tile:null,from:null}:m),river:r.rivers[i],...(revealed?{hand:r.hands[i]}:{})}:null),actions:available(r,me),pending:r.pending?{id:r.pending.id,tile:r.pending.tile,from:r.pending.from,rob:r.pending.rob,responded:Object.hasOwn(r.pending.choices,me)}:null,result:r.result,log:r.log}};
+  return {room:{token,phase:r.phase,version:r.version,handNo:r.handNo,rules:r.rules,me,hostId:r.hostId,dealer:r.dealer,turn:r.turn,remaining:Math.max(0,r.wall.length-r.rules.reserve),wallCount:r.wall.length,deadline:r.deadline,serverNow:now,drawn:r.turn===me&&r.phase==='playing'?r.drawn:null,hand:[...r.hands[me]],seats:r.seats.map((s,i)=>s?{...s,handCount:r.hands[i].length,melds:r.melds[i].map(m=>m.type==='an'&&i!==me&&!revealed?{type:'an',tile:null,from:null}:m),river:r.rivers[i],...(revealed?{hand:r.hands[i]}:{})}:null),actions:available(r,me),pending:r.pending?{id:r.pending.id,tile:r.pending.tile,from:r.pending.from,rob:r.pending.rob,responded:Object.hasOwn(r.pending.choices,me)}:null,result:r.result,log:r.log,discards:r.discards||[]}};
 }

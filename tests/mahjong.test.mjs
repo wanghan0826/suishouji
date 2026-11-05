@@ -100,3 +100,33 @@ test('a real SQLite write lock defers background cleanup and rooms advance once 
   writer.exec('BEGIN IMMEDIATE');assert.doesNotThrow(()=>game.sweep());writer.exec('ROLLBACK');assert.doesNotThrow(()=>game.sweep());
  }finally{game?.close();writer?.close();db.close();fs.unlinkSync(file);fs.rmdirSync(dir);}
 });
+test('confirmed discard stream records claimed tiles and bot plays, with bounded history across hands',()=>{
+ const r=force(table(),[[0],[0,0,4],[],[]]);
+ playAction(r,0,{type:'discard',tile:0},1100);playAction(r,1,{type:'claim',choice:'pong'},1200);
+ assert.deepEqual(r.rivers[0],[]);
+ assert.deepEqual(roomView(r,3,'t',1200).room.discards,[{id:1,seat:0,tile:0,index:0,handNo:1,at:1100}]);
+ assert.equal(roomView(r,99,'t',1200).preview.discards,undefined);
+ r.seats[1].bot=true;tick(r,r.deadline+1);assert.equal(r.discards.at(-1).seat,1);assert.equal(r.discards.at(-1).tile,4);
+ startHand(r,100000);for(let i=0;i<14;i++){force(r,[[12],[],[],[]]);playAction(r,0,{type:'discard',tile:12},100001+i);}
+ assert.deepEqual(r.discards.map(e=>e.id),[5,6,7,8,9,10,11,12,13,14,15,16]);assert.ok(r.discards.every(e=>e.handNo===2));
+});
+test('only active tablemates can read and send chat; safe retries preserve the game version',async t=>{
+ const f=await fixture(t),token=await f.create(),route='/'+token+'/chat',message={kind:'text',text:'  <img src=x onerror=alert(1)>  ',opId:op()};
+ await f.mutate(token,'join',{},2);const version=f.read(token).version;
+ assert.equal((await f.call(route,{user:0,data:message})).status,401);
+ assert.equal((await f.call(route,{user:3,data:message})).status,403);
+ assert.equal((await f.call(route,{user:2,csrf:'bad',data:message})).status,403);
+ for(const bad of [{kind:'emoji',text:'unknown'},{kind:'text',text:'😀'.repeat(81)},{kind:'text',text:'\u202eabc'},{kind:'text',text:'\u200b'}])assert.equal((await f.call(route,{user:2,data:{...bad,opId:op()}})).status,400);
+ const sent=await f.call(route,{user:2,data:message});assert.equal(sent.status,200);assert.equal(sent.data.chat[0].text,message.text.trim());assert.equal(sent.data.chat[0].name,'user2');
+ assert.deepEqual((await f.call(route,{user:2,data:message})).data,sent.data);
+ assert.equal((await f.call(route,{user:2,data:{...message,text:'another'}})).status,409);
+ const emoji={kind:'emoji',text:'clap',opId:op()};
+ assert.equal((await f.call(route,{user:2,data:emoji})).status,429);
+ assert.equal((await f.call(route,{user:1,data:emoji})).status,200);
+ assert.equal(f.read(token).version,version);
+ f.restart();assert.equal((await f.call('/'+token)).data.room.chat.length,2);assert.equal((await f.call('/'+token,{user:3})).data.preview.chat,undefined);
+ for(let i=0;i<50;i++){f.advance(850);assert.equal((await f.call(route,{user:2,data:{kind:'text',text:'消息 '+i,opId:op()}})).status,200);}
+ const history=(await f.call('/'+token)).data.room.chat;assert.equal(history.length,48);assert.equal(history[0].text,'消息 2');assert.equal(history.at(-1).text,'消息 49');
+ await f.mutate(token,'leave',{},2);assert.equal((await f.call('/'+token,{user:2})).data.preview.chat,undefined);assert.equal((await f.call(route,{user:2,data:message})).status,403);
+ await f.mutate(token,'close');assert.deepEqual((await f.call('/'+token)).data.room.chat,[]);assert.equal((await f.call(route,{data:message})).status,410);
+});
