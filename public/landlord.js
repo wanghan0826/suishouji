@@ -33,9 +33,9 @@
     return el;
   }
 
-  const exitFullscreen = window.SJLandscape.bind($('llFullscreen'),({active,needsRotation}) => {
-    $('llFullscreen').textContent = active ? '退出全屏' : '⛶ 横屏';
-    $('llRotate').textContent = needsRotation ? '请将手机横放，牌桌会自动调整。' : '';
+  const exitFullscreen = window.SJLandscape.bind($('llFullscreen'),({active,unavailable}) => {
+    $('llFullscreen').textContent = active ? '退出全屏' : '⛶ 全屏';
+    $('llRotate').textContent = unavailable ? '浏览器暂时无法隐藏工具栏，牌桌仍可横向使用。' : '';
   });
 
   function storedRoom(value) {

@@ -51,12 +51,12 @@
   $('mjChat').onkeydown=e=>{if(e.key==='Escape'){e.preventDefault();chatOpen(false,true);}};
   $('mjChatForm').onsubmit=e=>{e.preventDefault();sendChat('text',$('mjChatInput').value.trim());};
   const viewport=window.visualViewport;
-  function keyboardSize(){const h=viewport&&document.activeElement===$('mjChatInput')&&window.innerHeight-viewport.height>75?Math.floor(viewport.height):0;$('mjTable').classList.toggle('mj-keyboard',!!h);$('mjTable').style.setProperty('--mj-keyboard-height',h?h+'px':'100dvh');}
+  function keyboardSize(){const h=!window.SJLandscape.isRotated()&&viewport&&document.activeElement===$('mjChatInput')&&window.innerHeight-viewport.height>75?Math.floor(viewport.height):0;$('mjTable').classList.toggle('mj-keyboard',!!h);$('mjTable').style.setProperty('--mj-keyboard-height',h?h+'px':'100dvh');}
   viewport?.addEventListener('resize',keyboardSize);$('mjChatInput').onblur=()=>requestAnimationFrame(keyboardSize);
-  const releaseFull=window.SJLandscape.bind($('mjFullscreen'),({active,needsRotation})=>{
+  const releaseFull=window.SJLandscape.bind($('mjFullscreen'),({active,unavailable})=>{
     buttonIcon('mjFullscreen',active?'collapse':'expand');
-    $('mjFullscreen').querySelector('span:last-child').textContent=active?'退出':'横屏';
-    $('mjModeNotice').textContent=needsRotation?'请将手机横放，牌桌会自动调整。':'';
+    $('mjFullscreen').querySelector('span:last-child').textContent=active?'退出':'全屏';
+    $('mjModeNotice').textContent=unavailable?'浏览器暂时无法隐藏工具栏，牌桌仍可横向使用。':'';
   });
   const voiceCues=[[0,10183],[10183,10688],[20871,13028],[33899,11458],[45357,10838],[56195,10624],[66819,12123],[78942,10440],[89382,11589],[100971,12194],[113165,12281],[125446,14626],[140072,13035],[153107,12291],[165398,12215],[177613,13710],[191323,12030],[203353,13061],[216414,11982],[228396,12315],[240711,14666],[255377,13073],[268450,12472],[280922,12252],[293174,13749],[306923,12063],[318986,13224],[332210,13478],[345688,12864],[358552,12039],[370591,11157],[381748,16311],[398059,12503],[410562,11402]],voiceAsset='/assets/mahjong-voice-f089a5cf.wav',voiceRate=22050;
   let voiceOn=true,voiceId=null,voiceContext=null,voiceBuffer=null,voiceLoading=null,voiceCurrent=null,voiceQueue=[],voiceReading=false,voiceGeneration=0;
@@ -128,7 +128,7 @@
   function clearPrivate(){epoch++;for(const c of controllers)c.abort();room=null;preview=null;selected=null;lastRendered='';busy=false;polling=false;hideTable();for(const id of ['mjHand','mjOpponents','mjRivers','mjResult','mjActions','mjMyMelds','mjLobby','mjLog','mjRecent','mjRoomRules'])$(id).replaceChildren();for(const id of ['mjMyName','mjSelection','mjTurnHint','mjTableMessage','mjInviteInfo','mjCenterStatus','mjWallCount'])$(id).textContent='';$('mjShareLink').value='';$('mjCreate').querySelector('button[type=submit]').disabled=false;for(const d of document.querySelectorAll('.mj-dialog[open]'))d.close();$('mjInvite').hidden=true;$('mjConnection').textContent='';$('mjMessage').textContent='';}
   function navigate(next){clearPrivate();token=next;history.pushState(null,'',next?'/mahjong/'+next:'/mahjong');if(next)refresh();else recents();}
   function accept(value){
-    if(value.room){if(room&&room.token===value.room.token&&room.version>value.room.version)return;value.room._offset=Date.now()-value.room.serverNow;room=value.room;preview=null;$('mjInvite').hidden=true;$('mjTable').hidden=false;$('mjHome').hidden=true;document.body.classList.add('mj-in-table');$('mjChatToggle').disabled=room.phase==='closed';if(room.phase==='closed'){resetChat();voiceReset();}else{syncChat(room.chat||[]);syncVoice(room);}render();}
+    if(value.room){if(room&&room.token===value.room.token&&room.version>value.room.version)return;value.room._offset=Date.now()-value.room.serverNow;room=value.room;preview=null;if($('mjTable').hidden&&window.SJLandscape.isRotated())document.body.scrollTop=0;$('mjInvite').hidden=true;$('mjTable').hidden=false;$('mjHome').hidden=true;document.body.classList.add('mj-in-table');$('mjChatToggle').disabled=room.phase==='closed';if(room.phase==='closed'){resetChat();voiceReset();}else{syncChat(room.chat||[]);syncVoice(room);}render();}
     else if(value.preview){if(room&&room.version>value.preview.version)return;room=null;preview=value.preview;hideTable();$('mjInvite').hidden=false;$('mjInviteInfo').textContent=preview.host+'的牌室 · '+preview.count+'/4人 · '+(phases[preview.phase]||'');$('mjJoinInvite').disabled=!preview.canJoin;$('mjJoinInvite').textContent=preview.canJoin?'加入 / 回到座位':'暂时无法加入';}
   }
   async function refresh(){if(!token||!window.SJAuth.user||polling||busy)return;polling=true;const revision=epoch;try{accept(await api('/'+token));$('mjConnection').textContent='';}catch(e){if(revision!==epoch)return;if(e.status===401){clearPrivate();await window.SJAuth.refresh();message('登录已失效，请重新登录。');}else if([404,410].includes(e.status)){clearPrivate();message(e.message);recents();}else if(room)$('mjConnection').textContent=e.message;else message(e.message);}finally{if(revision===epoch)polling=false;}}
