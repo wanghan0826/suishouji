@@ -2,7 +2,7 @@
 .games-page .games-launch-heading{margin-bottom:16px;padding-bottom:12px}
 .games-page .games-launch-heading .eyebrow{margin-bottom:5px}
 .games-page .games-launch-heading h1{font-size:29px}
-.games-page .games-launch-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.games-page .games-launch-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .games-page .games-launch-card{grid-template-columns:minmax(0,1fr) 84px;padding:18px;gap:12px;box-shadow:none}
 .games-page .games-launch-card h2{font-size:23px;margin:8px 0}
 .games-page .games-launch-card h2 small{display:block;margin:0;font-size:11px}
@@ -15,6 +15,9 @@
 .games-launch-mahjong{border-top:3px solid #356e79!important}
 .games-launch-mahjong .games-launch-art{background:#153d3e;display:grid;place-items:center}
 .games-launch-mahjong svg{width:100%;height:100%}
+.games-launch-landlord{border-top:3px solid #9e6544!important}
+.games-launch-landlord .games-launch-art{background:#452c3e;display:grid;place-items:center}
+.games-launch-landlord svg{width:100%;height:100%}
 .games-page .games-launchpad{margin-bottom:16px}
 .games-page .games-launch-note{margin-top:10px;font-size:11px}
 .games-page .game-feedback-entry{padding:16px 18px;gap:16px;flex-direction:row;align-items:center;box-shadow:none}

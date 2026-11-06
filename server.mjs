@@ -8,6 +8,7 @@ import {ensureCommunity,channelInput,readCommunity} from './scripts/community.mj
 import {createWordGame} from './scripts/word-game.mjs';
 import {createDrawingGame} from './scripts/draw-game.mjs';
 import {createMahjongGame} from './scripts/mahjong-game.mjs';
+import {createLandlordGame} from './scripts/landlord-game.mjs';
 import {createGameFeedback} from './scripts/game-feedback.mjs';
 import {createGrowthTracking} from './scripts/growth-metrics.mjs';
 import {createXiaoji} from './scripts/xiaoji.mjs';
@@ -377,6 +378,7 @@ const friends=createFriendFeed({db,users});
 const wordGame=createWordGame({db,users});
 const drawGame=createDrawingGame({db,users});
 const mahjongGame=createMahjongGame({db,users});
+const landlordGame=createLandlordGame({db,users});
 const gameFeedback=createGameFeedback({db,users});
 const postHearts=createPostHearts({db,users});
 const socialInbox=createSocialInbox({db,users});
@@ -398,6 +400,7 @@ async function handler(req, res) {
   if(await wordGame.handle(req,res))return;
   if(await drawGame.handle(req,res))return;
   if(await mahjongGame.handle(req,res))return;
+  if(await landlordGame.handle(req,res))return;
   if(await gameFeedback.handle(req,res))return;
   if (!users.authorizeWrite(req, res)) return;
   if (postHearts.handle(req,res)) return;
@@ -410,6 +413,7 @@ async function handler(req, res) {
   if(/^\/play(?:\/[a-f0-9]{32})?\/?$/.test(url.pathname)&&['GET','HEAD'].includes(req.method))return serveFile(res,path.join(PUBLIC,'word-game.html'));
   if(/^\/draw(?:\/[a-f0-9]{32})?\/?$/.test(url.pathname)&&['GET','HEAD'].includes(req.method))return serveFile(res,path.join(PUBLIC,'draw-game.html'));
   if(/^\/mahjong(?:\/[a-f0-9]{32})?\/?$/.test(url.pathname)&&['GET','HEAD'].includes(req.method))return serveFile(res,path.join(PUBLIC,'mahjong.html'));
+  if(/^\/landlord(?:\/[a-f0-9]{32})?\/?$/.test(url.pathname)&&['GET','HEAD'].includes(req.method))return serveFile(res,path.join(PUBLIC,'landlord.html'));
   if(['/feedback','/feedback/'].includes(url.pathname)&&['GET','HEAD'].includes(req.method))return serveFile(res,path.join(PUBLIC,'game-feedback.html'));
   if(req.method==='GET'&&url.pathname==='/api/community'){try{return send(res,200,readCommunity(db,url));}catch{return send(res,400,{error:'分区筛选条件无效'});}}
   if(['/games','/games/'].includes(url.pathname)&&['GET','HEAD'].includes(req.method))return serveFile(res,path.join(PUBLIC,'games.html'));

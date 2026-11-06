@@ -53,25 +53,11 @@
   const viewport=window.visualViewport;
   function keyboardSize(){const h=viewport&&document.activeElement===$('mjChatInput')&&window.innerHeight-viewport.height>75?Math.floor(viewport.height):0;$('mjTable').classList.toggle('mj-keyboard',!!h);$('mjTable').style.setProperty('--mj-keyboard-height',h?h+'px':'100dvh');}
   viewport?.addEventListener('resize',keyboardSize);$('mjChatInput').onblur=()=>requestAnimationFrame(keyboardSize);
-  const orientation=matchMedia('(orientation: landscape)'),fullElement=()=>document.fullscreenElement||document.webkitFullscreenElement;
-  let fullOwned=false,fullPending=false,rotationHint=false,fullEpoch=0;
-  function fullUi(){const full=fullOwned&&!!fullElement();buttonIcon('mjFullscreen',full?'collapse':'expand');$('mjFullscreen').setAttribute('aria-pressed',String(full));$('mjFullscreen').setAttribute('aria-label',full?'退出全屏':'横屏全屏');$('mjFullscreen').querySelector('span:last-child').textContent=full?'退出':'横屏';$('mjModeNotice').textContent=rotationHint&&!orientation.matches?'请将手机横放，牌桌会自动调整。':'';}
-  function releaseFull(){fullEpoch++;rotationHint=false;if(fullOwned){screen.orientation?.unlock?.();if(fullElement()){try{Promise.resolve((document.exitFullscreen||document.webkitExitFullscreen).call(document)).catch(()=>{});}catch{}}}fullOwned=false;fullUi();}
-  $('mjFullscreen').onclick=async()=>{
-    if(fullOwned&&fullElement()){releaseFull();return;}if(fullPending)return;
-    if(fullElement()){rotationHint=true;fullUi();return;}
-    fullPending=true;const id=fullEpoch,root=document.documentElement;
-    try{
-      const request=root.requestFullscreen||root.webkitRequestFullscreen;if(!request)throw Error();
-      await request.call(root,{navigationUI:'hide'});fullOwned=!!fullElement();
-      if(id!==fullEpoch){releaseFull();return;}
-      try{if(!screen.orientation?.lock)throw Error();await screen.orientation.lock('landscape');rotationHint=false;}catch{rotationHint=true;}
-      if(id!==fullEpoch){releaseFull();return;}
-    }catch{if(id===fullEpoch)rotationHint=true;}
-    finally{fullPending=false;fullUi();}
-  };
-  function fullChanged(){if(fullOwned&&!fullElement()){fullOwned=false;rotationHint=false;screen.orientation?.unlock?.();}fullUi();}
-  document.addEventListener('fullscreenchange',fullChanged);document.addEventListener('webkitfullscreenchange',fullChanged);orientation.addEventListener('change',fullUi);
+  const releaseFull=window.SJLandscape.bind($('mjFullscreen'),({active,needsRotation})=>{
+    buttonIcon('mjFullscreen',active?'collapse':'expand');
+    $('mjFullscreen').querySelector('span:last-child').textContent=active?'退出':'横屏';
+    $('mjModeNotice').textContent=needsRotation?'请将手机横放，牌桌会自动调整。':'';
+  });
   const voiceCues=[[0,10183],[10183,10688],[20871,13028],[33899,11458],[45357,10838],[56195,10624],[66819,12123],[78942,10440],[89382,11589],[100971,12194],[113165,12281],[125446,14626],[140072,13035],[153107,12291],[165398,12215],[177613,13710],[191323,12030],[203353,13061],[216414,11982],[228396,12315],[240711,14666],[255377,13073],[268450,12472],[280922,12252],[293174,13749],[306923,12063],[318986,13224],[332210,13478],[345688,12864],[358552,12039],[370591,11157],[381748,16311],[398059,12503],[410562,11402]],voiceAsset='/assets/mahjong-voice-f089a5cf.wav',voiceRate=22050;
   let voiceOn=true,voiceId=null,voiceContext=null,voiceBuffer=null,voiceLoading=null,voiceCurrent=null,voiceQueue=[],voiceReading=false,voiceGeneration=0;
   try{voiceOn=localStorage.getItem('sj-mahjong-voice')!=='off';}catch{}

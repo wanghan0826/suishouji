@@ -1,0 +1,69 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>经典斗地主 · 随手记</title><meta name="description" content="三人经典斗地主，手机横屏打牌。好友可通过邀请入座，也可以叫机器人补位。"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/appearance.css"><link rel="stylesheet" href="/plaza.css"><link rel="stylesheet" href="/user-auth.css"><link rel="stylesheet" href="/social-inbox.css"><link rel="stylesheet" href="/platform.css"><script src="/appearance.js"></script><link rel="stylesheet" href="/touch-ui.css"><link rel="stylesheet" href="/interaction.css"><link rel="stylesheet" href="/graphic.css"><link rel="stylesheet" href="/navigation.css"><link rel="stylesheet" href="/landlord.css"></head><body class="plaza-page landlord-page"><header class="plaza-header"><a class="brand" href="/"><span class="brand-icon">记</span><span class="brand-name">随手记</span></a><nav aria-label="主导航"><a href="/">弹幕首页</a><a href="/games" aria-current="page">游戏大厅</a><a href="/plaza">社区广场</a><a href="/space">我的空间</a></nav><div><button id="btnAppearance" class="btn-ghost">主题</button><button id="btnAccount" class="btn-ghost">登录 / 注册</button></div></header>
+<main class="ll-shell">
+  <header class="ll-toolbar">
+    <a href="/games" id="llBack">← 游戏大厅</a>
+    <div id="llRound">经典斗地主</div>
+    <div class="ll-tools"><button type="button" id="llShare" hidden>邀请</button><button type="button" id="llFullscreen" aria-pressed="false">⛶ 横屏</button></div>
+  </header>
+  <p id="llRotate" role="status" class="ll-notice"></p>
+  <p id="llError" role="status" class="ll-notice ll-error"></p>
+
+  <section id="llHome" class="ll-home">
+    <div class="ll-intro">
+      <p class="ll-kicker">SUISHOUJI / CARD TABLE</p><h1>经典斗地主</h1>
+      <p>三人一桌，叫分定地主。两位农民联手，先出完牌的一方赢。</p>
+      <div class="ll-home-actions"><button type="button" class="ll-primary" id="llCreate">开好友房</button><button type="button" id="llSolo">单人练习</button></div>
+      <a id="llResume" hidden>回到上次的牌室 →</a>
+    </div>
+    <div class="ll-cover" aria-hidden="true"><span>Q<small>♠</small></span><span>K<small>♥</small></span><span>A<small>♣</small></span></div>
+    <form id="llJoinForm" class="ll-join-form"><label for="llJoinLink">已有牌室邀请</label><input id="llJoinLink" placeholder="粘贴邀请链接或房间号" required><button>查看牌室</button></form>
+    <details class="ll-rules"><summary>牌型与计分</summary>
+      <p>用一副 54 张牌。每人 17 张，留 3 张底牌；叫分只可叫得更高，叫到 3 分直接成为地主，三人都不叫就重新发牌。地主拿底牌并先出。</p>
+      <p>同牌型且张数相同才能比较。顺子至少五张，连对至少三对，飞机至少两组连续三张。2 和大小王不进顺子、连对和飞机主体。支持三带单、三带对、飞机带单或带对、四带两张或两对。炸弹能压普通牌，王炸最大。两家都不出时，上一手的玩家重新领出。</p>
+      <p>每个炸弹或王炸让倍数翻倍。地主赢且两家农民一手也没出是春天；农民赢且地主只出了一手是反春，均再翻倍。每位农民按底分乘倍数结算，地主算两份。</p>
+    </details>
+  </section>
+
+  <section id="llPreview" class="ll-panel" hidden><h1>朋友邀你打斗地主</h1><p id="llInviteInfo"></p><button class="ll-primary" id="llJoin">加入牌室</button></section>
+  <section id="llLobby" class="ll-panel" hidden><h1>三人牌室</h1><p>先邀请朋友入座，空位会由机器人补齐。</p><ol id="llSeats"></ol><div class="ll-home-actions"><button id="llStart" class="ll-primary">开始对局</button><button id="llLeave">离开牌室</button></div><p id="llWaiting"></p></section>
+
+  <section id="llTable" class="ll-table" aria-label="斗地主牌桌" hidden>
+    <div class="ll-stage">
+      <div id="llLeft" class="ll-opponent"></div>
+      <div class="ll-center">
+        <div class="ll-center-head"><div class="ll-bottom"><small>底牌</small><div id="llBottom"></div></div><div class="ll-clock"><small id="llClockLabel">叫分</small><strong id="llTimer"></strong></div></div>
+        <div class="ll-last"><p id="llLastTitle"></p><div id="llLast" class="ll-played"></div></div>
+        <p id="llTurnStatus" class="ll-turn" aria-live="polite"></p>
+      </div>
+      <div id="llRight" class="ll-opponent"></div>
+    </div>
+    <div class="ll-controls" id="llControls"></div>
+    <div class="ll-hand-label"><span id="llSelf"></span><span id="llMultiplier"></span></div>
+    <div class="ll-hand" id="llHand" role="group" aria-label="我的手牌"></div>
+  </section>
+
+  <section id="llResult" class="ll-panel ll-result" hidden><p class="ll-kicker">ROUND RESULT</p><h1 id="llWin"></h1><p id="llScoreInfo"></p><ol id="llScores"></ol><div class="ll-home-actions"><button id="llNext" class="ll-primary">下一局</button><button id="llResultLeave">离开牌室</button></div><p id="llNextWait"></p></section>
+  <section id="llClosed" class="ll-panel" hidden><h1>牌室已结束</h1><a href="/landlord">再开一桌 →</a></section>
+</main>
+<dialog id="llShareDialog" class="ll-share" aria-labelledby="llShareTitle"><h2 id="llShareTitle">邀请牌友</h2><p>朋友登录后可以在开局前加入。</p><label for="llShareLink">牌室链接</label><input id="llShareLink" readonly><div class="ll-home-actions"><button id="llCopy">复制链接</button><button id="llCloseShare">关闭</button></div><p id="llCopyStatus" role="status"></p></dialog>
+<dialog id="accountDialog" class="account-dialog" aria-labelledby="accountTitle"><button id="accountClose" class="account-close" aria-label="关闭账号窗口">×</button><p class="account-kicker">SUISHOUJI / YOUR ACCOUNT</p><h2 id="accountTitle">让每一条分享，都有来处。</h2><p class="account-description">浏览无需登录，发布和评论需要账号。</p><div id="accountSignedOut"><div class="account-tabs"><button id="accountLoginTab" aria-pressed="true">登录</button><button id="accountRegisterTab" aria-pressed="false">注册</button></div><form id="accountForm"><label for="accountUsername">用户名</label><input id="accountUsername" autocomplete="username" required minlength="3" maxlength="20" pattern="[a-zA-Z0-9_]{3,20}" placeholder="3–20 位字母、数字或下划线"><label for="accountPassword">密码</label><input id="accountPassword" type="password" autocomplete="current-password" required minlength="6" maxlength="128" placeholder="输入密码"><div id="accountConfirmWrap" hidden><label for="accountConfirm">再次输入密码</label><input id="accountConfirm" type="password" autocomplete="new-password" maxlength="12"><label class="account-consent"><input id="accountAccept" type="checkbox"><span>我了解：内容会关联固定账号；站点记录注册 IP 和近30天登录记录，仅供站主管理与处理违规使用。</span></label><p class="account-footnote">不绑定邮箱，不支持邮箱找回，请妥善保存密码。通过邀请注册时，会记录邀请来源与互动阶段；邀请效果页面仅展示汇总。站点会汇总访问入口及注册后的游戏、社区参与情况。</p></div><p class="account-error" id="accountError" role="alert"></p><button id="accountSubmit" class="account-primary" type="submit">登录 →</button></form></div><div id="accountSignedIn" hidden><p id="accountIdentity" class="account-identity"></p><p><a class="account-primary" href="/space">进入我的空间 →</a></p><p><a href="/friends">看看朋友的近况 →</a></p><p class="account-description">分享使用这个账号名，不能填写他人的账号。</p><form id="accountPasswordForm"><label for="accountCurrentPassword">当前密码</label><input id="accountCurrentPassword" type="password" autocomplete="current-password" required minlength="6" maxlength="128"><label for="accountNewPassword">新密码</label><input id="accountNewPassword" type="password" autocomplete="new-password" required minlength="6" maxlength="12" placeholder="6–12 位新密码"><p id="accountPasswordError" class="account-error" role="alert"></p><button class="account-primary" type="submit">修改密码</button></form><button id="accountLogout" class="account-logout">退出登录</button></div></dialog><dialog id="appearanceDialog" class="appearance-dialog" aria-labelledby="appearanceTitle" aria-describedby="appearanceDescription">
+  <div class="appearance-heading"><div><p class="appearance-kicker">MAKE IT YOUR MOMENT</p><h2 id="appearanceTitle">换一种心情，看世界</h2></div><button class="appearance-close" data-appearance-close aria-label="关闭主题设置">×</button></div>
+  <p id="appearanceDescription" class="appearance-description">选择喜欢的视觉主题。手动选择后将固定显示，随时可以开启自动变化。</p>
+  <div class="appearance-choices" role="group" aria-label="选择视觉主题">
+
+    <button class="appearance-choice" data-appearance-choice="paper" aria-pressed="true"><span class="appearance-preview" style="--swatch:#f0ede3;--swatch-pill:#8caa85" aria-hidden="true"><i></i><i></i></span><strong>晴日纸白</strong></button>
+    <button class="appearance-choice" data-appearance-choice="mint" aria-pressed="false"><span class="appearance-preview" style="--swatch:#e5f4ec;--swatch-pill:#cce2d5" aria-hidden="true"><i></i><i></i></span><strong>薄荷清晨</strong></button>
+    <button class="appearance-choice" data-appearance-choice="sky" aria-pressed="false"><span class="appearance-preview" style="--swatch:#e8f2fb;--swatch-pill:#cddfea" aria-hidden="true"><i></i><i></i></span><strong>晴空浅蓝</strong></button>
+    <button class="appearance-choice" data-appearance-choice="rose" aria-pressed="false"><span class="appearance-preview" style="--swatch:#f9eaf0;--swatch-pill:#ebd1dc" aria-hidden="true"><i></i><i></i></span><strong>樱花浅粉</strong></button>
+    <button class="appearance-choice" data-appearance-choice="sand" aria-pressed="false"><span class="appearance-preview" style="--swatch:#f7eedf;--swatch-pill:#e6d6bd" aria-hidden="true"><i></i><i></i></span><strong>奶杏暖阳</strong></button>
+    <button class="appearance-choice" data-appearance-choice="night" aria-pressed="false"><span class="appearance-preview" style="--swatch:#101e26;--swatch-pill:#7faaa4" aria-hidden="true"><i></i><i></i></span><strong>静谧夜色</strong></button>
+    <button class="appearance-choice" data-appearance-choice="forest" aria-pressed="false"><span class="appearance-preview" style="--swatch:#142e27;--swatch-pill:#b1c98a" aria-hidden="true"><i></i><i></i></span><strong>林间微光</strong></button>
+    <button class="appearance-choice" data-appearance-choice="sunset" aria-pressed="false"><span class="appearance-preview" style="--swatch:#3c252d;--swatch-pill:#d9a580" aria-hidden="true"><i></i><i></i></span><strong>暖橙日落</strong></button>
+  </div>
+  <div class="appearance-options"><label class="appearance-option"><span>首页省流模式<small>少加载弹幕头像、背景和未浏览图片，点开帖子仍可看原图</small></span><input id="appearanceLightweight" type="checkbox"></label>
+    <label class="appearance-option"><span>自动切换主题<small>按顺序轮换全部风格，关闭后固定当前主题</small></span><input id="appearanceAutomatic" type="checkbox"></label>
+    <label class="appearance-interval" for="appearanceInterval">切换间隔<select id="appearanceInterval" aria-label="切换间隔" disabled><option value="30">30 秒</option><option value="60" selected>1 分钟</option><option value="300">5 分钟</option></select></label>
+    <label class="appearance-option"><span>背景图片轮播<small>每 12 秒更换一张帖子配图，关闭后固定当前图片</small></span><input id="appearanceSlideshow" type="checkbox"></label>
+  </div>
+  <p class="appearance-state" id="appearanceState" role="status"></p><p class="appearance-saved" id="appearanceSaved">选择会自动保存在当前浏览器</p>
+</dialog><script src="/interface-icons.js"></script><script src="/user-auth.js"></script><script src="/social-inbox.js"></script><script src="/touch-ui.js"></script><script src="/game-landscape.js"></script><script src="/landlord.js"></script></body></html>
