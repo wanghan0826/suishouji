@@ -1,4 +1,4 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>经典斗地主 · 随手记</title><meta name="description" content="三人经典斗地主，手机横屏打牌。好友可通过邀请入座，也可以叫机器人补位。"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/appearance.css"><link rel="stylesheet" href="/plaza.css"><link rel="stylesheet" href="/user-auth.css"><link rel="stylesheet" href="/social-inbox.css"><link rel="stylesheet" href="/platform.css"><script src="/appearance.js"></script><link rel="stylesheet" href="/touch-ui.css"><link rel="stylesheet" href="/interaction.css"><link rel="stylesheet" href="/graphic.css"><link rel="stylesheet" href="/navigation.css"><link rel="stylesheet" href="/landlord.css"><link rel="stylesheet" href="/game-landscape.css"></head><body class="plaza-page landlord-page game-landscape-page"><header class="plaza-header"><a class="brand" href="/"><span class="brand-icon">记</span><span class="brand-name">随手记</span></a><nav aria-label="主导航"><a href="/">弹幕首页</a><a href="/games" aria-current="page">游戏大厅</a><a href="/plaza">社区广场</a><a href="/space">我的空间</a></nav><div><button id="btnAppearance" class="btn-ghost">主题</button><button id="btnAccount" class="btn-ghost">登录 / 注册</button></div></header>
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>经典斗地主 · 随手记</title><meta name="description" content="三人经典斗地主，手机横屏打牌。好友可通过邀请入座，也可以叫机器人补位。"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/appearance.css"><link rel="stylesheet" href="/plaza.css"><link rel="stylesheet" href="/user-auth.css"><link rel="stylesheet" href="/social-inbox.css"><link rel="stylesheet" href="/platform.css"><script src="/appearance.js"></script><link rel="stylesheet" href="/touch-ui.css"><link rel="stylesheet" href="/interaction.css"><link rel="stylesheet" href="/graphic.css"><link rel="stylesheet" href="/navigation.css"><link rel="stylesheet" href="/table-players.css"><link rel="stylesheet" href="/landlord.css"><link rel="stylesheet" href="/game-landscape.css"></head><body class="plaza-page landlord-page game-landscape-page"><header class="plaza-header"><a class="brand" href="/"><span class="brand-icon">记</span><span class="brand-name">随手记</span></a><nav aria-label="主导航"><a href="/">弹幕首页</a><a href="/games" aria-current="page">游戏大厅</a><a href="/plaza">社区广场</a><a href="/space">我的空间</a></nav><div><button id="btnAppearance" class="btn-ghost">主题</button><button id="btnAccount" class="btn-ghost">登录 / 注册</button></div></header>
 <main class="ll-shell">
   <header class="ll-toolbar">
     <a href="/games" id="llBack">← 游戏大厅</a>
@@ -29,16 +29,19 @@
 
   <section id="llTable" class="ll-table" aria-label="斗地主牌桌" hidden>
     <div class="ll-stage">
-      <div id="llLeft" class="ll-opponent"></div>
-      <div class="ll-center">
-        <div class="ll-center-head"><div class="ll-bottom"><small>底牌</small><div id="llBottom"></div></div><div class="ll-clock"><small id="llClockLabel">叫分</small><strong id="llTimer"></strong></div></div>
-        <div class="ll-last"><p id="llLastTitle"></p><div id="llLast" class="ll-played"></div></div>
-        <p id="llTurnStatus" class="ll-turn" aria-live="polite"></p>
-      </div>
-      <div id="llRight" class="ll-opponent"></div>
+      <div class="ll-table-felt" aria-hidden="true"><span>随手记 · 好友牌桌</span></div>
+      <div id="llLeft" class="ll-opponent" data-side="left"></div>
+      <div class="ll-center-head"><div class="ll-bottom"><small>底牌</small><div id="llBottom"></div></div><div class="ll-clock"><small id="llClockLabel">叫分</small><strong id="llTimer"></strong></div></div>
+      <p id="llLastTitle" class="ll-last-title"></p>
+      <div class="ll-seat-play" data-side="left"><div id="llLeftPlay" class="ll-played"></div></div>
+      <div class="ll-seat-play" data-side="right"><div id="llRightPlay" class="ll-played"></div></div>
+      <div class="ll-seat-play" data-side="bottom"><div id="llLast" class="ll-played"></div></div>
+      <p id="llTurnStatus" class="ll-turn" aria-live="polite"></p>
+      <div id="llRight" class="ll-opponent" data-side="right"></div>
     </div>
     <div class="ll-controls" id="llControls"></div>
     <div class="ll-hand-label"><span id="llSelf"></span><span id="llMultiplier"></span></div>
+    <p class="ll-select-help" id="llSelectHelp">点选或划过手牌，再点出牌</p>
     <div class="ll-hand" id="llHand" role="group" aria-label="我的手牌"></div>
   </section>
 

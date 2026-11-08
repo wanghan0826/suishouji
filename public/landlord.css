@@ -1,11 +1,11 @@
 .landlord-page {
-  --ll-ink:#fbf1da; --ll-muted:#d2c0cd; --ll-dark:#231b2d; --ll-rail:#302237;
-  --ll-line:#9f7e92; --ll-gold:#f1d089;
+  --ll-ink:#fbf1da; --ll-muted:#b3ced4; --ll-dark:#112b3a; --ll-rail:#183b4a;
+  --ll-line:#6e9eab; --ll-gold:#f1d089;
 }
 .landlord-page .ll-shell [hidden], .landlord-page .ll-share[hidden] {display:none!important}
 .ll-shell {
   width:min(1080px,100%); margin:20px auto; padding:0 16px 20px;
-  color:var(--ll-ink); background:var(--ll-dark); border:1px solid #8c718666; border-radius:10px;
+  color:var(--ll-ink); background:var(--ll-dark); border:1px solid #789aa366; border-radius:10px;
 }
 .landlord-page.ll-in-room {overflow:hidden; padding:0!important}
 .ll-in-room>.plaza-header, .ll-in-room>#touchNav, :fullscreen .landlord-page>.plaza-header, :fullscreen .landlord-page>#touchNav {display:none!important}
@@ -22,7 +22,7 @@
 .ll-toolbar>a {justify-self:start; display:flex; align-items:center; min-height:44px}
 .ll-tools {display:flex; justify-self:end; align-items:center; gap:5px}
 .landlord-page .ll-shell button, .landlord-page .ll-share button {
-  min-height:44px; border:1px solid #8d7489; border-radius:6px; padding:5px 12px; background:#45334c;
+  min-height:44px; border:1px solid #81a1a9; border-radius:6px; padding:5px 12px; background:#214c60;
   color:var(--ll-ink); font:inherit; font-weight:650; font-size:13px; cursor:pointer; touch-action:manipulation;
 }
 .landlord-page .ll-shell button:disabled {opacity:.48;cursor:default}
@@ -41,7 +41,7 @@
 .ll-home p:not(.ll-kicker), .ll-panel p:not(.ll-kicker) {color:var(--ll-muted); font-size:14px; line-height:1.55; margin:6px 0 12px}
 .ll-home-actions {display:flex; flex-wrap:wrap; gap:7px; align-items:center}
 .ll-home a {display:inline-block; color:#f5d39b; margin-top:9px; font-size:13px}
-.ll-cover {display:flex; justify-content:center; align-items:center; min-height:110px; background:radial-gradient(#684652,transparent 70%); padding:8px 0}
+.ll-cover {display:flex; justify-content:center; align-items:center; min-height:110px; background:radial-gradient(#306c74,transparent 70%); padding:8px 0}
 .ll-cover>span {
   background:#fff0d2; color:#362333; border:1px solid #e6ccaa; width:clamp(30px,calc(8 * var(--game-vw)),68px); aspect-ratio: .67;
   padding:5px; font:bold clamp(17px,calc(4 * var(--game-vw)),30px)/1 Georgia,serif; border-radius:5px; box-shadow:0 4px 12px #190d1c8a;
@@ -53,84 +53,61 @@
 .ll-join-form {grid-column:1/-1; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:6px}
 .ll-join-form label {grid-column:1/-1; font-size:12px; color:var(--ll-muted)}
 .landlord-page .ll-join-form input, .landlord-page .ll-share input {
-  width:100%; min-width:0; border:1px solid #8d7489; border-radius:6px; padding:7px 8px; background:#1c1624; color:var(--ll-ink); font-size:16px;
+  width:100%; min-width:0; border:1px solid #81a1a9; border-radius:6px; padding:7px 8px; background:#102d3b; color:var(--ll-ink); font-size:16px;
 }
 .ll-rules {grid-column:1/-1; border-top:1px solid #b799ad36; padding-top:8px}
 .ll-rules summary {cursor:pointer; padding:6px 0; font-size:13px}
 .ll-panel {margin:auto; width:min(540px,100%); padding:12px; overflow:auto}
 .ll-panel ol {list-style:none; padding:0; margin:10px 0; display:grid; gap:6px}
-.ll-panel li {border:1px solid #ac8c9e54; border-radius:4px; padding:7px 9px; font-size:14px; background:#3a2a43}
+.ll-panel li {border:1px solid #ac8c9e54; border-radius:4px; padding:7px 9px; font-size:14px; background:#1c4050}
 .ll-result li {display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:8px; align-items:center}
 .ll-result li small {color:var(--ll-muted)} .ll-result li .is-positive {color:var(--ll-gold)}
-.ll-share {color:var(--ll-ink); background:var(--ll-dark); border:1px solid #8d7489; border-radius:8px; width:min(400px,calc(100% - 24px)); padding:16px; margin:auto}
+.ll-share {color:var(--ll-ink); background:var(--ll-dark); border:1px solid #81a1a9; border-radius:8px; width:min(400px,calc(100% - 24px)); padding:16px; margin:auto}
 .ll-share::backdrop {background:#130f19bf}
 .ll-share h2 {margin:0 0 4px} .ll-share label, .ll-share p {font-size:13px} .ll-share .ll-home-actions {margin-top:8px}
 
-.ll-table {display:flex; flex-direction:column; flex:1; min-height:0; width:min(1200px,100%); margin:auto; padding-top:5px}
-.ll-stage {
-  position:relative; display:grid; grid-template-columns:minmax(78px,13%) minmax(0,1fr) minmax(78px,13%);
-  align-items:center; gap:5px; flex:1; min-height:0; padding:clamp(7px,calc(1.4 * var(--game-vw)),16px);
-  background:radial-gradient(ellipse at 50% 37%,#684557,#482e47 68%,#35243b);
-  border:1px solid #b692a3; border-radius:9px; box-shadow:inset 0 0 0 4px #37263f;
-}
-.ll-stage::before {content:"";position:absolute;inset:7%;border:1px solid #e7c6c923;border-radius:30%;pointer-events:none}
-.ll-opponent {
-  z-index:1; display:flex; flex-direction:column; align-items:flex-start; justify-content:center;
-  gap:3px; padding:6px; background:#271f31; border:1px solid #a0829b; border-radius:6px; min-width:0;
-}
-.ll-opponent.is-turn {border-color:var(--ll-gold);box-shadow:0 0 0 1px #f2d09442}
-.ll-opponent strong {width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
-.ll-opponent small, .ll-seat-action {font-size:10px; color:#e9ccd8}
-.ll-seat-mark {background:#f3d395;color:#3a2533;padding:2px 4px;border-radius:3px;font-size:10px;font-weight:bold}
-.ll-seat-action {min-height:1.3em}
-.ll-center {height:100%; min-width:0; position:relative; display:flex; flex-direction:column; align-items:center; justify-content:space-between; gap:3px}
-.ll-center-head {display:flex; gap:8px; justify-content:center; align-items:stretch}
-.ll-bottom, .ll-clock {background:#281f32; border:1px solid #a0829b; border-radius:5px; padding:4px 6px; display:grid; gap:3px; justify-items:center}
-.ll-bottom small, .ll-clock small {font-size:10px; color:#e9ccd8;line-height:1}
-.ll-bottom>div {display:flex;gap:3px}
-.ll-clock strong {font:700 clamp(19px,calc(5 * var(--game-vh)),36px)/1 ui-monospace,monospace; color:var(--ll-gold); align-self:center}
-.ll-last {display:grid; justify-items:center; width:100%; min-width:0; gap:3px}
-.ll-last p, .ll-turn {margin:0;text-align:center;font-size:12px;font-weight:650;color:#fff1dd}
-.ll-turn {color:#f5d99a}
-.ll-played {width:min(100%,calc(var(--played-count,1) * 44px)); display:grid;grid-template-columns:repeat(var(--played-count,1),minmax(0,1fr));gap:2px}
-.ll-controls {min-height:47px; display:flex; align-items:center; justify-content:center; gap:6px; flex:none; padding:2px 0}
-.landlord-page .ll-controls button {min-width:63px}
-.ll-hand-label {display:flex;justify-content:space-between;align-items:center;gap:6px;margin:1px 2px 6px;font-size:12px;line-height:1.25;color:var(--ll-muted)}
-.ll-hand {width:min(100%,calc(var(--card-count,20) * 53px)); margin-inline:auto; display:grid; grid-template-columns:repeat(var(--card-count,20),minmax(0,1fr)); gap:2px; flex:none}
-.landlord-page .ll-shell .ll-card {
-  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0;
-  min-width:0; min-height:0; height:clamp(44px,calc(15 * var(--game-vh)),82px); border:1px solid #e5cfa9; border-radius:4px; padding:0;
-  box-shadow:0 2px 0 #aa9279; background:linear-gradient(180deg,#fff7e3,#f5e4c6); color:#33293e; font-family:system-ui,sans-serif;
-}
-.ll-card strong {font-size:clamp(13px,calc(3.8 * var(--game-vh)),25px);line-height:1.05;white-space:nowrap}
-.ll-card span {font-size:clamp(13px,calc(2.9 * var(--game-vh)),24px);line-height:1}
-.landlord-page .ll-shell .ll-card.is-red {color:#9a263a}
-.ll-card.is-joker strong {font-size:clamp(9px,calc(2 * var(--game-vh)),16px)}
-.landlord-page .ll-shell .ll-card:disabled {opacity:1}
-.landlord-page .ll-hand .ll-card[aria-pressed=true] {transform:translateY(-4px);outline:2px solid #fff29b;background:#ffe2a4}
-.landlord-page .ll-shell .ll-bottom .ll-card {height:clamp(20px,calc(6.5 * var(--game-vh)),35px);width:clamp(16px,calc(4 * var(--game-vw)),27px);box-shadow:none}
-.ll-bottom .ll-card strong,.ll-bottom .ll-card span {font-size:10px}
-.landlord-page .ll-shell .ll-card-back {background:repeating-linear-gradient(55deg,#986886 0 2px,#543950 2px 5px);border-color:#d9adb9}
-.landlord-page .ll-shell .ll-played .ll-card {height:clamp(28px,calc(9 * var(--game-vh)),54px);box-shadow:none}
-.ll-played .ll-card strong,.ll-played .ll-card span {font-size:clamp(10px,calc(2 * var(--game-vh)),16px)}
-@media (orientation:portrait) and (pointer:fine) {
-  .ll-table {max-width:660px}
-  .ll-hand {width:100%;grid-template-columns:repeat(10,minmax(0,1fr));row-gap:6px}
-  .landlord-page .ll-shell .ll-hand .ll-card {height:clamp(43px,calc(10 * var(--game-vh)),63px)}
-  .ll-stage {grid-template-columns: minmax(54px,16%) minmax(0,1fr) minmax(54px,16%);padding:7px;gap:3px}
-  .ll-played {grid-template-columns:repeat(min(10,var(--played-count,1)),minmax(0,1fr))}
-  .ll-opponent {padding:4px}
-  .ll-opponent strong {font-size:11px}
-}
-@media (orientation:landscape) and (max-height:400px), (orientation:portrait) and (pointer:coarse) {
-  .ll-toolbar {min-height:42px}
-  .landlord-page .ll-controls button, .landlord-page .ll-tools button {min-height:40px}
-  .ll-controls {min-height:43px}
-  .ll-hand-label {font-size:11px;margin-bottom:4px}
-  .ll-stage {padding:6px}
-}
-@media (max-width:385px) {
-  .ll-toolbar {font-size:11px}
-  .landlord-page .ll-tools button {padding-inline:7px}
-  .ll-hand .ll-card.is-joker strong {font-size:9px}
-}
+
+/* A single landscape canvas: players above, decisions in the middle, hand below. */
+.ll-in-room .ll-shell{background:radial-gradient(ellipse at 50% 15%,#46828c,#1c495e 55%,#102c40);isolation:isolate;padding-bottom:max(5px,var(--game-inset-bottom))}
+.ll-in-room .ll-shell::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:repeating-linear-gradient(130deg,transparent 0 58px,#9fcedc04 59px 60px),radial-gradient(ellipse at 25% 15%,#b8f0e915,transparent 45%)}
+.ll-toolbar{min-height:42px;border:0;color:#e8f5f4;z-index:3}.ll-toolbar>a{font-weight:600}.ll-toolbar #llRound{font-size:12px;letter-spacing:.04em;color:#c4dfdf}
+.landlord-page .ll-tools button{min-height:38px;border-color:#c1eeef38;background:#142d42aa;border-radius:20px;padding:4px 13px}
+.ll-table{--ll-card-height:clamp(78px,calc(28 * var(--game-vh)),145px);--ll-card-width:calc(var(--ll-card-height) * .66);position:relative;flex:1;min-height:0;width:min(1360px,100%);margin:auto;isolation:isolate}
+.ll-stage{position:absolute;inset:0 0 calc(var(--ll-card-height) + 60px);display:block;min-height:90px;padding:0;background:none;border:0;box-shadow:none}
+.ll-stage::before{display:none}.ll-table-felt{position:absolute;inset:22% 5% -28%;border-radius:50%;border:6px solid #9a7f4d;background:radial-gradient(ellipse at 45% 25%,#3c7d75,#1d514f 65%,#183f46);box-shadow:0 0 0 2px #ecd8a256,inset 0 0 0 3px #153731,inset 0 0 0 12px #b5d7b00b,0 12px 0 #1a2d33,0 18px 28px #10223888;transform:perspective(700px) rotateX(18deg);z-index:-1}
+.ll-table-felt::before{content:'';position:absolute;inset:13px;border:1px solid #daebcb2e;border-radius:50%;background:repeating-linear-gradient(45deg,#d3e6ca05 0 1px,transparent 1px 4px)}
+.ll-table-felt>span{position:absolute;left:50%;top:65%;transform:translateX(-50%);white-space:nowrap;font-size:12px;letter-spacing:.2em;color:#e6e1b52b;font-weight:700}
+.ll-opponent{position:absolute;top:7%;width:clamp(78px,calc(12 * var(--game-vw)),150px);display:flex;flex-direction:column;align-items:center;gap:2px;padding:0;background:none;border:0;border-radius:0;text-align:center;z-index:2}
+.ll-opponent[data-side=left]{left:1%}.ll-opponent[data-side=right]{right:1%}.ll-opponent .table-avatar{width:clamp(62px,calc(22 * var(--game-vh)),120px);aspect-ratio:3/4;border-radius:24% 24% 12px 12px;background:linear-gradient(#23485800,#1b425855);box-shadow:none;overflow:visible}
+.ll-opponent .table-avatar::before{filter:drop-shadow(0 5px 6px #06192777)}.ll-opponent .table-avatar::after{border:0}
+.ll-opponent strong{max-width:100%;font-size:12px;text-shadow:0 1px 3px #001828}.ll-opponent small{font-size:11px;color:#dbefef}
+.ll-seat-mark{position:absolute;top:0;left:0;border-radius:4px;background:linear-gradient(#fff0b1,#e4b45b);box-shadow:0 2px 4px #16324066;padding:3px 7px;color:#593e18;font-size:10px;font-weight:800}
+.ll-seat-action{color:#ffe29b;font-size:11px;min-height:14px}.ll-opponent.is-turn{border:0;box-shadow:none}.ll-opponent.is-turn .table-avatar{filter:drop-shadow(0 0 5px #ffd98499)}
+.ll-opponent.is-turn::after{content:'';position:absolute;top:-9px;left:calc(50% - 5px);border:5px solid transparent;border-top-color:#ffe4a4}
+.ll-center-head{position:absolute;left:50%;top:0;transform:translateX(-50%);display:flex;align-items:center;gap:9px;z-index:2}
+.ll-bottom{display:flex;align-items:center;gap:6px;border:0;background:#102b4080;border-radius:6px;padding:4px 7px}.ll-bottom small{font-size:10px;color:#bed7d9;writing-mode:vertical-rl}.ll-bottom>div{display:flex;gap:3px}
+.ll-clock{display:flex;align-items:center;gap:5px;border:1px solid #e2c57c55;background:#123446cc;border-radius:50%;width:43px;height:43px;justify-content:center;box-shadow:inset 0 0 0 3px #c9d9ca12}.ll-clock small{display:none}.ll-clock strong{font:800 23px/1 ui-monospace,monospace;color:#ffe3a1}.is-urgent .ll-clock strong{color:#ffba92}
+.ll-last-title{position:absolute;top:48px;left:20%;right:20%;text-align:center;font-size:11px;color:#c7e6e1;margin:0;line-height:1.3}
+.ll-seat-play{position:absolute;top:38%;width:31%;min-height:32px;display:flex;justify-content:center;z-index:1}
+.ll-seat-play[data-side=left]{left:15%;justify-content:flex-start}.ll-seat-play[data-side=right]{right:15%;justify-content:flex-end}.ll-seat-play[data-side=bottom]{top:auto;bottom:-5px;left:29%;width:42%}
+.ll-played{display:grid;grid-template-columns:repeat(var(--played-count,1),minmax(0,1fr));width:min(100%,calc(var(--played-count,1) * 30px));align-items:start;padding-right:10px}
+.ll-pass{font-size:clamp(17px,calc(5 * var(--game-vh)),26px);font-weight:800;color:#f8db91;text-shadow:0 2px 0 #2e4936;white-space:nowrap;margin:8px auto}
+.ll-seat-play.is-latest .ll-card{box-shadow:0 2px 1px #0d293999,0 0 0 1px #f3d68b}
+.ll-turn{position:absolute;bottom:-25px;left:20%;right:20%;text-align:center;margin:0;color:#d3e9e2;font-size:11px;line-height:16px}.is-my-turn .ll-turn{color:#ffe5a8;font-weight:700}
+.ll-controls{position:absolute;bottom:calc(var(--ll-card-height) + 26px);left:10%;right:10%;display:flex;justify-content:center;align-items:center;gap:12px;min-height:44px;z-index:4}
+.landlord-page .ll-controls button{min-width:88px;min-height:44px;border:1px solid #a9d9e3;border-radius:9px;padding:4px 22px;background:linear-gradient(#e1f3f6,#9cc8dc);box-shadow:0 3px 0 #36728b,0 5px 8px #12343c66;color:#1f4b60;font-size:17px;font-weight:800}
+.landlord-page .ll-controls .ll-primary{background:linear-gradient(#fff1b2,#efc56e);border-color:#ffe9a3;color:#6c411b;box-shadow:0 3px 0 #aa7940,0 5px 8px #12343c66}
+.ll-hand-label{position:absolute;bottom:calc(var(--ll-card-height) + 31px);left:2%;right:2%;display:flex;justify-content:space-between;gap:10px;font-size:11px;color:#e0eddd;line-height:15px;pointer-events:none}.ll-hand-label>span{max-width:25%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ll-hand-label #llMultiplier{color:#ffe7ad;font-weight:700}
+.ll-select-help{position:absolute;bottom:0;left:0;right:0;text-align:center;color:#b1cecf;font-size:10px;line-height:12px;margin:0;pointer-events:none}
+.ll-hand{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);display:grid;align-items:end;width:min(calc(100% - 64px),calc(var(--card-count,20) * var(--ll-card-width)));height:var(--ll-card-height);gap:0;touch-action:none;user-select:none;-webkit-user-select:none;z-index:5}
+.landlord-page .ll-shell .ll-card{display:flex;position:relative;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:0;min-width:0;min-height:0;overflow:hidden;border:1px solid #f2ead7;border-radius:6px;background:linear-gradient(120deg,#fffef7,#fffdf5 70%,#e4ddcc);color:#253746;padding:5px 0 0 5px;box-shadow:0 3px 0 #b2b6ae,1px 2px 4px #102b3d77;font-family:Georgia,'Times New Roman',serif;text-align:left}
+.landlord-page .ll-shell .ll-card.is-red{color:#b93d39}.ll-card .ll-rank{font-size:clamp(21px,calc(7 * var(--game-vh)),37px);font-weight:700;letter-spacing:-.07em;line-height:1;z-index:1}.ll-card .ll-suit{font-size:clamp(17px,calc(5 * var(--game-vh)),28px);line-height:1.05;z-index:1}.ll-card .ll-pip{position:absolute;right:7%;bottom:9%;font-size:calc(var(--ll-card-height)*.4);font-style:normal;opacity:.84;line-height:1}.ll-card.is-joker .ll-rank{font:800 clamp(12px,calc(3.3 * var(--game-vh)),18px)/1.1 system-ui;writing-mode:vertical-rl;letter-spacing:1px}.ll-card.is-joker .ll-suit{display:none}
+.landlord-page .ll-hand .ll-card{width:var(--ll-card-width);height:var(--ll-card-height);transition:transform .12s,background .12s;touch-action:none;outline-offset:-2px}
+.landlord-page .ll-hand .ll-card[aria-pressed=true]{transform:translateY(-13px);background:linear-gradient(120deg,#fff4bd,#fff0b1);outline:2px solid #ffe58a;box-shadow:0 3px 0 #d5a74c,1px 4px 6px #122b3d88}
+.landlord-page .ll-shell .ll-card:disabled{opacity:1;cursor:default}
+.landlord-page .ll-shell .ll-played .ll-card{height:clamp(39px,calc(13 * var(--game-vh)),68px);width:clamp(28px,calc(8.8 * var(--game-vh)),46px);padding:2px 0 0 3px;border-radius:3px;box-shadow:0 2px 1px #102e3877}
+.ll-played .ll-card .ll-rank{font-size:clamp(14px,calc(4.5 * var(--game-vh)),23px)}.ll-played .ll-card .ll-suit{font-size:clamp(11px,calc(3.4 * var(--game-vh)),17px)}.ll-played .ll-card .ll-pip{display:none}.ll-played .ll-card.is-joker .ll-rank{font-size:10px}
+.landlord-page .ll-shell .ll-bottom .ll-card{width:23px;height:31px;box-shadow:0 1px 0 #8ca6a6;border-radius:3px;padding:2px 3px}.ll-bottom .ll-card .ll-rank{font-size:13px;line-height:1}.ll-bottom .ll-card .ll-suit{font-size:10px}.ll-bottom .ll-card .ll-pip{display:none}.ll-bottom .ll-card.is-joker .ll-rank{font-size:8px;letter-spacing:0}
+.landlord-page .ll-shell .ll-card-back{background:repeating-linear-gradient(45deg,#4f8b9f 0 2px,#2b5e7b 2px 5px);border:2px solid #c7dfe0}
+@media(orientation:portrait) and (pointer:fine){.ll-table{--ll-card-height:clamp(72px,calc(13 * var(--game-vh)),100px)}.ll-opponent .table-avatar{width:64px}.ll-controls{left:0;right:0}.landlord-page .ll-controls button{min-width:68px;padding-inline:10px}.ll-seat-play{width:29%}.ll-seat-play[data-side=left]{left:19%}.ll-seat-play[data-side=right]{right:19%}}
+@media(orientation:landscape) and (max-height:360px),(orientation:portrait) and (pointer:coarse) and (max-width:360px){.ll-toolbar{min-height:37px}.ll-toolbar>a{min-height:36px}.landlord-page .ll-tools button{min-height:34px}.ll-opponent{top:14%}.ll-opponent .table-avatar{width:57px}.ll-opponent strong{font-size:10px}.ll-opponent small,.ll-seat-action{font-size:9px}.ll-center-head{top:-3px}.ll-last-title{top:41px;font-size:10px}.ll-controls{gap:9px;bottom:calc(var(--ll-card-height) + 25px)}.landlord-page .ll-controls button{min-width:77px;font-size:15px;padding-inline:16px}.ll-turn{display:none}.ll-seat-play{top:43%}.ll-seat-play[data-side=bottom]{bottom:-10px}.ll-table-felt{inset:20% 3% -37%}.ll-select-help{font-size:9px}.ll-hand{width:min(calc(100% - 30px),calc(var(--card-count,20) * var(--ll-card-width)))}}

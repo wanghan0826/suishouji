@@ -144,7 +144,7 @@
     for(const b of document.querySelectorAll('[data-mj-mutate]'))b.disabled=busy;$('mjSaveRules').disabled=busy;$('mjJoinInvite').disabled=busy||!preview?.canJoin;
     const can=!!room?.actions.discard&&selected!==null&&room.hand.includes(selected);$('mjDiscard').disabled=busy||!can;$('mjDiscard').textContent=can?'打出 '+name(selected):'选择手牌';
     for(const b of $('mjHand').children){b.disabled=busy||!room?.actions.discard;b.setAttribute('aria-pressed',String(selected!==null&&Number(b.dataset.index)===selectedIndex));}
-    $('mjSelection').textContent=selected!==null?'已选 '+name(selected):'点选手牌，再确认出牌';
+    $('mjSelection').textContent=selected!==null?'已选 '+name(selected):'点选手牌 · 点牌河可放大';
   }
   function meldNode(m,small=false){const d=el('span',small?'':'mj-meld');for(let i=0;i<(m.type==='pong'?3:4);i++)d.append(tile(m.tile,m.tile===null));if(!small)d.append(el('small','',m.type==='pong'?'碰':m.type==='an'?'暗杠':m.type==='bu'?'补杠':'明杠'));return d;}
   function renderBoard(r){
@@ -159,27 +159,50 @@
       if(offset>0&&p){
         const group=el('div','mj-seat'),badge=el('div','mj-opponent'+(actor===s?' is-turn':'')),details=el('div','mj-opponent-info');
         group.dataset.side=side;
-        badge.append(el('span','mj-seat-avatar',p.bot?'机':p.name.slice(0,1).toUpperCase()),details);
-        details.append(el('strong','',p.name),el('small','',directions[s]+'位 · '+p.score+'分'+(r.dealer===s?' · 庄':'')));
+        const avatar=el('span','table-avatar');avatar.style.setProperty('--portrait',s);avatar.setAttribute('aria-hidden','true');badge.append(avatar,details);
+        details.append(el('strong','',p.name),el('small','',directions[s]+'位 · '+p.score+'分'+(r.dealer===s?' · 庄':'')+(p.bot||p.away?' · 托管':'')));
         const rack=el('div','mj-rack');rack.setAttribute('aria-label','手牌 '+p.handCount+' 张'+(p.away?'，暂离托管':''));
         for(let j=0;j<p.handCount;j++)rack.append(el('i'));
         const melds=el('div','mj-mini-melds');for(const m of p.melds)melds.append(meldNode(m,true));
         group.append(badge,rack,melds);opponents.append(group);
       }
-      const box=el('div','mj-river'),tiles=el('div','mj-river-tiles');
-      box.dataset.side=side;box.setAttribute('aria-label',directions[s]+'位弃牌');
+      const box=el('button','mj-river'),tiles=el('span','mj-river-tiles');
+      box.type='button';box.dataset.side=side;box.setAttribute('aria-label',directions[s]+'位弃牌 '+(p?.river.length||0)+'张，点按放大');box.onclick=()=>openRivers(s);
       for(const [i,t]of (p?.river||[]).entries()){
         const svg=tile(t),entry=el('span','mj-river-tile');entry.title=name(t);
         if(featured?.seat===s&&featured.index===i&&featured.tile===t)entry.classList.add('is-last');
         entry.append(svg);tiles.append(entry);
       }
-      box.append(tiles);rivers.append(box);
-      // Follow the newest end of each pile, even when a long hand needs scrolling.
-      box.scrollTop=box.scrollHeight;box.scrollLeft=box.scrollWidth;
+      box.append(el('span','mj-river-label',directions[s]+' · '+(p?.river.length||0)+'张'),tiles);box.hidden=!p?.river.length;rivers.append(box);
     }
     $('mjWallCount').textContent='余 '+r.remaining+' 张';$('mjWallCount').title='另留 '+r.rules.reserve+' 张荒牌';
     $('mjCenterStatus').textContent=r.phase==='respond'?directions[r.pending.from]+'家'+(r.pending.rob?'补杠 ':'打出 ')+name(r.pending.tile):actor>=0?directions[actor]+'家出牌':phases[r.phase];
+    requestAnimationFrame(fitRivers);
+    if($('mjRiverDialog').open)paintRivers();
   }
+  function fitRivers(){
+    for(const box of $('mjRivers').children){
+      const sideways=['left','right'].includes(box.dataset.side),count=box.querySelectorAll('.mj-river-tile').length,cols=sideways?4:10,rows=Math.max(1,Math.ceil(count/cols));
+      const widthLimit=(box.clientWidth-6-(cols-1))/cols/(sideways?1.4:1);
+      const dense=Math.min(widthLimit,(box.clientHeight-18-(rows-1))/rows/(sideways?1:1.4))<11;
+      box.classList.toggle('is-dense',dense);
+      const size=Math.max(2,Math.min(28,widthLimit,(box.clientHeight-(dense?6:18)-(rows-1))/rows/(sideways?1:1.4)));
+      box.style.setProperty('--pile-tile',size+'px');box.style.setProperty('--pile-cols',cols);
+    }
+  }
+  new ResizeObserver(fitRivers).observe($('mjBoard'));
+  function paintRivers(){
+    if(!room)return;
+    $('mjRiverDetail').replaceChildren(...room.seats.map((p,s)=>{
+      const section=el('section','mj-river-detail'),tiles=el('div');section.dataset.seat=s;
+      if(!p){section.append(el('h3','',directions[s]+'位 · 空座'));return section;}
+      section.append(el('h3','',directions[s]+'位 · '+p.name+' · '+p.river.length+'张'),tiles);
+      for(const t of p.river){const entry=el('span');entry.title=name(t);entry.append(tile(t));tiles.append(entry);}
+      if(!p.river.length)tiles.append(el('small','','还没有弃牌'));
+      return section;
+    }));
+  }
+  function openRivers(seat){paintRivers();$('mjRiverDialog').showModal();$('mjRiverDetail').querySelector('[data-seat="'+seat+'"]').scrollIntoView({block:'nearest'});}
   function render(){
     const r=room;if(!r)return;const key=r.token+':'+r.version;if(lastRendered===key){countdown();return;}lastRendered=key;selected=null;
     $('mjTableTitle').textContent='第 '+r.handNo+'/'+r.rules.hands+' 局';$('mjMyName').textContent=r.seats[r.me].name+' · '+directions[r.me]+'位 · '+r.seats[r.me].score+'分'+(r.dealer===r.me?' · 庄':'');

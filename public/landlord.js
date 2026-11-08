@@ -25,6 +25,8 @@
   let clockOffset = 0;
   let hint = 0;
   const selected = new Set();
+  let drag = null;
+  let suppressHandClick = false;
 
   function node(tag, className, text) {
     const el = document.createElement(tag);
@@ -75,6 +77,7 @@
     epoch++;
     room = preview = null;
     selected.clear();
+    drag = null;
     busy = polling = false;
     pendingCreate = null;
     disconnected = false;
@@ -100,6 +103,7 @@
       return;
     }
     room = value.room || null;
+    drag = null;
     preview = value.preview || null;
     if (room) {
       clockOffset = Date.now()-room.now;
@@ -191,7 +195,7 @@
     const red = value === 53 || (!joker && (suit === 1 || suit === 3));
     const face = node(interactive ? 'button' : 'span','ll-card'+(red ? ' is-red' : '')+(joker ? ' is-joker' : ''));
     const rank = joker ? (red ? '大王' : '小王') : ranks[Math.floor(value/4)];
-    face.append(node('strong','',rank),node('span','',joker ? '✦' : suits[suit]));
+    face.append(node('strong','ll-rank',rank),node('span','ll-suit',joker ? '✦' : suits[suit]),node('i','ll-pip',joker ? '✦' : suits[suit]));
     if (interactive) {
       face.type = 'button';
       face.dataset.card = value;
@@ -209,7 +213,10 @@
     const player = room.seats[index];
     const active = room.turn === index;
     el.classList.toggle('is-turn',active);
-    el.replaceChildren(
+    const portrait = node('span','table-avatar');
+    portrait.style.setProperty('--portrait',String(index % 4));
+    portrait.setAttribute('aria-hidden','true');
+    el.replaceChildren(portrait,
       node('span','ll-seat-mark',index === room.landlord ? '地主' : room.landlord === null ? '牌友' : '农民'),
       node('strong','',player.name),
       node('small','',player.count+' 张 · '+player.score+' 分'),
@@ -248,6 +255,52 @@
     for (const button of $('llControls').children) {
       button.disabled = busy || (button.id === 'llPlay' && !selected.size);
     }
+    $('llSelectHelp').textContent = selected.size ? '已选 '+selected.size+' 张 · 点选可取消' : playing ? '点选或划过手牌，再点出牌' : '等待其他牌友出牌';
+  }
+
+  // Hit testing uses screen coordinates, so swiping also works in the CSS-rotated view.
+  $('llHand').addEventListener('pointerdown',event => {
+    const button=event.target.closest('button[data-card]');
+    if(!button || button.disabled || (event.pointerType==='mouse' && event.button!==0))return;
+    drag={id:event.pointerId,start:Number(button.dataset.card),x:event.clientX,y:event.clientY,baseline:new Set(selected),moved:false};
+  });
+  $('llHand').addEventListener('pointermove',event => {
+    if(!drag || event.pointerId!==drag.id)return;
+    if(Math.hypot(event.clientX-drag.x,event.clientY-drag.y)<5 && !drag.moved)return;
+    const hit=document.elementsFromPoint(event.clientX,event.clientY).map(n=>n.closest?.('#llHand button[data-card]')).find(Boolean);
+    if(!hit)return;
+    drag.moved=true;
+    // Touch has implicit capture on the starting card; mouse drags need explicit capture.
+    if(event.pointerType!=='touch' && !$('llHand').hasPointerCapture(event.pointerId))$('llHand').setPointerCapture(event.pointerId);
+    const cards=[...$('llHand').children].map(b=>Number(b.dataset.card));
+    const a=cards.indexOf(drag.start),b=cards.indexOf(Number(hit.dataset.card));
+    selected.clear();for(const value of drag.baseline)selected.add(value);
+    for(let i=Math.min(a,b);i<=Math.max(a,b);i++){
+      if(drag.baseline.has(drag.start))selected.delete(cards[i]);else selected.add(cards[i]);
+    }
+    setControls();
+  });
+  for(const type of ['pointerup','pointercancel','lostpointercapture'])$('llHand').addEventListener(type,event=>{
+    if(type==='lostpointercapture' && event.target!==$('llHand'))return;
+    if(!drag || drag.id!==event.pointerId)return;
+    if(drag.moved){suppressHandClick=true;setTimeout(()=>{suppressHandClick=false;},0);}
+    drag=null;
+  });
+  $('llHand').addEventListener('click',event=>{
+    if(!suppressHandClick)return;
+    suppressHandClick=false;event.stopImmediatePropagation();
+  },true);
+
+  function seatPlay(root,index){
+    const move=room.actions[index];
+    root.replaceChildren();
+    root.parentElement.classList.toggle('is-latest',room.tablePlay?.seat===index);
+    if(!move)return;
+    if(move.pass){root.append(node('span','ll-pass','不出'));return;}
+    const cards=move.cards||[];
+    root.style.setProperty('--played-count',cards.length);
+    root.append(...cards.map(value=>card(value)));
+    root.parentElement.setAttribute('aria-label',room.seats[index].name+'出的'+shapes[move.shape.kind]);
   }
 
   function renderTable() {
@@ -256,8 +309,9 @@
     opponent($('llLeft'),(me+2)%3);
     opponent($('llRight'),(me+1)%3);
     $('llBottom').replaceChildren(...(room.bottom.length ? room.bottom : [null,null,null]).map(value => card(value)));
-    $('llLast').replaceChildren(...(tablePlay?.cards || []).map(value => card(value)));
-    $('llLast').style.setProperty('--played-count',tablePlay?.cards.length || 1);
+    seatPlay($('llLeftPlay'),(me+2)%3);
+    seatPlay($('llRightPlay'),(me+1)%3);
+    seatPlay($('llLast'),me);
     $('llLastTitle').textContent = tablePlay
       ? room.seats[tablePlay.seat].name + ' · ' + shapes[tablePlay.shape.kind]
       : bidding ? room.redeal ? '三家都不叫，已重新发牌' : '叫 3 分直接成为地主' : '新一轮 · 领出任意合法牌型';
@@ -267,7 +321,9 @@
     $('llSelf').textContent = room.seats[me].name + ' · ' + (room.landlord === null ? '待定' : room.landlord === me ? '地主' : '农民') + ' · ' + room.hand.length + ' 张';
     $('llMultiplier').textContent = (room.bid ? '底分 '+room.bid+' · ' : '') + '×'+room.multiplier;
     $('llHand').style.setProperty('--card-count',room.hand.length);
-    $('llHand').replaceChildren(...room.hand.map(value => card(value,true)));
+    const count=room.hand.length;
+    $('llHand').style.gridTemplateColumns=count>1?'repeat('+(count-1)+',minmax(0,1fr)) var(--ll-card-width)':'var(--ll-card-width)';
+    $('llHand').replaceChildren(...room.hand.map((value,i)=>{const c=card(value,true);c.style.zIndex=i;return c;}));
     const buttons = [];
     if (myTurn && bidding) {
       buttons.push(action('不叫',() => operate('bid',{score:0})));
@@ -334,6 +390,8 @@
     if (!room?.deadline) return;
     const seconds = Math.max(0, Math.ceil((room.deadline - Date.now() + clockOffset)/1000));
     $('llTimer').textContent = String(seconds).padStart(2,'0');
+    $('llTable').classList.toggle('is-urgent',seconds<=8);
+    $('llTable').classList.toggle('is-my-turn',room.turn===room.me);
   }
 
   $('llCreate').onclick = () => operate('create');
