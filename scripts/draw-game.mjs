@@ -5,6 +5,7 @@ import {ensureGrowthMetrics,recordGrowthGuess} from './growth-metrics.mjs';
 
 const DAY=86400000,TURN=90000,BREAK=8000,CHOOSING=20000;
 const fail=(status,message)=>Object.assign(Error(message),{status});
+function roomNickname(value){if(typeof value!=='string'||/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u.test(value))throw fail(400,'昵称请输入1–20字，不要包含换行或隐藏字符');const name=value.normalize('NFC').trim();if(!name||Array.from(name).length>20)throw fail(400,'昵称请输入1–20字');return name;}
 export const DRAW_COLORS=['#25352d','#ef606c','#efaa44','#63a77d','#5c90dc','#a982d6','#ffffff'];
 
 export function drawingScores(eligible,correct,drawer){
@@ -29,6 +30,7 @@ export function createDrawingGame({db,users,clock=Date.now}){
     CREATE INDEX IF NOT EXISTS draw_message_room ON draw_messages(room_token,round,id);
     CREATE TABLE IF NOT EXISTS draw_activity(room_token TEXT NOT NULL,round INTEGER NOT NULL,user_id INTEGER NOT NULL,PRIMARY KEY(room_token,round,user_id));`);
   const columns=db.prepare('PRAGMA table_info(draw_rooms)').all().map(c=>c.name);
+  if(!db.prepare('PRAGMA table_info(draw_members)').all().some(c=>c.name==='nickname'))db.exec("ALTER TABLE draw_members ADD COLUMN nickname TEXT NOT NULL DEFAULT ''");
   if(!columns.includes('mode'))db.exec("ALTER TABLE draw_rooms ADD COLUMN mode TEXT NOT NULL DEFAULT 'party'");
   if(!columns.includes('canvas_height'))db.exec('ALTER TABLE draw_rooms ADD COLUMN canvas_height INTEGER NOT NULL DEFAULT 640');
   if(!columns.includes('last_activity'))db.exec('ALTER TABLE draw_rooms ADD COLUMN last_activity INTEGER NOT NULL DEFAULT 0');
@@ -45,7 +47,7 @@ export function createDrawingGame({db,users,clock=Date.now}){
   const turn=r=>db.prepare('SELECT * FROM draw_rounds WHERE room_token=? AND round=?').get(r.token,r.round);
   const correct=r=>db.prepare('SELECT user_id,rank FROM draw_correct WHERE room_token=? AND round=? ORDER BY rank').all(r.token,r.round);
   function participate(r,id){if(db.prepare('INSERT OR IGNORE INTO draw_activity VALUES(?,?,?)').run(r.token,r.round,id).changes)recordGrowthGuess(db,id,clock());}
-  function limit(id,kind){const max=kind==='stroke'?650:kind==='create'?6:kind==='guess'?60:90,window=kind==='create'?3600000:60000,key=id+':'+kind,now=clock();let row=buckets.get(key);if(!row||row.until<=now){row={n:0,until:now+window};buckets.set(key,row);}if(++row.n>max)throw fail(429,kind==='stroke'?'画笔同步稍快，请稍停一下。':'操作有点快，请稍后再试');if(buckets.size>3000)for(const[k,v]of buckets)if(v.until<now)buckets.delete(k);}
+  function limit(id,kind){const max=kind==='stroke'?650:['create','nickname'].includes(kind)?6:kind==='guess'?60:90,window=kind==='create'?3600000:60000,key=id+':'+kind,now=clock();let row=buckets.get(key);if(!row||row.until<=now){row={n:0,until:now+window};buckets.set(key,row);}if(++row.n>max)throw fail(429,kind==='stroke'?'画笔同步稍快，请稍停一下。':'操作有点快，请稍后再试');if(buckets.size>3000)for(const[k,v]of buckets)if(v.until<now)buckets.delete(k);}
   function settle(r,reason='time'){
     const t=turn(r);if(!t||t.settled_at!==null)return;
     const guessed=correct(r).map(v=>v.user_id),eligible=JSON.parse(t.eligible),cancelled=['left','skip'].includes(reason),scores=cancelled?[]:score(r,eligible,guessed,t.drawer_id),now=clock();
@@ -69,10 +71,10 @@ export function createDrawingGame({db,users,clock=Date.now}){
   function board(r){return db.prepare('SELECT seq,op_id opId,stroke_id strokeId,color,size,points FROM draw_strokes WHERE room_token=? AND round=? ORDER BY seq').all(r.token,r.round).map(s=>({...s,points:JSON.parse(s.points)}));}
   function state(token,id,includeBoard=false){
     const r=room(token),list=members(token),mine=list.find(m=>m.user_id===id);
-    if(!mine){const host=list.find(m=>m.user_id===r.host_id);return {preview:{host:host?.username||'朋友',count:list.length,phase:r.phase,canJoin:(r.phase==='lobby'||r.mode==='studio'&&['choosing','playing','between'].includes(r.phase))&&list.length<10}};}
+    if(!mine){const host=list.find(m=>m.user_id===r.host_id);return {preview:{host:host?.nickname||host?.username||'朋友',count:list.length,phase:r.phase,canJoin:(r.phase==='lobby'||r.mode==='studio'&&['choosing','playing','between'].includes(r.phase))&&list.length<10}};}
     const t=turn(r),guessed=correct(r),eligible=t?JSON.parse(t.eligible):[],done=t?.settled_at!==null,rank=guessed.find(v=>v.user_id===id)?.rank||0;
     const scores=t&&done&&!['left','skip'].includes(t.reason)?score(r,eligible,guessed.map(v=>v.user_id),t.drawer_id):[];
-    const result={room:{token,mode:r.mode,canvasHeight:r.canvas_height,phase:r.phase,round:r.round,totalRounds:JSON.parse(r.roster).length,version:r.version,hostId:r.host_id,me:id,serverNow:clock(),nextAt:r.next_at,members:list.map(m=>({id:m.user_id,name:m.username,score:m.score,seat:m.seat,guessed:guessed.some(g=>g.user_id===m.user_id),rank:guessed.find(g=>g.user_id===m.user_id)?.rank||0})),turn:t?{drawerId:t.drawer_id,answer:t.answer&&(t.drawer_id===id||done)?t.answer:null,category:t.answer?t.category:'选题中',length:t.answer?Array.from(t.answer).length:0,difficulty:t.answer?t.difficulty:null,choices:r.phase==='choosing'&&t.drawer_id===id?JSON.parse(t.choices).map((w,index)=>({...w,index})):undefined,chooseDeadline:t.choose_deadline,deadline:t.deadline,epoch:t.canvas_epoch,correctCount:guessed.length,eligibleCount:eligible.length,myRank:rank,provisional:rank?(r.mode==='studio'?Math.max(20,100-(rank-1)*20):eligible.length-rank+1):0,reason:t.reason,scores}:null,messages:t?db.prepare('SELECT m.id,m.user_id userId,u.username name,m.text FROM draw_messages m JOIN site_users u ON u.id=m.user_id WHERE m.room_token=? AND m.round=? AND u.disabled=0 ORDER BY m.id DESC LIMIT 30').all(token,r.round).reverse():[]}};
+    const result={room:{token,mode:r.mode,canvasHeight:r.canvas_height,phase:r.phase,round:r.round,totalRounds:JSON.parse(r.roster).length,version:r.version,hostId:r.host_id,me:id,serverNow:clock(),nextAt:r.next_at,members:list.map(m=>({id:m.user_id,name:m.nickname||m.username,score:m.score,seat:m.seat,guessed:guessed.some(g=>g.user_id===m.user_id),rank:guessed.find(g=>g.user_id===m.user_id)?.rank||0})),turn:t?{drawerId:t.drawer_id,answer:t.answer&&(t.drawer_id===id||done)?t.answer:null,category:t.answer?t.category:'选题中',length:t.answer?Array.from(t.answer).length:0,difficulty:t.answer?t.difficulty:null,choices:r.phase==='choosing'&&t.drawer_id===id?JSON.parse(t.choices).map((w,index)=>({...w,index})):undefined,chooseDeadline:t.choose_deadline,deadline:t.deadline,epoch:t.canvas_epoch,correctCount:guessed.length,eligibleCount:eligible.length,myRank:rank,provisional:rank?(r.mode==='studio'?Math.max(20,100-(rank-1)*20):eligible.length-rank+1):0,reason:t.reason,scores}:null,messages:t?db.prepare("SELECT m.id,m.user_id userId,COALESCE(NULLIF(d.nickname,''),u.username) name,d.seat,m.text FROM draw_messages m JOIN site_users u ON u.id=m.user_id JOIN draw_members d ON d.room_token=m.room_token AND d.user_id=m.user_id WHERE m.room_token=? AND m.round=? AND u.disabled=0 ORDER BY m.id DESC LIMIT 30").all(token,r.round).reverse():[]}};
     if(includeBoard)result.room.board=t?board(r):[];return result;
   }
   function write(stream,event,data){if(stream.res.destroyed)return;if(stream.res.writableLength>512*1024){stream.res.end();return;}stream.res.write('event: '+event+'\ndata: '+JSON.stringify(data)+'\n\n');}
@@ -87,7 +89,7 @@ export function createDrawingGame({db,users,clock=Date.now}){
     const url=new URL(req.url,'http://local');if(!url.pathname.startsWith('/api/draw-game'))return false;
     const send=(status,value)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','Vary':'Cookie','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(value));return true;};
     try{
-      const root=url.pathname==='/api/draw-game',match=/^\/api\/draw-game\/([a-f0-9]{32})(?:\/(join|start|choose|guess|stroke|clear|undo|leave|skip|next|close|events))?$/.exec(url.pathname);if(!root&&!match)throw fail(404,'画室地址无效');
+      const root=url.pathname==='/api/draw-game',match=/^\/api\/draw-game\/([a-f0-9]{32})(?:\/(join|start|choose|guess|stroke|clear|undo|leave|skip|next|close|nickname|events))?$/.exec(url.pathname);if(!root&&!match)throw fail(404,'画室地址无效');
       const user=req.method==='GET'?users.currentUser(req):users.requireUser(req);if(!user)throw fail(401,'登录后加入你画我猜');
       if(req.method==='GET'){
         if(root){const items=db.prepare('SELECT r.token,r.phase,r.round,r.created_at FROM draw_rooms r JOIN draw_members m ON m.room_token=r.token WHERE m.user_id=? AND m.active=1 AND r.expires_at>? ORDER BY r.created_at DESC LIMIT 10').all(user.id,clock());return send(200,{items,wordCount:DRAW_WORD_STATS.total});}
@@ -110,6 +112,7 @@ export function createDrawingGame({db,users,clock=Date.now}){
           db.prepare('INSERT INTO draw_members(room_token,user_id,seat) VALUES(?,?,?) ON CONFLICT(room_token,user_id) DO UPDATE SET active=1').run(token,user.id,seat);if(r.mode==='studio'&&['choosing','playing'].includes(r.phase)){const eligible=JSON.parse(t.eligible);if(!eligible.includes(user.id)){eligible.push(user.id);db.prepare('UPDATE draw_rounds SET eligible=? WHERE room_token=? AND round=?').run(JSON.stringify(eligible),token,r.round);}}changed=true;return;
         }
         if(!mine)throw fail(403,'只有画室内的玩家可以操作');
+        if(action==='nickname'){if(['closed','finished'].includes(r.phase))throw fail(409,'这局已结束，请在新的画室设置昵称');const name=roomNickname(input.nickname);if(name===mine.nickname)return;db.prepare('UPDATE draw_members SET nickname=? WHERE room_token=? AND user_id=?').run(name,token,user.id);changed=true;return;}
         if(action==='start'){if(!host)throw fail(403,'请等房主开始');if(r.phase!=='lobby')throw fail(409,'本局已经开始');if(r.mode==='party'&&list.length<3)throw fail(409,'轮流挑战至少3人，自由画室1人可开');db.prepare('UPDATE draw_rooms SET roster=? WHERE token=?').run(JSON.stringify(list.map(m=>m.user_id)),token);next(room(token));changed=true;reset=true;return;}
         if(action==='close'){if(!host)throw fail(403,'只有房主可以结束整局');if(['choosing','playing'].includes(r.phase))settle(r,'skip');db.prepare("UPDATE draw_rooms SET phase='closed',version=version+1 WHERE token=?").run(token);changed=true;return;}
         if(action==='leave'){

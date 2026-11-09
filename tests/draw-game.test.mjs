@@ -17,6 +17,40 @@ async function fixture(t){
 }
 const stroke=(round=1,epoch=0,op='a'.repeat(32),path='b'.repeat(32))=>({round,epoch,opId:op,strokeId:path,color:'#25352d',size:6,points:[[10,20],[100,200]]});
 
+test('room nicknames persist and remain bound to the same account and seat in one room',async t=>{
+ const f=await fixture(t),token=await f.create(),base='/'+token;await f.call(base+'/join',{user:2,data:{}});
+ let state=(await f.call(base+'/nickname',{user:2,data:{nickname:'  小汪  ',userId:1}})).data.room;
+ assert.equal(state.members.find(m=>m.id===2).name,'小汪');assert.equal(state.members.find(m=>m.id===2).seat,1);assert.equal(state.members.find(m=>m.id===1).name,'player_1');
+ const version=state.version;assert.equal((await f.call(base+'/nickname',{user:2,data:{nickname:'小汪'}})).data.room.version,version);
+ assert.equal(f.db.prepare('SELECT username FROM site_users WHERE id=2').get().username,'player_2');assert.equal(f.db.prepare('SELECT nickname FROM draw_members WHERE user_id=2 AND room_token=?').get(token).nickname,'小汪');
+ f.restart();state=(await f.call(base)).data.room;assert.equal(state.members.find(m=>m.id===2).name,'小汪');
+ const other=await f.create();await f.call('/'+other+'/join',{user:2,data:{}});assert.equal((await f.call('/'+other,{user:2})).data.room.members.find(m=>m.id===2).name,'player_2');
+ await f.call(base+'/nickname',{data:{nickname:'画手'}});assert.equal((await f.call(base,{user:3})).data.preview.host,'画手');
+});
+
+test('renaming broadcasts the new identity and updates answers without changing the canvas or timer',async t=>{
+ const f=await fixture(t),token=await f.start(4),base='/'+token;await f.call(base+'/stroke',{data:stroke()});await f.call(base+'/guess',{user:2,data:{round:1,text:'wrong guess'}});
+ const before=(await f.call(base)).data.room,controller=new AbortController();t.after(()=>controller.abort());
+ const stream=await fetch(f.base+'/api/draw-game'+base+'/events',{headers:{'X-Test-User':'3'},signal:controller.signal}),reader=stream.body.getReader();await reader.read();
+ const updated=await f.call(base+'/nickname',{user:2,data:{nickname:'<b>小汪</b>'}});assert.equal(updated.status,200);const event=new TextDecoder().decode((await reader.read()).value);assert.match(event,/event: state/);assert.ok(event.includes('<b>小汪</b>'));assert.ok(!event.includes(before.turn.answer));controller.abort();await reader.cancel().catch(()=>{});
+ const after=(await f.call(base,{user:3})).data.room;assert.equal(after.members.find(m=>m.id===2).seat,1);assert.equal(after.messages[0].name,'<b>小汪</b>');assert.equal(after.messages[0].seat,1);assert.equal(after.messages[0].userId,2);
+ assert.deepEqual(after.board,before.board);assert.equal(after.turn.deadline,before.turn.deadline);assert.equal(after.turn.epoch,before.turn.epoch);assert.deepEqual(after.members.map(m=>m.score),before.members.map(m=>m.score));
+});
+
+test('nickname writes validate identity, CSRF, membership, names, room phase and rate limits',async t=>{
+ const f=await fixture(t),token=await f.create(),base='/'+token;await f.call(base+'/join',{user:2,data:{}});
+ assert.equal((await f.call(base+'/nickname',{user:0,data:{nickname:'无账号'}})).status,401);assert.equal((await f.call(base+'/nickname',{csrf:'bad',data:{nickname:'坏凭据'}})).status,403);assert.equal((await f.call(base+'/nickname',{user:3,data:{nickname:'旁观者'}})).status,403);
+ for(const nickname of ['',null,'x'.repeat(21),'换\n行','隐\u200b藏','\u2028名字']){f.advance(60001);assert.equal((await f.call(base+'/nickname',{data:{nickname}})).status,400);}
+ f.advance(60001);for(let i=0;i<6;i++)assert.equal((await f.call(base+'/nickname',{data:{nickname:'昵称'+i}})).status,200);assert.equal((await f.call(base+'/nickname',{data:{nickname:'太频繁'}})).status,429);
+ f.advance(60001);await f.call(base+'/leave',{user:2,data:{}});assert.equal((await f.call(base+'/nickname',{user:2,data:{nickname:'已离开'}})).status,403);await f.call(base+'/close',{data:{}});assert.equal((await f.call(base+'/nickname',{data:{nickname:'已结束'}})).status,409);
+});
+
+test('leaving and rejoining preserves room nicknames and never renumbers other players',async t=>{
+ const f=await fixture(t),created=await f.call('',{data:{mode:'studio'}}),base='/'+created.data.room.token;for(const user of [2,3])await f.call(base+'/join',{user,data:{}});
+ await f.call(base+'/nickname',{user:2,data:{nickname:'第二位'}});await f.call(base+'/leave',{user:2,data:{}});let r=(await f.call(base)).data.room;assert.equal(r.members.find(m=>m.id===3).seat,2);
+ await f.call(base+'/join',{user:4,data:{}});await f.call(base+'/join',{user:2,data:{}});r=(await f.call(base)).data.room;assert.deepEqual(r.members.map(m=>[m.id,m.seat]),[[1,0],[2,1],[3,2],[4,3]]);assert.equal(r.members.find(m=>m.id===2).name,'第二位');
+});
+
 test('word bank has thousands of unique curated prompts, with three difficulty choices and no avoidable repeats',()=>{
  assert.ok(DRAW_WORD_STATS.total>=2000);assert.equal(new Set(DRAW_WORDS.map(w=>w.text.normalize('NFKC'))).size,DRAW_WORDS.length);assert.ok(DRAW_WORD_STATS.difficulties.every(n=>n>=400));assert.ok(DRAW_WORDS.every(w=>w.category&&w.text.length<=12&&w.text.trim()===w.text));
  const used=new Set();for(let i=0;i<100;i++){const choices=pickDrawChoices(used);assert.deepEqual(choices.map(w=>w.difficulty),[0,1,2]);for(const w of choices){assert.ok(!used.has(w.text));used.add(w.text);}}assert.equal(used.size,300);

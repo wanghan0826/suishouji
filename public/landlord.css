@@ -111,3 +111,15 @@
 .landlord-page .ll-shell .ll-card-back{background:repeating-linear-gradient(45deg,#4f8b9f 0 2px,#2b5e7b 2px 5px);border:2px solid #c7dfe0}
 @media(orientation:portrait) and (pointer:fine){.ll-table{--ll-card-height:clamp(72px,calc(13 * var(--game-vh)),100px)}.ll-opponent .table-avatar{width:64px}.ll-controls{left:0;right:0}.landlord-page .ll-controls button{min-width:68px;padding-inline:10px}.ll-seat-play{width:29%}.ll-seat-play[data-side=left]{left:19%}.ll-seat-play[data-side=right]{right:19%}}
 @media(orientation:landscape) and (max-height:360px),(orientation:portrait) and (pointer:coarse) and (max-width:360px){.ll-toolbar{min-height:37px}.ll-toolbar>a{min-height:36px}.landlord-page .ll-tools button{min-height:34px}.ll-opponent{top:14%}.ll-opponent .table-avatar{width:57px}.ll-opponent strong{font-size:10px}.ll-opponent small,.ll-seat-action{font-size:9px}.ll-center-head{top:-3px}.ll-last-title{top:41px;font-size:10px}.ll-controls{gap:9px;bottom:calc(var(--ll-card-height) + 25px)}.landlord-page .ll-controls button{min-width:77px;font-size:15px;padding-inline:16px}.ll-turn{display:none}.ll-seat-play{top:43%}.ll-seat-play[data-side=bottom]{bottom:-10px}.ll-table-felt{inset:20% 3% -37%}.ll-select-help{font-size:9px}.ll-hand{width:min(calc(100% - 30px),calc(var(--card-count,20) * var(--ll-card-width)))}}
+
+/* The same nine original chibi portraits used at the Mahjong table. */
+.landlord-page .ll-chibi-avatar{background:radial-gradient(ellipse at 50% 15%,#a9d2b5,#416f69 68%,#244d4c);overflow:hidden;border-radius:14px;box-shadow:0 3px 8px #09252155}
+.landlord-page .ll-chibi-avatar::before{background-image:var(--ll-portrait);background-size:cover;background-position:center;filter:none}
+.landlord-page .ll-opponent .ll-chibi-avatar{aspect-ratio:1;border-radius:18%;overflow:hidden;box-shadow:0 3px 8px #09252155}
+.landlord-page .ll-panel .ll-player-row{display:flex;gap:9px;align-items:center;min-height:46px}
+.ll-player-row .ll-chibi-avatar{width:32px;aspect-ratio:1;border-radius:7px}
+.ll-hand-label #llSelf{display:flex;align-items:center;gap:5px;min-width:0;overflow:visible}
+.ll-hand-label #llSelf .ll-chibi-avatar{width:26px;aspect-ratio:1;border-radius:6px}
+.ll-self-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ll-hand-label #llMultiplier{align-self:center}
+@media(orientation:landscape) and (max-height:360px),(orientation:portrait) and (pointer:coarse) and (max-width:360px){.ll-hand-label #llSelf .ll-chibi-avatar{width:22px}}

@@ -209,13 +209,18 @@
     return face;
   }
 
+  function chibiAvatar(player) {
+    const portrait=node('span','table-avatar ll-chibi-avatar');let hash=2166136261;
+    for(const c of String(player.name))hash=Math.imul(hash^c.codePointAt(0),16777619);
+    portrait.style.setProperty('--ll-portrait',"url('/assets/mahjong-chibi-v1-"+((hash>>>0)%9+1)+".webp')");
+    portrait.setAttribute('aria-hidden','true');return portrait;
+  }
+
   function opponent(el, index) {
     const player = room.seats[index];
     const active = room.turn === index;
     el.classList.toggle('is-turn',active);
-    const portrait = node('span','table-avatar');
-    portrait.style.setProperty('--portrait',String(index % 4));
-    portrait.setAttribute('aria-hidden','true');
+    const portrait = chibiAvatar(player);
     el.replaceChildren(portrait,
       node('span','ll-seat-mark',index === room.landlord ? '地主' : room.landlord === null ? '牌友' : '农民'),
       node('strong','',player.name),
@@ -318,7 +323,7 @@
     $('llClockLabel').textContent = bidding ? '叫分' : '出牌';
     const myTurn = turn === me;
     $('llTurnStatus').textContent = myTurn ? (bidding ? '轮到你叫分' : '轮到你出牌') : '等 '+room.seats[turn].name+(bidding?' 叫分':' 出牌');
-    $('llSelf').textContent = room.seats[me].name + ' · ' + (room.landlord === null ? '待定' : room.landlord === me ? '地主' : '农民') + ' · ' + room.hand.length + ' 张';
+    $('llSelf').replaceChildren(chibiAvatar(room.seats[me]),node('span','ll-self-name',room.seats[me].name + ' · ' + (room.landlord === null ? '待定' : room.landlord === me ? '地主' : '农民') + ' · ' + room.hand.length + ' 张'));
     $('llMultiplier').textContent = (room.bid ? '底分 '+room.bid+' · ' : '') + '×'+room.multiplier;
     $('llHand').style.setProperty('--card-count',room.hand.length);
     const count=room.hand.length;
@@ -382,7 +387,7 @@
         : account ? '正在连接牌室…' : '先登录，再加入朋友的牌室。';
       $('llJoin').textContent = account ? '加入牌室' : '登录后加入';
     } else if (panel === 'llLobby') {
-      $('llSeats').replaceChildren(...room.seats.map((p,i) => node('li','',p ? p.name : '等待牌友 · 座位 '+(i+1))));
+      $('llSeats').replaceChildren(...room.seats.map((p,i) => {const row=node('li','ll-player-row');if(p)row.append(chibiAvatar(p),node('span','',p.name));else row.textContent='等待牌友 · 座位 '+(i+1);return row;}));
       $('llStart').hidden = !room.isHost;
       $('llWaiting').textContent = room.isHost ? '' : '等待房主开始。';
     } else if (panel === 'llTable') renderTable();
