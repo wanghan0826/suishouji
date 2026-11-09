@@ -364,6 +364,8 @@
       : phase ? 'llTable' : token ? 'llPreview' : 'llHome';
     for (const id of ['llLobby','llResult','llClosed','llTable','llPreview','llHome']) $(id).hidden = id !== panel;
     document.body.classList.toggle('ll-in-room',!!token);
+    document.body.classList.toggle('game-landscape-page',!!token);
+    $('llFullscreen').hidden = !token;
     $('llRound').textContent = phase && phase !== 'lobby' && phase !== 'closed' ? '第 '+room.round+' 局 · '+phases[phase] : '经典斗地主';
     $('llBack').href = token ? '/landlord' : '/games';
     $('llBack').textContent = token ? '← 斗地主' : '← 游戏大厅';
@@ -371,6 +373,8 @@
     if (panel === 'llHome') {
       const recent = storedRoom();
       $('llResume').hidden = !recent;
+      $('llRecentEmpty').hidden = !!recent;
+      $('llRecentEmpty').textContent = account ? '还没有牌室记录，开一桌或加入朋友吧。' : '登录后可找回最近的牌室。';
       if (recent) $('llResume').href = '/landlord/'+recent;
     } else if (panel === 'llPreview') {
       $('llInviteInfo').textContent = preview

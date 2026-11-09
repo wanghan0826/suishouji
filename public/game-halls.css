@@ -1,0 +1,127 @@
+/* Lobby-only presentation. The card table and drawing canvas retain their own layouts. */
+.landlord-page:not(.ll-in-room),.draw-page{
+  --hall-text:var(--text);--hall-muted:var(--text2);--hall-surface:var(--surface);
+  --hall-line:var(--border);--hall-accent:#ba573b;--hall-soft:color-mix(in srgb,var(--surface) 86%,#edb987);
+}
+.landlord-page:not(.ll-in-room){
+  --hall-text:#edf2e4;--hall-muted:#aac5b9;--hall-surface:#153a31;--hall-line:#91bda549;
+  --hall-accent:#f2cf89;--hall-soft:#20473a;
+  background:radial-gradient(ellipse at 80% 15%,#2d57433b,transparent 60%),#0d2923;
+  padding-bottom:90px;min-height:100dvh;
+}
+.landlord-page:not(.ll-in-room) .ll-shell{width:min(1140px,100%);margin:24px auto 0;padding:0 22px 20px;background:none;border:0;box-shadow:none;border-radius:0;color:var(--hall-text)}
+.landlord-page:not(.ll-in-room) .ll-toolbar{display:none}
+.landlord-page:not(.ll-in-room)>.plaza-header{--text:#edf2e4;--text2:#aac5b9;--surface:#193b32;--surface2:#20473a;--border:#91bda549;--accent:#f2cf89;--edge-line:#91bda549;color:var(--text);background:#102e26;border-color:var(--border)}
+.landlord-page:not(.ll-in-room) .ll-home{display:block;max-width:none;margin:0;padding:0;overflow:visible}
+.draw-page:not(.in-draw-room){background-image:radial-gradient(ellipse at 85% 8%,#eaa97515,transparent 55%)}
+.draw-page:not(.in-draw-room) .draw-main{max-width:1140px;margin:24px auto 0;padding:0 22px}
+.hall-home,.hall-draw-intro{color:var(--hall-text)}
+.hall-breadcrumb{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:12px;font-size:11px;color:var(--hall-muted);letter-spacing:.05em}
+.hall-breadcrumb a{display:inline-flex;align-items:center;min-height:36px;color:inherit;text-decoration:none;font-size:13px;font-weight:650;margin:0}
+.hall-hero{position:relative;min-height:252px;isolation:isolate;overflow:hidden;border:1px solid var(--hall-line);border-radius:8px;padding:38px 36px;display:flex;align-items:center}
+.hall-hero picture{position:absolute;inset:0;z-index:-2;pointer-events:none}
+.hall-hero picture img{display:block;width:100%;height:100%;object-fit:cover;object-position:center 52%}
+.hall-hero::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none}
+.ll-hall-hero{background:#0b3022;color:#fff5da;border-color:#c6a46c88}
+.ll-hall-hero::before{background:linear-gradient(90deg,#04261c9c,transparent 74%)}
+.draw-hall-hero{background:#fbecd7;color:#35463c;border-color:#d8c4a3}
+.draw-hall-hero::before{background:linear-gradient(90deg,#fff2dd66,transparent 78%)}
+.hall-hero-copy{max-width:65%;position:relative}
+.hall-hero .hall-kicker{font-size:12px;font-weight:700;letter-spacing:.15em;margin:0 0 10px;color:inherit;opacity:.83}
+.hall-hero h1,.draw-page .hall-hero h1,.ll-home .hall-hero h1{font-size:clamp(30px,4.2vw,46px);font-weight:850;line-height:1.15;letter-spacing:-1.5px;color:inherit;margin:0 0 12px;text-wrap:nowrap}
+.hall-hero .hall-hero-copy>p:last-child,.ll-home .hall-hero .hall-hero-copy>p:last-child{font-size:14px;line-height:1.7;color:inherit;opacity:.85;margin:0}
+.hall-hero-tag{position:absolute;right:16px;bottom:13px;font-size:10px;letter-spacing:.06em;padding:5px 9px;border:1px solid currentColor;background:#ffffff15;border-radius:3px;opacity:.8}
+.hall-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-bottom:1px solid var(--hall-line);padding:14px 0;gap:12px;margin-bottom:20px}
+.hall-facts>span{font-size:12px;color:var(--hall-muted);display:flex;gap:8px;align-items:baseline;justify-content:center;border-right:1px solid var(--hall-line)}
+.hall-facts>span:last-child{border-right:0}.hall-facts b{font:750 19px/1.2 ui-monospace,Consolas,monospace;color:var(--hall-text)}
+.hall-section-heading{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:0 0 10px}
+.hall-section-heading h2{margin:0;font-size:17px;font-weight:750;color:var(--hall-text);line-height:1.4}
+.hall-section-heading>span{font-size:11px;color:var(--hall-muted)}
+.hall-action-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.landlord-page .ll-shell .hall-action{display:flex;align-items:center;gap:14px;min-width:0;min-height:108px;border:1px solid var(--hall-line);padding:18px;text-align:left;color:var(--hall-text);background:var(--hall-surface);border-radius:6px;box-shadow:0 3px 0 #031b1540;transition:background .15s,border-color .15s}
+.landlord-page .ll-shell .hall-action-primary{background:#edd19c;color:#203c2d;border-color:#f6dca9}
+.hall-action-icon,.hall-mode-icon{display:grid;place-items:center;flex:none;width:45px;height:45px;background:#ffffff0c;border:1px solid #91bda538;border-radius:5px;color:var(--hall-accent)}
+.hall-action-primary .hall-action-icon{background:#fff8e955;border-color:#78643b38;color:inherit}
+.hall-action svg,.hall-mode-icon svg{width:30px;height:30px}
+.hall-action>span:nth-child(2){min-width:0}.hall-action strong{display:block;font-size:19px;line-height:1.5;font-weight:800}
+.hall-action small{display:block;font-weight:400;font-size:12px;line-height:1.5;margin-top:5px;opacity:.75}
+.hall-arrow{flex:none;font-size:21px;line-height:1;font-weight:500;margin-left:auto}
+.hall-utility-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;align-items:stretch}
+.hall-join,.hall-recent{min-width:0;padding:17px 18px;background:var(--hall-surface);border:1px solid var(--hall-line);border-radius:6px}
+.hall-home .ll-join-form{display:block;grid-column:auto;margin:0;scroll-margin-top:16px}
+.hall-join label{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:11px;color:var(--hall-muted);margin-bottom:12px}
+.hall-join label b{font-size:15px;color:var(--hall-text);font-weight:750}
+.hall-input-row{display:flex;align-items:stretch;gap:7px;min-width:0}
+.hall-input-row input,.landlord-page .ll-join-form input{width:100%;min-width:0;min-height:46px;border:1px solid var(--hall-line);border-radius:4px;padding:9px 10px;font:inherit;font-size:16px;background:color-mix(in srgb,var(--hall-surface) 90%,#000);color:var(--hall-text)}
+.hall-input-row input::placeholder{color:var(--hall-muted);opacity:.85;font-size:12px}
+.hall-input-row button,.landlord-page .hall-input-row button{display:flex;gap:8px;align-items:center;justify-content:center;flex:none;min-height:46px;border:1px solid var(--hall-line);border-radius:4px;padding:6px 14px;background:var(--hall-soft);color:var(--hall-text);font:inherit;font-size:13px;font-weight:700;line-height:1.3;cursor:pointer}
+.hall-input-row .hall-arrow{font-size:17px}
+.hall-input-row input[aria-invalid=true]{border-color:#ca543f}
+.hall-home .hall-empty,.ll-home p.hall-empty{font-size:12px;line-height:1.7;color:var(--hall-muted);margin:12px 0 0}
+.hall-home .hall-recent-link,.hall-home .draw-recent-link{display:flex;gap:12px;align-items:center;min-height:48px;padding:8px 0;margin:0;border:0;border-radius:0;text-decoration:none;color:var(--hall-text);font-size:13px;line-height:1.5}
+.hall-recent-link b{display:block;font-size:13px}.hall-recent-link small{display:block;font-size:11px;color:var(--hall-muted);margin-top:3px}
+.hall-home .draw-recent-link{border-top:1px solid var(--hall-line)}
+.hall-home .draw-recent-link::after{content:'↗';margin-left:auto;font-size:18px}
+.hall-recent:has(.draw-recent-link) .hall-empty{display:none}
+#drawRecent{max-height:170px;overflow:auto;overscroll-behavior:contain}
+.hall-home .hall-help{padding:0;border:1px solid var(--hall-line);border-radius:5px;margin:16px 0 0;background:var(--hall-surface)}
+.hall-help summary{min-height:48px;padding:14px 17px;cursor:pointer;color:var(--hall-text);font-size:13px;font-weight:650}
+.hall-home .hall-help>p,.hall-home .hall-help>ol{font-size:13px;line-height:1.8;margin:0;padding:0 18px 14px;color:var(--hall-muted)}
+.hall-home .hall-help>ol{padding-left:36px}.hall-help li{padding-bottom:6px;color:var(--hall-muted);font-size:13px;line-height:1.8}
+.hall-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:17px 0;color:var(--hall-muted);font-size:11px;line-height:1.6}
+.hall-home .hall-footer a{font-size:11px;min-height:32px;display:flex;align-items:center;text-decoration:none;color:var(--hall-muted);margin:0}
+.hall-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.draw-page .hall-draw-intro{margin-bottom:0}
+.draw-page .hall-draw-intro .hall-facts{margin-bottom:18px}
+.draw-page #drawLobby.hall-home{display:block;background:none;border:0;box-shadow:none;padding:0;max-width:none;border-radius:0}
+.draw-page .hall-mode-picker{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0;border:0;padding:0}
+.draw-page .hall-mode-picker label{position:relative;display:block;min-width:0;border:1px solid var(--hall-line);border-radius:6px;padding:18px;background:var(--hall-surface);color:var(--hall-text);cursor:pointer;transition:background .15s,border-color .15s}
+.draw-page .hall-mode-picker label:has(:checked){border-color:var(--hall-accent);box-shadow:inset 0 0 0 1px var(--hall-accent);background:var(--hall-soft)}
+.hall-mode-picker input{position:absolute;top:18px;right:18px;width:19px;height:19px;margin:0;accent-color:var(--hall-accent)}
+.hall-mode-content{display:grid;grid-template-columns:45px 1fr;column-gap:14px;align-items:center}
+.hall-mode-icon{grid-row:1/3;background:#e4b77d15;border-color:var(--hall-line);color:var(--hall-accent)}
+.hall-mode-content strong{display:block;font-size:19px;font-weight:800;line-height:1.6;padding-right:23px;color:var(--hall-text)}
+.draw-page .hall-mode-content small{display:block;font-size:12px;line-height:1.65;margin:3px 0 0;color:var(--hall-muted)}
+.hall-mode-tag{grid-column:2;justify-self:start;font-size:10px;color:var(--hall-muted);padding-top:8px;letter-spacing:.04em}
+.draw-page .hall-draw-actions{display:flex;align-items:center;gap:12px;margin:12px 0 0;flex-wrap:wrap}
+.draw-page .hall-draw-actions #drawCreate{min-height:48px;border:1px solid #a04731;background:#b95136;color:#fff8ee;border-radius:4px;box-shadow:0 3px 0 #7d382c26;padding:10px 24px;font-size:15px;letter-spacing:.03em}
+.hall-draw-actions>span{font-size:11px;color:var(--hall-muted);margin-right:auto}
+.draw-page #drawLogin{font-size:12px;min-height:44px;border-color:var(--hall-line);color:var(--hall-muted)}
+.draw-page #drawError:empty{display:none}
+.draw-page .hall-draw-intro:has(+ #drawError + #drawLobby[hidden]),.in-draw-room .hall-draw-intro{display:none}
+.hall-home :is(button,a,input,summary):focus-visible,.hall-mode-picker label:has(:focus-visible){outline:2px solid var(--hall-accent);outline-offset:3px}
+@media(hover:hover){.landlord-page .ll-shell .hall-action:hover{border-color:var(--hall-accent);background:var(--hall-soft)}.landlord-page .ll-shell .hall-action-primary:hover{background:#f7dda9}.draw-page .hall-mode-picker label:hover{border-color:var(--hall-accent)}.hall-home a:hover{text-decoration:underline}}
+@media(max-width:760px){
+ .landlord-page:not(.ll-in-room) .ll-shell,.draw-page:not(.in-draw-room) .draw-main{padding:0 14px 14px;margin-top:12px}
+ .hall-breadcrumb{margin-bottom:7px;font-size:10px}.hall-breadcrumb a{font-size:12px}
+ .hall-hero{min-height:190px;padding:24px 20px;border-radius:6px}
+ .hall-hero picture img{object-position:60% 50%}
+ .hall-hero-copy{max-width:75%}.hall-hero .hall-kicker{font-size:10px;margin-bottom:10px;letter-spacing:.1em}
+ .hall-hero h1,.draw-page .hall-hero h1,.ll-home .hall-hero h1{font-size:32px;margin-bottom:12px;letter-spacing:-1px}
+ .hall-hero .hall-hero-copy>p:last-child,.ll-home .hall-hero .hall-hero-copy>p:last-child{font-size:12px;line-height:1.65}
+ .hall-hero-tag{font-size:9px;right:10px;bottom:8px;padding:3px 6px}
+ .ll-hall-hero::before{background:linear-gradient(90deg,#05261cc9,#05261c38 75%,transparent)}
+ .draw-hall-hero::before{background:linear-gradient(90deg,#fff1dbd9,#fff1db65 70%,transparent)}
+ .hall-facts{padding:12px 0;gap:4px;margin-bottom:16px}.hall-facts>span{font-size:10px;gap:5px}.hall-facts b{font-size:17px}
+ .hall-section-heading h2{font-size:16px}.hall-section-heading>span{font-size:10px}
+ .hall-action-grid{gap:9px}.landlord-page .ll-shell .hall-action{min-height:130px;padding:13px;gap:8px;align-items:flex-start;position:relative;flex-direction:column}
+ .hall-action-icon{width:32px;height:32px}.hall-action svg{width:25px;height:25px}
+ .hall-action strong{font-size:17px}.hall-action small{font-size:10px;line-height:1.6;margin-top:3px}.hall-action>.hall-arrow{position:absolute;top:17px;right:13px;font-size:20px}
+ .hall-utility-grid{grid-template-columns:minmax(0,1fr);gap:10px;margin-top:12px}.hall-join,.hall-recent{padding:14px}
+ .hall-join label{margin-bottom:9px;font-size:10px}.hall-join label b{font-size:14px}
+ .hall-input-row button,.landlord-page .hall-input-row button{padding-inline:13px}
+ .hall-home .hall-help{margin-top:12px}.hall-help summary{padding:13px 14px}
+ .hall-footer{gap:6px;font-size:10px;padding:12px 0;flex-wrap:wrap}.hall-home .hall-footer a{font-size:10px}
+ .draw-page .hall-mode-picker{gap:9px}.draw-page .hall-mode-picker label{padding:13px 12px}
+ .hall-mode-picker input{top:15px;right:12px;width:17px;height:17px}
+ .hall-mode-content{display:flex;align-items:flex-start;flex-direction:column;gap:0}
+ .hall-mode-icon{width:32px;height:32px;margin-bottom:7px}.hall-mode-icon svg{width:25px;height:25px}
+ .hall-mode-content strong{font-size:17px;padding:0}.draw-page .hall-mode-content small{font-size:10px;margin-top:5px;line-height:1.7}
+ .hall-mode-tag{padding-top:8px;font-size:9px}
+ .draw-page .hall-draw-actions{display:grid;grid-template-columns:1fr auto;gap:7px 10px;margin-top:10px}
+ .draw-page .hall-draw-actions #drawCreate{grid-column:1/-1;width:100%;min-height:48px;font-size:15px}
+ .hall-draw-actions>span{font-size:10px;line-height:1.5}.draw-page #drawLogin{min-height:36px;font-size:11px;padding:5px 10px}
+ #drawRecent{max-height:140px}
+}
+@media(max-width:360px){.hall-hero{min-height:175px;padding:20px 16px}.hall-hero h1,.draw-page .hall-hero h1,.ll-home .hall-hero h1{font-size:29px}.hall-hero .hall-hero-copy>p:last-child,.ll-home .hall-hero .hall-hero-copy>p:last-child{font-size:11px}.hall-action strong,.hall-mode-content strong{font-size:16px}.hall-section-heading>span{max-width:55%;text-align:right}.hall-hero-tag{font-size:8px}.hall-facts>span{font-size:9px}.hall-facts b{font-size:15px}}
+@media(prefers-reduced-motion:reduce){.hall-action,.hall-mode-picker label{transition:none!important}}
