@@ -102,6 +102,45 @@
 @keyframes mj-discard-in{from{opacity:.3;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
 @media(prefers-reduced-motion:reduce){.mahjong-page .mj-tile{transition:none}.mj-tile.is-entering>svg,.mj-river-tile.is-entering{animation:none}}
 
+/* Side hands stay inside the board; expose two compact meld groups per row. */
+.mj-seat:is([data-side=left],[data-side=right]){top:18%;width:13%;height:76%;gap:5px;align-items:center;justify-content:flex-start}
+.mj-seat:is([data-side=left],[data-side=right]) .mj-opponent{width:100%;max-width:100%;gap:2px}
+.mj-seat:is([data-side=left],[data-side=right]) .table-avatar{width:clamp(30px,calc(10 * var(--game-vh)),60px);border-radius:9px}
+.mj-seat:is([data-side=left],[data-side=right]) .mj-rack{top:50%;gap:1px}
+.mj-rack i{flex:none;width:clamp(6px,calc(.95 * var(--game-vw)),13px)}
+.mj-seat[data-side=left] .mj-rack{left:calc(100% + 5px)}.mj-seat[data-side=right] .mj-rack{right:calc(100% + 5px)}
+.mj-seat:is([data-side=left],[data-side=right]) .mj-mini-melds{position:static;width:100%;max-width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:3px}
+.mj-mini-melds>span{display:flex;justify-content:center;min-width:0;gap:1px}
+.mj-seat:is([data-side=left],[data-side=right]) .mj-mini-melds svg{width:calc((100% - 3px)/4);min-width:0;height:auto;flex:0 1 auto}
+.mj-seat[data-side=top]{max-width:75%}.mj-seat[data-side=top] .mj-mini-melds{position:static;left:auto;top:auto;width:clamp(54px,calc(14 * var(--game-vw)),132px);max-width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px}
+.mj-seat[data-side=top] .mj-mini-melds:empty{display:none}.mj-seat[data-side=top] .mj-mini-melds svg{width:calc((100% - 3px)/4);min-width:0;flex:0 1 auto}
+.mahjong-page .mj-river{width:var(--pile-width,100px);height:var(--pile-height,55px);min-width:0;min-height:0;flex-direction:column;gap:2px;padding:3px;border:1px solid #d6dfb32b;border-radius:4px;background:#173d352e;overflow:visible;--pile-cols:6;--pile-tile:inherit}
+.mj-river[data-side=top],.mj-river[data-side=bottom]{left:50%;transform:translateX(-50%)}
+.mj-river[data-side=top]{top:34px;bottom:auto}.mj-river[data-side=bottom]{top:auto;bottom:2px}
+.mj-river[data-side=left],.mj-river[data-side=right]{top:50%;transform:translateY(-50%);height:var(--pile-height,55px);width:var(--pile-width,100px)}
+.mj-river[data-side=left]{left:16%;right:auto}.mj-river[data-side=right]{right:16%;left:auto}
+.mj-river-tiles,.mj-river:is([data-side=left],[data-side=right]) .mj-river-tiles{grid-template-columns:repeat(6,var(--pile-cell,12px));grid-auto-rows:var(--pile-cell,12px);align-items:center;justify-items:center;gap:1px}
+.mj-river .mj-river-tile{width:var(--pile-tile);height:calc(var(--pile-tile)*1.4)}
+.mj-river:is([data-side=left],[data-side=right]) .mj-river-tile{width:calc(var(--pile-tile)*1.4);height:var(--pile-tile)}
+.mj-river-label{display:block!important;font-size:8px;line-height:10px;flex:none}
+.mj-river-detail>div{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;width:min(100%,360px)}
+.mj-river-detail>div>span{display:flex;justify-content:center}.mj-river-detail svg{width:min(100%,42px);height:auto}
+.mj-chat{top:44px;bottom:6px;left:max(9px,var(--game-inset-left));right:auto;width:min(320px,40%);grid-template-rows:auto minmax(0,1fr) auto auto auto auto auto;gap:4px}
+.mj-sticker-picker{min-height:0}.mj-sticker-picker>summary{cursor:pointer;min-height:32px;font-size:12px;display:flex;align-items:center;justify-content:space-between;padding:0 5px;border:1px solid #78a78e53;border-radius:4px;list-style:none;background:#285247}
+.mj-sticker-picker summary small{font-size:10px;font-weight:400;color:#bfd3c9}.mj-sticker-picker[open]>summary{margin-bottom:4px}
+.mj-emoji{grid-template-columns:repeat(8,minmax(0,1fr));gap:2px;max-height:85px;overflow:auto}
+.mahjong-page .mj-emoji button{min-width:0;min-height:36px;aspect-ratio:1;padding:0;background:#e5e9cc17;border:0}
+.mj-sticker{display:block;width:100%;aspect-ratio:1;background-image:url('/assets/mahjong-chat-stickers-v1.webp');background-size:400% 400%;background-position:var(--sticker-x) var(--sticker-y);background-repeat:no-repeat;flex:none;pointer-events:none}
+.mj-chat-reaction{background:transparent!important;padding:0;gap:3px;align-items:end}.mj-chat-reaction .mj-sticker{width:64px}.mj-chat-reaction>span:last-child{font-size:10px;padding-bottom:4px}
+.mj-voice-tools{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px}
+.mahjong-page #mjVoiceRecord{min-height:40px;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;font-size:12px;font-weight:700;background:#4a7260}
+.mahjong-page #mjVoiceRecord.is-recording{background:#b8d2b3;color:#163b30}.mahjong-page #mjVoiceRecord.is-cancel{background:#9e5146;color:#fff4e9}
+.mahjong-page #mjVoiceAuto{font-size:10px;padding-inline:6px;min-width:0;background:transparent}.mahjong-page #mjVoiceAuto[aria-pressed=false]{color:#a4b7ad}
+.mahjong-page .mj-voice-message{display:block;min-height:36px;min-width:100px;text-align:left;font-size:12px;cursor:pointer;background:#416c57;border-color:#a3bf8d55;color:#f7f0cc}
+.mahjong-page .mj-voice-message.is-playing{background:#d4d8a6;color:#15382c}.mj-chat-voice{padding:0;background:transparent!important}
+.mahjong-page #mjVoiceRetry{font-size:11px;min-height:30px;background:#725739;color:#fff3d2}
+@media(orientation:landscape) and (max-height:360px),(orientation:portrait) and (pointer:coarse) and (max-width:360px){.mj-seat:is([data-side=left],[data-side=right]){top:12%;height:85%;gap:3px}.mj-seat:is([data-side=left],[data-side=right]) .table-avatar{width:28px}.mj-opponent-info strong{font-size:9px}.mj-opponent-info small{font-size:8px}.mj-river[data-side=top]{top:28px}.mj-emoji{max-height:60px}.mahjong-page .mj-emoji button{min-height:27px}.mj-chat-reaction .mj-sticker{width:50px}}
+
 /* The hall scrolls naturally; only an occupied table uses the rotated canvas. */
 .mahjong-page:not(.mj-in-table){overflow-x:clip}
 .mj-main{max-width:1120px;padding:24px 24px 32px}

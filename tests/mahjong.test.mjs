@@ -71,7 +71,8 @@ async function fixture(t){
    t.after(async()=>{controller.abort();await pump;});
    return {events,close(){controller.abort();},next(test=()=>true){const index=events.findIndex(test);if(index>=0)return Promise.resolve(events.splice(index,1)[0]);return new Promise((resolve,reject)=>{const w={resolve,test,timer:setTimeout(()=>{waiters.splice(waiters.indexOf(w),1);reject(Error('Missing live Mahjong event'));},2500)};waiters.push(w);});}};
  };
- return {db,call,create,mutate,start,read,write,advance,restart,connect,sweep:()=>game.sweep()};
+ const raw=(route,user=1,headers={})=>fetch('http://127.0.0.1:'+server.address().port+'/api/mahjong'+route,{headers:{'X-User':String(user),...headers}});
+ return {db,call,raw,create,mutate,start,read,write,advance,restart,connect,sweep:()=>game.sweep()};
 }
 test('API authentication, CSRF, host-only rules, four-seat capacity and ready resets',async t=>{
  const f=await fixture(t);assert.equal((await f.call('',{user:0})).status,401);assert.equal((await f.call('',{data:{},csrf:'wrong'})).status,403);const token=await f.create();for(const user of [2,3,4])assert.equal((await f.mutate(token,'join',{},user)).status,200);assert.equal((await f.mutate(token,'join',{},5)).status,409);assert.equal((await f.mutate(token,'rules',{rules:{base:2}},2)).status,403);assert.equal((await f.mutate(token,'start',{fillBots:true})).status,409);
@@ -167,4 +168,33 @@ test('live streams revoke departed or disabled players, expire rooms and cap dup
  f.restart();
  const second=await f.create();await f.mutate(second,'join',{},2);const banned=await f.connect(second,2);await banned.next();
  f.db.prepare('UPDATE site_users SET disabled=1 WHERE id=2').run();f.sweep();assert.equal((await banned.next(e=>e.type==='revoked')).data.status,401);
+});
+
+test('pong announcements occur only after successful resolution, include bots and survive a claimed discard',()=>{
+ const r=force(table(),[[0],[0,0,4],[],[]]);playAction(r,0,{type:'discard',tile:0},1100);assert.deepEqual(r.sounds.map(e=>e.kind),['discard']);
+ playAction(r,1,{type:'claim',choice:'pong'},1200);assert.deepEqual(r.sounds.map(e=>e.kind),['discard','pong']);assert.deepEqual(r.rivers[0],[]);assert.equal(r.sounds[1].seat,1);assert.equal(roomView(r,2,'token',1300).room.sounds[1].kind,'pong');assert.equal(roomView(r,99,'token',1300).preview.sounds,undefined);
+ assert.throws(()=>playAction(r,1,{type:'claim',choice:'pong'},1300));assert.equal(r.sounds.length,2);
+ const bot=force(table(),[[4],[4,4,5],[],[]]);bot.seats[1].bot=true;playAction(bot,0,{type:'discard',tile:4},1100);tick(bot,2100);assert.equal(bot.sounds.at(-1).kind,'pong');
+ const cancelled=force(table({selfDrawOnly:false}),[[2],[2,2,4],[0,1,9,10,11,12,13,14,18,19,20,27,27],[]]);playAction(cancelled,0,{type:'discard',tile:2},1100);playAction(cancelled,1,{type:'claim',choice:'pong'},1200);assert.equal(cancelled.sounds.filter(e=>e.kind==='pong').length,0);playAction(cancelled,2,{type:'claim',choice:'hu'},1300);assert.equal(cancelled.sounds.filter(e=>e.kind==='pong').length,0);
+});
+
+test('private voice messages bind the sender, retry once, persist and support bounded authenticated audio reads',async t=>{
+ const f=await fixture(t),token=await f.create();await f.mutate(token,'join',{},2);
+ const audio=Buffer.concat([Buffer.from([0x1a,0x45,0xdf,0xa3]),Buffer.alloc(2048,7)]),message={kind:'voice',mime:'audio/webm;codecs=opus',duration:1200,audio:audio.toString('base64'),opId:op(),name:'forged'};
+ assert.equal((await f.call('/'+token+'/chat',{user:3,data:message})).status,403);assert.equal((await f.call('/'+token+'/chat',{user:2,data:message,csrf:'bad'})).status,403);
+ const sent=await f.call('/'+token+'/chat',{user:2,data:message});assert.equal(sent.status,200);const item=sent.data.chat.at(-1);assert.equal(item.name,'user2');assert.equal(item.duration,1200);assert.equal(item.audio,undefined);assert.match(item.url,/\/voice\/\d+$/);
+ assert.equal((await f.call('/'+token+'/chat',{user:2,data:message})).data.chat.length,1);assert.equal((await f.call('/'+token+'/chat',{user:2,data:{...message,duration:1400}})).status,409);assert.equal(f.db.prepare('SELECT COUNT(*) n FROM mahjong_voice').get().n,1);
+ const route=item.url.replace('/api/mahjong','');assert.equal((await f.raw(route,0)).status,401);assert.equal((await f.raw(route,3)).status,403);
+ const response=await f.raw(route);assert.equal(response.status,200);assert.equal(response.headers.get('content-type'),'audio/webm');assert.equal(response.headers.get('cache-control'),'no-store');assert.deepEqual(Buffer.from(await response.arrayBuffer()),audio);
+ const partial=await f.raw(route,2,{Range:'bytes=4-19'});assert.equal(partial.status,206);assert.equal(partial.headers.get('content-range'),'bytes 4-19/'+audio.length);assert.deepEqual(Buffer.from(await partial.arrayBuffer()),audio.subarray(4,20));assert.equal((await f.raw(route,2,{Range:'bytes=999999-'})).status,416);
+ f.restart();assert.equal((await f.raw(route,2)).status,200);await f.mutate(token,'leave',{},2);assert.equal((await f.raw(route,2)).status,403);await f.mutate(token,'close');assert.equal((await f.raw(route)).status,410);
+});
+
+test('voice limits reject oversized, malformed and long clips and remove audio when chat history rotates',async t=>{
+ const f=await fixture(t),token=await f.create(),message={kind:'voice',mime:'audio/ogg',duration:1000,audio:Buffer.concat([Buffer.from('OggS'),Buffer.alloc(80)]).toString('base64')};
+ for(const bad of [{duration:30001},{duration:100},{mime:'text/html'},{audio:'<script>'},{audio:Buffer.alloc(100).toString('base64')},{audio:'A'.repeat(710000)}])assert.ok((await f.call('/'+token+'/chat',{data:{...message,...bad,opId:op()}})).status>=400);
+ f.advance(60001);const sent=await f.call('/'+token+'/chat',{data:{...message,opId:op()}});assert.equal(sent.status,200);const route=sent.data.chat[0].url.replace('/api/mahjong','');
+ for(let i=0;i<48;i++){f.advance(850);assert.equal((await f.call('/'+token+'/chat',{data:{kind:'text',text:'消息'+i,opId:op()}})).status,200);}
+ assert.equal(f.db.prepare('SELECT COUNT(*) n FROM mahjong_voice').get().n,0);assert.equal((await f.raw(route)).status,404);
+ for(const text of ['love','proud','shock','cry','please','angry','sleepy','hurry','nice','shy']){f.advance(850);assert.equal((await f.call('/'+token+'/chat',{data:{kind:'emoji',text,opId:op()}})).status,200);}
 });

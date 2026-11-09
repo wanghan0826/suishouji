@@ -13,13 +13,14 @@
   function icon(key){const svg=document.createElementNS(svgNS,'svg'),p=document.createElementNS(svgNS,'path');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('aria-hidden','true');p.setAttribute('d',icons[key]);svg.append(p);return svg;}
   function buttonIcon(id,key){$(id).querySelector('[data-mj-icon]').replaceChildren(icon(key));}
   document.querySelectorAll('[data-mj-icon]').forEach(n=>n.append(icon(n.dataset.mjIcon)));
-  const emoji={hello:'打招呼',laugh:'大笑',clap:'鼓掌',think:'想一想',wow:'好牌！',again:'再来一局'};
-  let chatLast=null,chatUnread=false,chatPending=null,chatBusy=false;
-  for(const [id,label]of Object.entries(emoji)){const b=el('button');b.type='button';b.title=label;b.setAttribute('aria-label',label);b.append(icon(id));b.onclick=()=>sendChat('emoji',id);$('mjEmoji').append(b);}
+  const emoji={hello:'打招呼',laugh:'大笑',clap:'鼓掌',think:'想一想',wow:'好牌！',again:'再来一局',love:'比心',proud:'得意',shock:'震惊',cry:'哭哭',please:'拜托',angry:'生气',sleepy:'困了',hurry:'快出牌',nice:'打得好',shy:'害羞'};
+  let chatLast=null,chatUnread=false,chatPending=null,chatBusy=false,voiceChat=null;
+  function sticker(id){const n=el('span','mj-sticker'),index=Object.keys(emoji).indexOf(id);n.style.setProperty('--sticker-x',(index%4)*100/3+'%');n.style.setProperty('--sticker-y',Math.floor(index/4)*100/3+'%');n.setAttribute('aria-hidden','true');return n;}
+  for(const [id,label]of Object.entries(emoji)){const b=el('button');b.type='button';b.title=label;b.setAttribute('aria-label',label);b.append(sticker(id));b.onclick=()=>sendChat('emoji',id);$('mjEmoji').append(b);}
   function chatOpen(open,focus=false){
     $('mjChat').hidden=!open;$('mjChatToggle').setAttribute('aria-expanded',String(open));
     if(open){chatUnread=false;const list=$('mjChatHistory');list.scrollTop=list.scrollHeight;if(focus)$('mjChatClose').focus();}
-    else {$('mjChatInput').blur();if(focus)$('mjChatToggle').focus();}
+    else {voiceChat?.cancelRecording();$('mjChatInput').blur();if(focus)$('mjChatToggle').focus();}
     $('mjChatToggle').lastElementChild.hidden=!chatUnread;
   }
   function syncChat(history){
@@ -29,21 +30,23 @@
     if(chatLast!==null&&$('mjChat').hidden&&history.some(m=>m.id>chatLast&&m.seat!==room?.me))chatUnread=true;
     chatLast=newest;$('mjChatToggle').lastElementChild.hidden=!chatUnread;
     const items=history.map(m=>{const li=el('div','mj-chat-line'+(m.seat===room?.me?' is-mine':'')),body=el('span','mj-chat-body');li.dataset.id=m.id;li.append(el('b','',m.name),body);
-      if(m.kind==='emoji'&&Object.hasOwn(emoji,m.text)){body.classList.add('mj-chat-reaction');body.append(icon(m.text),el('span','',emoji[m.text]));}else{body.textContent=m.text;body.dir='auto';}return li;});
+      if(m.kind==='voice'){body.classList.add('mj-chat-voice');body.append(voiceChat.message(m));}
+      else if(m.kind==='emoji'&&Object.hasOwn(emoji,m.text)){body.classList.add('mj-chat-reaction');body.append(sticker(m.text),el('span','',emoji[m.text]));}else{body.textContent=m.text;body.dir='auto';}return li;});
     const first=Number(list.firstElementChild?.dataset.id||0),retained=new Set(history.map(m=>m.id));let removed=0;
     for(const old of [...list.children])if(!retained.has(Number(old.dataset.id))){removed+=old.getBoundingClientRect().height+6;old.remove();}
     const displayed=Number(list.lastElementChild?.dataset.id||first-1);
     if(items.length)list.append(...items.filter(li=>Number(li.dataset.id)>displayed));
     else list.replaceChildren(el('p','mj-chat-empty','还没有消息，和牌友打个招呼吧。'));
     if(atEnd||!previousHeight)list.scrollTop=list.scrollHeight;else list.scrollTop=Math.max(0,previousTop-removed);
+    voiceChat?.sync(history);
   }
-  function resetChat(){chatLast=null;chatUnread=false;chatPending=null;chatBusy=false;chatOpen(false);$('mjChatHistory').replaceChildren();$('mjChatInput').value='';$('mjChatStatus').textContent='';$('mjChatSend').disabled=false;}
-  async function sendChat(kind,text){
+  function resetChat(){voiceChat?.reset();chatLast=null;chatUnread=false;chatPending=null;chatBusy=false;chatOpen(false);$('mjChatHistory').replaceChildren();$('mjChatInput').value='';$('mjChatStatus').textContent='';$('mjChatSend').disabled=false;}
+  async function sendChat(kind,text,voice){
     if(!room||room.phase==='closed'||chatBusy)return;
     if(kind==='text'&&(!text||[...text].length>80)){$('mjChatStatus').textContent='请输入 1–80 个字符。';return;}
-    if(chatPending?.kind!==kind||chatPending?.text!==text)chatPending={kind,text,opId:operationId()};
+    if(chatPending?.kind!==kind||chatPending?.text!==text||kind==='voice'&&chatPending.audio!==voice.audio)chatPending={kind,text,...voice,opId:voice?.opId||operationId()};
     const revision=epoch;chatBusy=true;$('mjChatSend').disabled=true;$('mjChatStatus').textContent='';
-    try {const value=await api('/'+token+'/chat',chatPending);if(room?.phase!=='closed')syncChat(value.chat);chatPending=null;if(kind==='text'&&$('mjChatInput').value.trim()===text)$('mjChatInput').value='';}
+    try {const value=await api('/'+token+'/chat',chatPending);if(room&&room.phase!=='closed')syncChat(value.chat);chatPending=null;if(kind==='text'&&$('mjChatInput').value.trim()===text)$('mjChatInput').value='';return true;}
     catch(e){if(revision===epoch){if([404,410].includes(e.status)){endRoom(e.message);return;}$('mjChatStatus').textContent=e.message;if(e.status&&e.status!==429)chatPending=null;}}
     finally{if(revision===epoch){chatBusy=false;$('mjChatSend').disabled=false;}}
   }
@@ -58,41 +61,47 @@
     $('mjFullscreen').querySelector('span:last-child').textContent=active?'退出':'全屏';
     $('mjModeNotice').textContent=unavailable?'浏览器暂时无法隐藏工具栏，牌桌仍可横向使用。':'';
   });
-  const voiceCues=[[0,12236],[12236,12766],[25002,13435],[38437,14211],[52648,11453],[64101,12742],[76843,13514],[90357,12036],[102393,12544],[114937,13600],[128537,13624],[142161,15371],[157532,14346],[171878,13453],[185331,13698],[199029,13983],[213012,13693],[226705,14451],[241156,13388],[254544,13686],[268230,15266],[283496,15376],[298872,12997],[311869,14180],[326049,14285],[340334,13403],[353737,13564],[367301,12337],[379638,12851],[392489,14244],[406733,13411],[420144,13274],[433418,13978],[447396,12322]],voiceAsset='/assets/mahjong-female-2b1ac661.wav',voiceRate=24000;
+  const voiceCues=[[0,12236],[12236,12766],[25002,13435],[38437,14211],[52648,11453],[64101,12742],[76843,13514],[90357,12036],[102393,12544],[114937,13600],[128537,13624],[142161,15371],[157532,14346],[171878,13453],[185331,13698],[199029,13983],[213012,13693],[226705,14451],[241156,13388],[254544,13686],[268230,15266],[283496,15376],[298872,12997],[311869,14180],[326049,14285],[340334,13403],[353737,13564],[367301,12337],[379638,12851],[392489,14244],[406733,13411],[420144,13274],[433418,13978],[447396,12322],[459718,9101]],voiceAsset='/assets/mahjong-female-pong-185d458e.wav',voiceRate=24000;
   let voiceOn=true,voiceId=null,voiceContext=null,voiceBuffer=null,voiceLoading=null,voiceCurrent=null,voiceQueue=[],voiceReading=false,voiceGeneration=0;
   try{voiceOn=localStorage.getItem('sj-mahjong-voice')!=='off';}catch{}
   function voiceUi(){buttonIcon('mjSound',voiceOn?'sound':'muted');$('mjSound').setAttribute('aria-pressed',String(voiceOn));$('mjSound').title=voiceOn?'关闭女声报牌':'开启女声报牌';}
-  function voiceStop(){voiceGeneration++;voiceQueue=[];voiceReading=false;if(voiceCurrent){try{voiceCurrent.stop();}catch{}voiceCurrent=null;}}
+  function voiceStop(){voiceGeneration++;voiceQueue=[];voiceReading=false;if(voiceCurrent){try{voiceCurrent.stop();}catch{}voiceCurrent=null;}voiceChat?.duck(false);}
   function voiceReset(){voiceId=null;voiceStop();}
-  function voicePrepare(unlock=false){
-    if(!voiceOn||!room||document.hidden)return;
+  function prepareAudio(unlock=false){
     const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;
     try{
       voiceContext??=new Audio({latencyHint:'interactive'});
       if(unlock&&voiceContext.state!=='running')voiceContext.resume().then(playVoice).catch(()=>{});
+    }catch{}return voiceContext;
+  }
+  function voicePrepare(unlock=false){
+    if(!voiceOn||!room||document.hidden)return;
+    try{
+      if(!prepareAudio(unlock))return;
       if(!voiceBuffer&&!voiceLoading)voiceLoading=fetch(voiceAsset).then(r=>{if(!r.ok)throw Error();return r.arrayBuffer();}).then(b=>voiceContext.decodeAudioData(b)).then(b=>{voiceBuffer=b;playVoice();}).catch(()=>{}).finally(()=>{voiceLoading=null;});
     }catch{}
   }
   function playVoice(){
     if(!voiceOn||document.hidden||!voiceBuffer||voiceReading||voiceContext.state!=='running')return;
     voiceQueue=voiceQueue.filter(e=>Date.now()-e.queued<1800);const event=voiceQueue.shift();if(!event)return;
-    const cue=voiceCues[event.tile];if(!cue)return;
+    const cue=voiceCues[event.kind==='pong'?34:event.tile];if(!cue)return;
     const source=voiceContext.createBufferSource(),gain=voiceContext.createGain(),rev=voiceGeneration;
     source.buffer=voiceBuffer;gain.gain.value=.8;source.connect(gain);gain.connect(voiceContext.destination);
-    voiceCurrent=source;voiceReading=true;source.onended=()=>{source.disconnect();gain.disconnect();if(rev===voiceGeneration){voiceCurrent=null;voiceReading=false;playVoice();}};
+    voiceCurrent=source;voiceReading=true;voiceChat?.duck(true);source.onended=()=>{source.disconnect();gain.disconnect();if(rev===voiceGeneration){voiceCurrent=null;voiceReading=false;voiceChat?.duck(false);playVoice();}};
     source.start(0,cue[0]/voiceRate,cue[1]/voiceRate);
   }
   function syncVoice(r){
-    const stream=r.discards||[],latest=stream.at(-1)?.id||0;
+    const stream=r.sounds||r.discards||[],latest=stream.at(-1)?.id||0;
     if(voiceId===null){voiceId=latest;return;}
     if(latest<=voiceId)return;
     if(voiceOn&&voiceContext&&!document.hidden){const now=Date.now();voiceQueue.push(...stream.filter(e=>e.id>voiceId&&e.handNo===r.handNo&&r.serverNow-e.at<1800).map(e=>({...e,queued:now-Math.max(0,r.serverNow-e.at)})));voiceQueue=voiceQueue.slice(-2);playVoice();}
     voiceId=latest;
   }
   voiceUi();
+  voiceChat=window.createMahjongVoiceChat({getRoom:()=>room,getContext:()=>prepareAudio(true),send:data=>sendChat('voice','',data)});
   $('mjSound').onclick=()=>{voiceOn=!voiceOn;try{localStorage.setItem('sj-mahjong-voice',voiceOn?'on':'off');}catch{}voiceUi();if(voiceOn)voicePrepare(true);else voiceStop();};
-  $('mjTable').addEventListener('pointerdown',e=>{if(!e.target.closest('#mjSound'))voicePrepare(true);},true);
-  $('mjTable').addEventListener('click',e=>{if(!e.target.closest('#mjSound'))voicePrepare(true);},true);
+  $('mjTable').addEventListener('pointerdown',e=>{voiceChat.unlock();if(!e.target.closest('#mjSound'))voicePrepare(true);},true);
+  $('mjTable').addEventListener('click',e=>{voiceChat.unlock();if(!e.target.closest('#mjSound'))voicePrepare(true);},true);
   document.addEventListener('visibilitychange',()=>{if(document.hidden)voiceStop();});
   const tileTemplates=new Map();
   $('mjTable').addEventListener('animationend',e=>e.target.closest('.mj-tile,.mj-river-tile')?.classList.remove('is-entering'));
@@ -242,14 +251,10 @@
   }
   function scheduleRivers(){if(!riverFrame)riverFrame=requestAnimationFrame(()=>{riverFrame=0;fitRivers();});}
   function fitRivers(){
-    const sizes=[...$('mjRivers').children].filter(box=>!box.hidden).map(box=>{
-      const sideways=['left','right'].includes(box.dataset.side),count=box.querySelectorAll('.mj-river-tile').length,cols=sideways?4:10,rows=Math.max(1,Math.ceil(count/cols));
-      const widthLimit=(box.clientWidth-6-(cols-1))/cols/(sideways?1.4:1);
-      const dense=Math.min(widthLimit,(box.clientHeight-18-(rows-1))/rows/(sideways?1:1.4))<11;
-      const size=Math.max(2,Math.min(28,widthLimit,(box.clientHeight-(dense?6:18)-(rows-1))/rows/(sideways?1:1.4)));
-      return {box,dense,size,cols};
-    });
-    for(const {box,dense,size,cols}of sizes){box.classList.toggle('is-dense',dense);box.style.setProperty('--pile-tile',size+'px');box.style.setProperty('--pile-cols',cols);}
+    const boxes=[...$('mjRivers').children],board=$('mjBoard'),rows=Math.max(3,...boxes.map(b=>Math.ceil(b.querySelectorAll('.mj-river-tile').length/6))),available=Math.max(40,(board.clientHeight-36-$('mjCompass').clientHeight-18)/2);
+    const size=Math.max(3,Math.min(22,(board.clientWidth*.20-14)/8.4,(available-23-(rows-1))/rows/1.4)),cell=size*1.4;
+    board.style.setProperty('--pile-tile',size+'px');board.style.setProperty('--pile-cell',cell+'px');board.style.setProperty('--pile-width',(cell*6+14)+'px');board.style.setProperty('--pile-height',(cell*rows+rows+21)+'px');
+    for(const box of boxes){box.classList.remove('is-dense');box.style.setProperty('--pile-cols','6');}
   }
   new ResizeObserver(scheduleRivers).observe($('mjBoard'));
   function paintRivers(){

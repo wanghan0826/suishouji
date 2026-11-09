@@ -1,0 +1,8 @@
+// Append a short call to the 34-name female voice sprite. Requires FFmpeg.
+import fs from 'node:fs';import {spawnSync} from 'node:child_process';import {createHash} from 'node:crypto';import {fileURLToPath} from 'node:url';
+const base=fs.readFileSync(fileURLToPath(new URL('../public/assets/mahjong-female-2b1ac661.wav',import.meta.url))),rate=base.readUInt32LE(24);
+const result=spawnSync(process.argv[3]||'ffmpeg',['-v','error','-i',process.argv[2],'-f','s16le','-ar',String(rate),'-ac','1','pipe:1'],{maxBuffer:1024*1024,windowsHide:true});if(result.status!==0)throw Error('Unable to decode pong call');
+const samples=Array.from({length:result.stdout.length/2},(_,i)=>result.stdout.readInt16LE(i*2)),peak=Math.max(...samples.map(Math.abs)),threshold=Math.max(45,peak*.006),first=samples.findIndex(v=>Math.abs(v)>threshold),last=samples.findLastIndex(v=>Math.abs(v)>threshold);
+if(first<0||last-first<2400)throw Error('Pong call is empty');const start=Math.max(0,first-360),end=Math.min(samples.length,last+1440),length=end-start,clip=Buffer.alloc(length*2);
+for(let i=0;i<length;i++)clip.writeInt16LE(Math.round(samples[start+i]*Math.min(3,26000/peak)*Math.min(1,i/144,(length-i-1)/144)),i*2);
+const cue=[(base.length-44)/2,length],audio=Buffer.concat([base,clip]);audio.writeUInt32LE(audio.length-8,4);audio.writeUInt32LE(audio.length-44,40);const file='mahjong-female-pong-'+createHash('sha256').update(audio).digest('hex').slice(0,8)+'.wav';fs.writeFileSync(fileURLToPath(new URL('../public/assets/'+file,import.meta.url)),audio);console.log(JSON.stringify({file,rate,cue,bytes:audio.length}));

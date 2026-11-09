@@ -24,9 +24,9 @@
   <div id="mjOpponents" class="mj-opponents"></div><div id="mjLobby" class="mj-lobby" hidden></div>
  </div>
  <div id="mjResult" class="mj-result" hidden></div>
- <aside class="mj-chat" id="mjChat" aria-labelledby="mjChatTitle" hidden><header><div><strong id="mjChatTitle">同桌聊天</strong><small>仅本桌入座玩家可见</small></div><button id="mjChatClose" type="button" aria-label="关闭聊天"><span data-mj-icon="close"></span></button></header><div id="mjChatHistory" class="mj-chat-history" role="log" aria-label="本桌聊天消息" aria-live="polite"></div><div id="mjEmoji" class="mj-emoji" role="group" aria-label="快捷表情"></div><form id="mjChatForm" class="mj-chat-form"><input id="mjChatInput" type="text" maxlength="160" enterkeyhint="send" autocomplete="off" aria-label="聊天文字，最多80个字符" placeholder="说两句…"><button id="mjChatSend" type="submit">发送</button></form><p id="mjChatStatus" role="status"></p></aside>
+ 
 </div>
-<div class="mj-playbar"><p id="mjTurnHint" role="status"></p></div>
+<aside class="mj-chat" id="mjChat" aria-labelledby="mjChatTitle" hidden><header><div><strong id="mjChatTitle">同桌聊天</strong><small>仅本桌入座玩家可见</small></div><button id="mjChatClose" type="button" aria-label="关闭聊天"><span data-mj-icon="close"></span></button></header><div id="mjChatHistory" class="mj-chat-history" role="log" aria-label="本桌聊天消息" aria-live="polite"></div><details class="mj-sticker-picker"><summary>表情 <small>16个原创表情</small></summary><div id="mjEmoji" class="mj-emoji" role="group" aria-label="快捷表情"></div></details><div class="mj-voice-tools"><button id="mjVoiceRecord" type="button">按住说话</button><button id="mjVoiceAuto" type="button" aria-pressed="true">自动播放：开</button></div><button id="mjVoiceRetry" type="button" hidden>重发上一条语音</button><form id="mjChatForm" class="mj-chat-form"><input id="mjChatInput" type="text" maxlength="160" enterkeyhint="send" autocomplete="off" aria-label="聊天文字，最多80个字符" placeholder="说两句…"><button id="mjChatSend" type="submit">发送</button></form><p id="mjChatStatus" role="status"></p></aside><div class="mj-playbar"><p id="mjTurnHint" role="status"></p></div>
 <div id="mjActions" class="mj-actions"></div>
 <div class="mj-hand-area"><div class="mj-hand-label"><strong id="mjMyName"></strong><span id="mjSelection">点选手牌，再确认出牌</span></div><div class="mj-hand-row"><div id="mjHand" class="mj-hand" role="group" aria-label="我的手牌"></div><div class="mj-my-melds" id="mjMyMelds"></div></div><button id="mjDiscard" class="mj-primary" disabled>选择手牌</button></div>
 <p class="mj-table-message" id="mjTableMessage" role="alert"></p></section>
@@ -54,4 +54,4 @@
     <label class="appearance-option"><span>背景图片轮播<small>每 12 秒更换一张帖子配图，关闭后固定当前图片</small></span><input id="appearanceSlideshow" type="checkbox"></label>
   </div>
   <p class="appearance-state" id="appearanceState" role="status"></p><p class="appearance-saved" id="appearanceSaved">选择会自动保存在当前浏览器</p>
-</dialog><script src="/interface-icons.js"></script><script src="/user-auth.js"></script><script src="/social-inbox.js"></script><script src="/touch-ui.js"></script><script src="/game-landscape.js"></script><script src="/mahjong.js"></script></body></html>
+</dialog><script src="/interface-icons.js"></script><script src="/user-auth.js"></script><script src="/social-inbox.js"></script><script src="/touch-ui.js"></script><script src="/game-landscape.js"></script><script src="/mahjong-chat.js"></script><script src="/mahjong.js"></script></body></html>
