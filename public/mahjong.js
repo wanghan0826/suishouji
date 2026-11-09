@@ -102,12 +102,29 @@
     if(t>=27){node('text',{x:20,y:35,'text-anchor':'middle','font-size':29,'font-weight':700,'font-family':'KaiTi, STKaiti, Microsoft YaHei, serif',fill:t===31?'#b34535':t===32?'#267357':'#233e4a'},name(t));return svg;}
     const n=t%9+1,suit=Math.floor(t/9);
     if(suit===0){node('text',{x:20,y:23,'text-anchor':'middle','font-size':22,'font-weight':700,fill:'#273e49'},['一','二','三','四','五','六','七','八','九'][n-1]);node('text',{x:20,y:44,'text-anchor':'middle','font-size':20,'font-weight':700,fill:'#b34535'},'万');return svg;}
-    if(suit===2&&n===1){node('path',{d:'M7 36q4-16 13-14 0-9 6-11 6 0 6 6l4 1-5 3q-3 13-15 12l-5 9 1-9z',fill:'#267357'});node('path',{d:'M15 29q5-8 11-7-2 7-11 7',fill:'#e5d79e'});node('circle',{cx:28,cy:16,r:1.4,fill:'#f8f3dd'});node('path',{d:'M18 33l-3 5m7-6-1 6',stroke:'#b34535','stroke-width':1.6});return svg;}
+    if(suit===2){
+      const layouts={1:[[20,25]],2:[[12,25],[28,25]],3:[[20,14],[11,35],[29,35]],4:[[11,14],[29,14],[11,36],[29,36]],5:[[10,12],[30,12],[20,25],[10,38],[30,38]],6:[[10,15],[20,15],[30,15],[10,35],[20,35],[30,35]],7:[[10,11],[20,11],[30,11],[11,27],[29,27],[11,41],[29,41]],8:[[8,15],[16,15],[24,15],[32,15],[8,35],[16,35],[24,35],[32,35]],9:[[10,11],[20,11],[30,11],[10,25],[20,25],[30,25],[10,39],[20,39],[30,39]]};
+      const height=n<=2?30:n<=4?17:n===6||n===8?17:11.5,width=n===1?8:n<=4?5.6:n===8?4.3:4.9;
+      svg.dataset.suit='bamboo';svg.dataset.rank=n;
+      for(const [i,[x,y]]of layouts[n].entries()){
+        const red=n===5&&i===2||n===7&&i<3||n===9&&i%3===1;
+        const body=red?'#b94432':'#17774f',edge=red?'#803427':'#0e5138',light=red?'#e27c58':'#65b77c';
+        const stick=node('g',{'class':'mj-bamboo-stick',transform:`translate(${x} ${y})`});
+        const shape=(tag,attrs)=>{const part=document.createElementNS(svgNS,tag);for(const[k,v]of Object.entries(attrs))part.setAttribute(k,v);stick.append(part);};
+        const w=width/2,h=height/2;
+        // Each continuous silhouette is one bamboo; joint bands stay inside it.
+        shape('path',{d:`M${-w+1} ${-h}Q${-w} ${-h} ${-w} ${-h+1.4}L${-w+.35} ${-height*.2}L${-w} ${h-1.4}Q${-w} ${h} ${-w+1} ${h}H${w-1}Q${w} ${h} ${w} ${h-1.4}L${w-.35} ${-height*.2}L${w} ${-h+1.4}Q${w} ${-h} ${w-1} ${-h}Z`,fill:body,stroke:edge,'stroke-width':.65,'stroke-linejoin':'round'});
+        shape('path',{d:`M${-w+1.35} ${-h+1.4}L${-w+1.6} ${h-1.5}`,stroke:light,'stroke-width':n<=2?1.45:1,'stroke-linecap':'round'});
+        for(const yBand of [-height*.22,height*.24])shape('path',{d:`M${-w+.5} ${yBand}H${w-.5}`,stroke:edge,'stroke-width':.85});
+        shape('path',{d:`M${-w+1} ${-h+.8}H${w-1}`,stroke:light,'stroke-width':.75,'stroke-linecap':'round'});
+      }
+      return svg;
+    }
     const positions={1:[[20,25]],2:[[20,15],[20,35]],3:[[11,12],[20,25],[29,38]],4:[[11,14],[29,14],[11,36],[29,36]],5:[[11,12],[29,12],[20,25],[11,38],[29,38]],6:[[11,12],[29,12],[11,25],[29,25],[11,38],[29,38]],7:[[11,10],[20,17],[29,24],[11,33],[29,33],[11,43],[29,43]],8:[[11,9],[29,9],[11,20],[29,20],[11,31],[29,31],[11,42],[29,42]],9:[[10,11],[20,11],[30,11],[10,25],[20,25],[30,25],[10,39],[20,39],[30,39]]}[n];
-    for(let i=0;i<positions.length;i++){const[x,y]=positions[i],color=suit===1?(i===Math.floor(n/2)&&n%2?'#b34535':'#284c68'):'#267357';if(suit===1){node('circle',{cx:x,cy:y,r:n===1?9:n>=8?3.5:4.3,fill:'none',stroke:color,'stroke-width':2});node('circle',{cx:x,cy:y,r:n===1?4.5:1,fill:color});}else{node('path',{d:`M${x} ${y-4}v8m-3-6h6m-6 4h6`,fill:'none',stroke:color,'stroke-width':2.2,'stroke-linecap':'round'});}}
+    for(let i=0;i<positions.length;i++){const[x,y]=positions[i],color=i===Math.floor(n/2)&&n%2?'#b34535':'#284c68';node('circle',{cx:x,cy:y,r:n===1?9:n>=8?3.5:4.3,fill:'none',stroke:color,'stroke-width':2});node('circle',{cx:x,cy:y,r:n===1?4.5:1,fill:color});}
     return svg;
   }
-  [0,13,30].forEach(t=>$('mjCover').append(tile(t)));
+  [18,22,26].forEach(t=>$('mjCover').append(tile(t)));
   function rulesForm(root,values,disabled=false){
     root.replaceChildren();
     const group=keys=>{const grid=el('div','mj-rule-grid');for(const k of keys){const label=el('label','',fields[k][0]),select=el('select');select.dataset.rule=k;select.setAttribute('aria-label',fields[k][0]);select.disabled=disabled;for(const[v,text]of fields[k][1]){const opt=el('option','',text);opt.value=String(v);select.append(opt);}select.value=String(values[k]);label.append(select);grid.append(label);}return grid;};
@@ -147,6 +164,11 @@
     $('mjSelection').textContent=selected!==null?'已选 '+name(selected):'点选手牌 · 点牌河可放大';
   }
   function meldNode(m,small=false){const d=el('span',small?'':'mj-meld');for(let i=0;i<(m.type==='pong'?3:4);i++)d.append(tile(m.tile,m.tile===null));if(!small)d.append(el('small','',m.type==='pong'?'碰':m.type==='an'?'暗杠':m.type==='bu'?'补杠':'明杠'));return d;}
+  function portraitIndex(player){
+    // Stable across clients and seating changes; all nine characters are reachable.
+    let hash=2166136261;for(const c of String(player.userId??player.name)){hash=Math.imul(hash^c.codePointAt(0),16777619);}
+    return (hash>>>0)%9+1;
+  }
   function renderBoard(r){
     const actor=r.phase==='playing'?r.turn:r.phase==='respond'?r.pending.from:-1;
     const opponents=$('mjOpponents'),rivers=$('mjRivers'),compass=$('mjCompass');
@@ -159,7 +181,7 @@
       if(offset>0&&p){
         const group=el('div','mj-seat'),badge=el('div','mj-opponent'+(actor===s?' is-turn':'')),details=el('div','mj-opponent-info');
         group.dataset.side=side;
-        const avatar=el('span','table-avatar');avatar.style.setProperty('--portrait',s);avatar.setAttribute('aria-hidden','true');badge.append(avatar,details);
+        const avatar=el('span','table-avatar mj-chibi-avatar');avatar.style.setProperty('--mj-portrait',`url('/assets/mahjong-chibi-v1-${portraitIndex(p)}.webp')`);avatar.setAttribute('aria-hidden','true');badge.append(avatar,details);
         details.append(el('strong','',p.name),el('small','',directions[s]+'位 · '+p.score+'分'+(r.dealer===s?' · 庄':'')+(p.bot||p.away?' · 托管':'')));
         const rack=el('div','mj-rack');rack.setAttribute('aria-label','手牌 '+p.handCount+' 张'+(p.away?'，暂离托管':''));
         for(let j=0;j<p.handCount;j++)rack.append(el('i'));
