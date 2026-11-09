@@ -63,7 +63,15 @@ async function fixture(t){
  const mutate=async(token,action,extra={},user=1)=>{const r=await call('/'+token,{user});return call('/'+token+'/'+action,{user,data:{version:r.data.room?.version??r.data.preview?.version,opId:op(),...extra}});};
  const start=async()=>{const token=await create();assert.equal((await mutate(token,'start',{fillBots:true})).status,200);return token;};
  const read=token=>JSON.parse(db.prepare('SELECT state FROM mahjong_rooms WHERE token=?').get(token).state),write=(token,r)=>db.prepare('UPDATE mahjong_rooms SET state=? WHERE token=?').run(JSON.stringify(r),token),advance=ms=>now+=ms,restart=()=>{game.close();game=createMahjongGame({db,users,clock:()=>now});};
- return {db,call,create,mutate,start,read,write,advance,restart};
+ const connect=async(token,user=1)=>{
+   const controller=new AbortController(),response=await fetch('http://127.0.0.1:'+server.address().port+'/api/mahjong/'+token+'/events',{headers:{'X-User':String(user)},signal:controller.signal});
+   assert.equal(response.status,200);assert.match(response.headers.get('content-type'),/text\/event-stream/);assert.equal(response.headers.get('x-accel-buffering'),'no');
+   const reader=response.body.getReader(),decoder=new TextDecoder(),events=[],waiters=[];let buffer='';
+   const pump=(async()=>{try{while(true){const {done,value}=await reader.read();if(done)break;buffer+=decoder.decode(value,{stream:true});let end;while((end=buffer.indexOf('\n\n'))>=0){const block=buffer.slice(0,end);buffer=buffer.slice(end+2);if(!block.startsWith('event: '))continue;const event={type:block.split('\n')[0].slice(7),data:JSON.parse(block.split('\ndata: ')[1])},index=waiters.findIndex(w=>w.test(event));if(index>=0){const w=waiters.splice(index,1)[0];clearTimeout(w.timer);w.resolve(event);}else events.push(event);}}}catch(e){if(!controller.signal.aborted)throw e;}})();
+   t.after(async()=>{controller.abort();await pump;});
+   return {events,close(){controller.abort();},next(test=()=>true){const index=events.findIndex(test);if(index>=0)return Promise.resolve(events.splice(index,1)[0]);return new Promise((resolve,reject)=>{const w={resolve,test,timer:setTimeout(()=>{waiters.splice(waiters.indexOf(w),1);reject(Error('Missing live Mahjong event'));},2500)};waiters.push(w);});}};
+ };
+ return {db,call,create,mutate,start,read,write,advance,restart,connect,sweep:()=>game.sweep()};
 }
 test('API authentication, CSRF, host-only rules, four-seat capacity and ready resets',async t=>{
  const f=await fixture(t);assert.equal((await f.call('',{user:0})).status,401);assert.equal((await f.call('',{data:{},csrf:'wrong'})).status,403);const token=await f.create();for(const user of [2,3,4])assert.equal((await f.mutate(token,'join',{},user)).status,200);assert.equal((await f.mutate(token,'join',{},5)).status,409);assert.equal((await f.mutate(token,'rules',{rules:{base:2}},2)).status,403);assert.equal((await f.mutate(token,'start',{fillBots:true})).status,409);
@@ -129,4 +137,34 @@ test('only active tablemates can read and send chat; safe retries preserve the g
  const history=(await f.call('/'+token)).data.room.chat;assert.equal(history.length,48);assert.equal(history[0].text,'消息 2');assert.equal(history.at(-1).text,'消息 49');
  await f.mutate(token,'leave',{},2);assert.equal((await f.call('/'+token,{user:2})).data.preview.chat,undefined);assert.equal((await f.call(route,{user:2,data:message})).status,403);
  await f.mutate(token,'close');assert.deepEqual((await f.call('/'+token)).data.room.chat,[]);assert.equal((await f.call(route,{data:message})).status,410);
+});
+
+test('live Mahjong updates are personalized, immediate and carry chat without changing the game version',async t=>{
+ const f=await fixture(t),token=await f.create();await f.mutate(token,'join',{},2);
+ assert.equal((await f.call('/'+token+'/events',{user:0})).status,401);
+ assert.equal((await f.call('/'+token+'/events',{user:3})).status,403);
+ const host=await f.connect(token),other=await f.connect(token,2);await host.next();await other.next();
+ await f.mutate(token,'ready',{ready:true},2);await host.next(e=>e.data.room?.seats[1].ready);await other.next(e=>e.data.room?.seats[1].ready);
+ await f.mutate(token,'start',{fillBots:true});const a=(await host.next(e=>e.data.room?.phase==='playing')).data.room,b=(await other.next(e=>e.data.room?.phase==='playing')).data.room;
+ assert.equal(a.hand.length,14);assert.equal(b.hand.length,13);assert.notDeepEqual(a.hand,b.hand);
+ assert.equal(a.seats[1].hand,undefined);assert.equal(b.seats[0].hand,undefined);assert.equal(a.wall,undefined);assert.equal(b.wall,undefined);
+ const version=a.version;await f.call('/'+token+'/chat',{user:2,data:{kind:'text',text:'出牌顺畅',opId:op()}});
+ const chat=(await host.next(e=>e.data.room?.chat.at(-1)?.text==='出牌顺畅')).data.room;assert.equal(chat.version,version);
+ await f.mutate(token,'action',{type:'discard',tile:a.hand[0]});const play=(await other.next(e=>e.data.room?.discards?.length)).data.room;assert.equal(play.discards.at(-1).tile,a.hand[0]);assert.ok(play.version>version);
+ const reconnect=await f.connect(token);assert.equal((await reconnect.next()).data.room.version,f.read(token).version);
+ await f.mutate(token,'close');assert.equal((await other.next(e=>e.type==='revoked')).data.status,410);assert.equal((await host.next(e=>e.type==='revoked')).data.status,410);
+});
+
+test('live streams revoke departed or disabled players, expire rooms and cap duplicate connections',async t=>{
+ const f=await fixture(t),token=await f.create();await f.mutate(token,'join',{},2);
+ const host=await f.connect(token),other=await f.connect(token,2),duplicate=await f.connect(token);await host.next();await other.next();await duplicate.next();
+ const third=await f.connect(token);await third.next();assert.equal((await f.call('/'+token+'/events')).status,429);third.close();
+ await f.mutate(token,'leave',{},2);assert.equal((await other.next(e=>e.type==='revoked')).data.status,403);
+ f.db.prepare('UPDATE mahjong_rooms SET expires_at=0 WHERE token=?').run(token);
+ // Reading a room that expires must also revoke the existing streams, without leaking another snapshot.
+ assert.equal((await f.call('/'+token)).status,410);
+ assert.equal((await host.next(e=>e.type==='revoked')).data.status,410);
+ f.restart();
+ const second=await f.create();await f.mutate(second,'join',{},2);const banned=await f.connect(second,2);await banned.next();
+ f.db.prepare('UPDATE site_users SET disabled=1 WHERE id=2').run();f.sweep();assert.equal((await banned.next(e=>e.type==='revoked')).data.status,401);
 });

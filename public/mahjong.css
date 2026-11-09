@@ -94,7 +94,13 @@
 .mj-table.mj-keyboard{height:var(--mj-keyboard-height)}.mj-keyboard :is(.mj-playbar,.mj-actions,.mj-hand-area,.mj-table-message){display:none}.mj-keyboard .mj-chat{width:min(360px,70%)}
 @media(max-width:760px){.mj-main{padding:18px 14px 30px}.mj-intro{gap:14px}.mj-intro h1{font-size:28px}.mj-intro .eyebrow{font-size:9px}.mj-intro p:not(.eyebrow){font-size:12px}.mj-cover{width:110px;min-height:110px;padding:12px;gap:3px}.mj-cover svg{width:28px;height:40px}.mj-tags{gap:5px}.mj-tags span{font-size:10px;padding:4px 6px}.mj-home-grid{grid-template-columns:minmax(0,1fr);gap:0}.mj-panel{padding:16px}.mj-dialog{padding:16px}.mj-dialog-head h2{font-size:18px}}
 @media(orientation:landscape) and (max-height:360px),(orientation:portrait) and (pointer:coarse) and (max-width:360px){.mj-table-toolbar{min-height:37px}.mahjong-page .mj-table-toolbar button{min-height:36px;padding:0 5px;font-size:11px}.mj-table-brand{gap:4px!important}.mj-table-brand strong{font-size:11px}.mj-opponent .table-avatar{width:39px}.mj-opponent-info strong{font-size:10px}.mj-opponent-info small{font-size:8px}.mj-seat[data-side=top] .table-avatar{width:25px}.mj-rack i{height:13px}.mj-river[data-side=top]{top:29px;height:calc(52% - 56px)}.mj-river[data-side=bottom]{height:calc(48% - 31px)}.mj-table-center{height:47px}.mj-compass strong{font-size:18px}.mj-compass b{font-size:9px}.mj-compass small{font-size:8px}.mj-compass [data-side=top]{top:1px}.mj-compass [data-side=bottom]{bottom:1px}.mj-center-status{font-size:8px;line-height:10px}.mj-hand-area{padding-top:9px}.mj-hand-label{margin-bottom:12px}.mj-hand-label span{font-size:9px}.mj-playbar{min-height:17px}.mj-playbar p{font-size:10px}.mahjong-page #mjDiscard{bottom:calc(var(--mj-hand-h) + 34px);min-width:90px;padding-inline:9px;font-size:13px}.mj-actions{bottom:calc(var(--mj-hand-h) + 42px);right:calc(2% + 100px);gap:5px}.mahjong-page .mj-actions button{font-size:12px;min-width:52px;padding-inline:8px}.mj-chat{gap:3px;padding:5px}.mj-chat header small{display:none}.mj-lobby{gap:5px}.mj-lobby h2{font-size:18px}.mj-lobby p{font-size:11px}}
-@media(prefers-reduced-motion:reduce){.mj-tile{transition:none}}
+.mahjong-page .mj-tile{transition:transform .1s ease-out,opacity .1s ease-out}
+.mahjong-page .mj-tile.is-pending{transform:translateY(-18px);opacity:.65}
+.mj-tile.is-entering>svg{animation:mj-draw-in .14s ease-out both}
+.mj-river-tile.is-entering{animation:mj-discard-in .14s ease-out both}
+@keyframes mj-draw-in{from{opacity:.25;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
+@keyframes mj-discard-in{from{opacity:.3;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
+@media(prefers-reduced-motion:reduce){.mahjong-page .mj-tile{transition:none}.mj-tile.is-entering>svg,.mj-river-tile.is-entering{animation:none}}
 
 /* The hall scrolls naturally; only an occupied table uses the rotated canvas. */
 .mahjong-page:not(.mj-in-table){overflow-x:clip}

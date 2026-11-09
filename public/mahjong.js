@@ -58,24 +58,24 @@
     $('mjFullscreen').querySelector('span:last-child').textContent=active?'退出':'全屏';
     $('mjModeNotice').textContent=unavailable?'浏览器暂时无法隐藏工具栏，牌桌仍可横向使用。':'';
   });
-  const voiceCues=[[0,10183],[10183,10688],[20871,13028],[33899,11458],[45357,10838],[56195,10624],[66819,12123],[78942,10440],[89382,11589],[100971,12194],[113165,12281],[125446,14626],[140072,13035],[153107,12291],[165398,12215],[177613,13710],[191323,12030],[203353,13061],[216414,11982],[228396,12315],[240711,14666],[255377,13073],[268450,12472],[280922,12252],[293174,13749],[306923,12063],[318986,13224],[332210,13478],[345688,12864],[358552,12039],[370591,11157],[381748,16311],[398059,12503],[410562,11402]],voiceAsset='/assets/mahjong-voice-f089a5cf.wav',voiceRate=22050;
+  const voiceCues=[[0,12236],[12236,12766],[25002,13435],[38437,14211],[52648,11453],[64101,12742],[76843,13514],[90357,12036],[102393,12544],[114937,13600],[128537,13624],[142161,15371],[157532,14346],[171878,13453],[185331,13698],[199029,13983],[213012,13693],[226705,14451],[241156,13388],[254544,13686],[268230,15266],[283496,15376],[298872,12997],[311869,14180],[326049,14285],[340334,13403],[353737,13564],[367301,12337],[379638,12851],[392489,14244],[406733,13411],[420144,13274],[433418,13978],[447396,12322]],voiceAsset='/assets/mahjong-female-2b1ac661.wav',voiceRate=24000;
   let voiceOn=true,voiceId=null,voiceContext=null,voiceBuffer=null,voiceLoading=null,voiceCurrent=null,voiceQueue=[],voiceReading=false,voiceGeneration=0;
   try{voiceOn=localStorage.getItem('sj-mahjong-voice')!=='off';}catch{}
-  function voiceUi(){buttonIcon('mjSound',voiceOn?'sound':'muted');$('mjSound').setAttribute('aria-pressed',String(voiceOn));$('mjSound').title=voiceOn?'关闭报牌声音':'开启报牌声音';}
+  function voiceUi(){buttonIcon('mjSound',voiceOn?'sound':'muted');$('mjSound').setAttribute('aria-pressed',String(voiceOn));$('mjSound').title=voiceOn?'关闭女声报牌':'开启女声报牌';}
   function voiceStop(){voiceGeneration++;voiceQueue=[];voiceReading=false;if(voiceCurrent){try{voiceCurrent.stop();}catch{}voiceCurrent=null;}}
   function voiceReset(){voiceId=null;voiceStop();}
-  function voicePrepare(){
+  function voicePrepare(unlock=false){
     if(!voiceOn||!room||document.hidden)return;
     const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;
     try{
-      voiceContext??=new Audio();
-      if(voiceContext.state!=='running')voiceContext.resume().then(playVoice).catch(()=>{});
+      voiceContext??=new Audio({latencyHint:'interactive'});
+      if(unlock&&voiceContext.state!=='running')voiceContext.resume().then(playVoice).catch(()=>{});
       if(!voiceBuffer&&!voiceLoading)voiceLoading=fetch(voiceAsset).then(r=>{if(!r.ok)throw Error();return r.arrayBuffer();}).then(b=>voiceContext.decodeAudioData(b)).then(b=>{voiceBuffer=b;playVoice();}).catch(()=>{}).finally(()=>{voiceLoading=null;});
     }catch{}
   }
   function playVoice(){
     if(!voiceOn||document.hidden||!voiceBuffer||voiceReading||voiceContext.state!=='running')return;
-    voiceQueue=voiceQueue.filter(e=>Date.now()-e.queued<4000);const event=voiceQueue.shift();if(!event)return;
+    voiceQueue=voiceQueue.filter(e=>Date.now()-e.queued<1800);const event=voiceQueue.shift();if(!event)return;
     const cue=voiceCues[event.tile];if(!cue)return;
     const source=voiceContext.createBufferSource(),gain=voiceContext.createGain(),rev=voiceGeneration;
     source.buffer=voiceBuffer;gain.gain.value=.8;source.connect(gain);gain.connect(voiceContext.destination);
@@ -86,14 +86,20 @@
     const stream=r.discards||[],latest=stream.at(-1)?.id||0;
     if(voiceId===null){voiceId=latest;return;}
     if(latest<=voiceId)return;
-    if(voiceOn&&voiceContext&&!document.hidden){const now=Date.now();voiceQueue.push(...stream.filter(e=>e.id>voiceId&&e.handNo===r.handNo&&r.serverNow-e.at<4000).map(e=>({...e,queued:now})));voiceQueue=voiceQueue.slice(-4);playVoice();}
+    if(voiceOn&&voiceContext&&!document.hidden){const now=Date.now();voiceQueue.push(...stream.filter(e=>e.id>voiceId&&e.handNo===r.handNo&&r.serverNow-e.at<1800).map(e=>({...e,queued:now-Math.max(0,r.serverNow-e.at)})));voiceQueue=voiceQueue.slice(-2);playVoice();}
     voiceId=latest;
   }
   voiceUi();
-  $('mjSound').onclick=()=>{voiceOn=!voiceOn;try{localStorage.setItem('sj-mahjong-voice',voiceOn?'on':'off');}catch{}voiceUi();if(voiceOn)voicePrepare();else voiceStop();};
-  $('mjTable').addEventListener('click',e=>{if(!e.target.closest('#mjSound'))voicePrepare();},true);
+  $('mjSound').onclick=()=>{voiceOn=!voiceOn;try{localStorage.setItem('sj-mahjong-voice',voiceOn?'on':'off');}catch{}voiceUi();if(voiceOn)voicePrepare(true);else voiceStop();};
+  $('mjTable').addEventListener('pointerdown',e=>{if(!e.target.closest('#mjSound'))voicePrepare(true);},true);
+  $('mjTable').addEventListener('click',e=>{if(!e.target.closest('#mjSound'))voicePrepare(true);},true);
   document.addEventListener('visibilitychange',()=>{if(document.hidden)voiceStop();});
+  const tileTemplates=new Map();
+  $('mjTable').addEventListener('animationend',e=>e.target.closest('.mj-tile,.mj-river-tile')?.classList.remove('is-entering'));
   function tile(t,back=false){
+    const key=back?'back':t;if(!tileTemplates.has(key))tileTemplates.set(key,drawTile(t,back));return tileTemplates.get(key).cloneNode(true);
+  }
+  function drawTile(t,back=false){
     const svg=document.createElementNS(svgNS,'svg');svg.setAttribute('viewBox','0 0 40 56');svg.setAttribute('aria-hidden','true');
     const node=(tag,attrs,text)=>{const n=document.createElementNS(svgNS,tag);for(const[k,v]of Object.entries(attrs))n.setAttribute(k,v);if(text)n.textContent=text;svg.append(n);return n;};
     node('rect',{x:0,y:4,width:40,height:52,rx:3,fill:'#79a690'});node('rect',{x:0,y:0,width:40,height:50,rx:3,fill:back?'#2c7463':'#f8f3dd'});node('path',{d:'M3 3H37',stroke:back?'#81ac95':'#fffdf1','stroke-width':2});
@@ -144,15 +150,34 @@
     const revision=epoch,controller=new AbortController();controllers.add(controller);const timeout=setTimeout(()=>controller.abort(),12000);
     try{const response=await fetch('/api/mahjong'+route,{method:data===undefined?'GET':'POST',credentials:'same-origin',cache:'no-store',signal:controller.signal,headers:{'Content-Type':'application/json','X-SJ-CSRF':window.SJAuth.csrf},...(data===undefined?{}:{body:JSON.stringify(data)})});const value=await response.json();if(revision!==epoch)throw new DOMException('Account or room changed','AbortError');if(!response.ok)throw Object.assign(Error(value.error||'牌桌同步失败'),{status:response.status});return value;}catch(e){if(revision!==epoch)throw new DOMException('Account or room changed','AbortError');if(e.name==='AbortError')throw Error('连接等待较久，正在尝试重新同步。');if(e instanceof TypeError)throw Error('网络暂时不可用，恢复后会自动同步牌桌。');throw e;}finally{clearTimeout(timeout);controllers.delete(controller);}
   }
-  function hideTable(){if(!$('mjTable').hidden){releaseFull();resetChat();voiceReset();}document.body.classList.remove('mj-in-table','game-landscape-page');$('mjTable').hidden=true;$('mjHome').hidden=false;}
-  function clearPrivate(){epoch++;for(const c of controllers)c.abort();room=null;preview=null;selected=null;lastRendered='';busy=false;polling=false;hideTable();for(const id of ['mjHand','mjOpponents','mjRivers','mjResult','mjActions','mjMyMelds','mjLobby','mjLog','mjRecent','mjRoomRules'])$(id).replaceChildren();for(const id of ['mjMyName','mjSelection','mjTurnHint','mjTableMessage','mjInviteInfo','mjCenterStatus','mjWallCount'])$(id).textContent='';$('mjShareLink').value='';$('mjCreate').querySelector('button[type=submit]').disabled=false;for(const d of document.querySelectorAll('.mj-dialog[open]'))d.close();$('mjInvite').hidden=true;$('mjConnection').textContent='';$('mjMessage').textContent='';}
+  let liveStream=null,streamReady=false,streamRetryAt=0,streamFailures=0,streamSeenAt=0,handKey='',riverFrame=0;
+  function stopStream(){liveStream?.close();liveStream=null;streamReady=false;}
+  function ensureStream(){
+    if(liveStream||!window.EventSource||!room||document.hidden||!navigator.onLine||Date.now()<streamRetryAt)return;
+    const revision=epoch,source=new EventSource('/api/mahjong/'+token+'/events');liveStream=source;
+    source.addEventListener('state',e=>{
+      if(revision!==epoch||liveStream!==source)return;
+      try{const value=JSON.parse(e.data);streamReady=true;streamFailures=0;streamSeenAt=Date.now();$('mjConnection').textContent='';accept(value);}catch{stopStream();streamRetryAt=Date.now()+3000;}
+    });
+    source.addEventListener('ping',()=>{if(revision===epoch&&liveStream===source)streamSeenAt=Date.now();});
+    source.addEventListener('revoked',e=>{
+      if(revision!==epoch||liveStream!==source)return;
+      const value=JSON.parse(e.data);stopStream();
+      if([404,410].includes(value.status))endRoom(value.error);
+      else if(value.status===401){clearPrivate();window.SJAuth.refresh();message(value.error);}
+      else endRoom(value.error);
+    });
+    source.onerror=()=>{if(revision!==epoch||liveStream!==source)return;stopStream();streamRetryAt=Date.now()+Math.min(15000,1500*2**Math.min(++streamFailures,4));refresh();};
+  }
+  function hideTable(){stopStream();if(!$('mjTable').hidden){releaseFull();resetChat();voiceReset();}document.body.classList.remove('mj-in-table','game-landscape-page');$('mjTable').hidden=true;$('mjHome').hidden=false;}
+  function clearPrivate(){epoch++;for(const c of controllers)c.abort();room=null;preview=null;selected=null;selectedIndex=-1;handKey='';lastRendered='';busy=false;polling=false;delete $('mjMyMelds')._key;streamRetryAt=0;streamFailures=0;hideTable();for(const id of ['mjHand','mjOpponents','mjRivers','mjResult','mjActions','mjMyMelds','mjLobby','mjLog','mjRecent','mjRoomRules'])$(id).replaceChildren();for(const id of ['mjMyName','mjSelection','mjTurnHint','mjTableMessage','mjInviteInfo','mjCenterStatus','mjWallCount'])$(id).textContent='';$('mjShareLink').value='';$('mjCreate').querySelector('button[type=submit]').disabled=false;for(const d of document.querySelectorAll('.mj-dialog[open]'))d.close();$('mjInvite').hidden=true;$('mjConnection').textContent='';$('mjMessage').textContent='';}
   function navigate(next){clearPrivate();token=next;history.pushState(null,'',next?'/mahjong/'+next:'/mahjong');if(next)refresh();else recents();}
   function endRoom(reason='牌室已关闭，已返回大厅。'){
     clearPrivate();token='';history.replaceState(null,'','/mahjong');message(reason);recents();window.scrollTo(0,0);
   }
   function accept(value){
     if(value.room?.phase==='closed'||value.preview?.phase==='closed'){endRoom('牌室已关闭，已返回大厅，可以重新开房。');return;}
-    if(value.room){if(room&&room.token===value.room.token&&room.version>value.room.version)return;value.room._offset=Date.now()-value.room.serverNow;room=value.room;preview=null;if($('mjTable').hidden&&window.SJLandscape.isRotated())document.body.scrollTop=0;$('mjInvite').hidden=true;$('mjTable').hidden=false;$('mjHome').hidden=true;document.body.classList.add('mj-in-table','game-landscape-page');$('mjChatToggle').disabled=false;syncChat(room.chat||[]);syncVoice(room);render();}
+    if(value.room){if(room&&room.token===value.room.token&&room.version>value.room.version)return;value.room._offset=Date.now()-value.room.serverNow;room=value.room;preview=null;if($('mjTable').hidden&&window.SJLandscape.isRotated())document.body.scrollTop=0;$('mjInvite').hidden=true;$('mjTable').hidden=false;$('mjHome').hidden=true;document.body.classList.add('mj-in-table','game-landscape-page');$('mjChatToggle').disabled=false;syncChat(room.chat||[]);voicePrepare();syncVoice(room);render();ensureStream();}
     else if(value.preview){if(room&&room.version>value.preview.version)return;room=null;preview=value.preview;hideTable();$('mjInvite').hidden=false;$('mjInviteInfo').textContent=preview.host+'的牌室 · '+preview.count+'/4人 · '+(phases[preview.phase]||'');$('mjJoinInvite').disabled=!preview.canJoin;$('mjJoinInvite').textContent=preview.canJoin?'加入 / 回到座位':'暂时无法加入';}
   }
   async function refresh(){if(!token||!window.SJAuth.user||polling||busy)return;polling=true;const revision=epoch;try{accept(await api('/'+token));$('mjConnection').textContent='';}catch(e){if(revision!==epoch)return;if(e.status===401){clearPrivate();await window.SJAuth.refresh();message('登录已失效，请重新登录。');}else if([404,410].includes(e.status)){endRoom(e.message);}else if(room)$('mjConnection').textContent=e.message;else message(e.message);}finally{if(revision===epoch)polling=false;}}
@@ -166,8 +191,8 @@
   function actionButton(label,fn,cls=''){const b=el('button',cls,label);b.type='button';b.dataset.mjMutate='';b.onclick=fn;return b;}
   function controls(){
     for(const b of document.querySelectorAll('[data-mj-mutate]'))b.disabled=busy;$('mjSaveRules').disabled=busy;$('mjJoinInvite').disabled=busy||!preview?.canJoin;
-    const can=!!room?.actions.discard&&selected!==null&&room.hand.includes(selected);$('mjDiscard').disabled=busy||!can;$('mjDiscard').textContent=can?'打出 '+name(selected):'选择手牌';
-    for(const b of $('mjHand').children){b.disabled=busy||!room?.actions.discard;b.setAttribute('aria-pressed',String(selected!==null&&Number(b.dataset.index)===selectedIndex));}
+    const can=!!room?.actions.discard&&selected!==null&&room.hand.includes(selected);$('mjDiscard').disabled=busy||!can;$('mjDiscard').textContent=busy&&can?'正在出牌…':can?'打出 '+name(selected):'选择手牌';$('mjHand').setAttribute('aria-busy',String(busy));
+    for(const b of $('mjHand').children){const active=selected!==null&&Number(b.dataset.index)===selectedIndex;b.disabled=busy||!room?.actions.discard;b.setAttribute('aria-pressed',String(active));b.classList.toggle('is-pending',busy&&active);}
     $('mjSelection').textContent=selected!==null?'已选 '+name(selected):'点选手牌 · 点牌河可放大';
   }
   function meldNode(m,small=false){const d=el('span',small?'':'mj-meld');for(let i=0;i<(m.type==='pong'?3:4);i++)d.append(tile(m.tile,m.tile===null));if(!small)d.append(el('small','',m.type==='pong'?'碰':m.type==='an'?'暗杠':m.type==='bu'?'补杠':'明杠'));return d;}
@@ -179,47 +204,54 @@
   function renderBoard(r){
     const actor=r.phase==='playing'?r.turn:r.phase==='respond'?r.pending.from:-1;
     const opponents=$('mjOpponents'),rivers=$('mjRivers'),compass=$('mjCompass');
-    opponents.replaceChildren();rivers.replaceChildren();
     const latest=(r.discards||[]).at(-1);
     const featured=r.pending&&!r.pending.rob?{seat:r.pending.from,tile:r.pending.tile,index:r.seats[r.pending.from].river.length-1}:latest?.handNo===r.handNo?latest:null;
+    let changed=false;
     for(const [offset,side]of sides.entries()){
       const s=(r.me+offset)%4,p=r.seats[s],mark=compass.querySelector('[data-side='+side+']');
       mark.textContent=directions[s];mark.classList.toggle('is-active',s===actor);
+      let group=opponents.querySelector('[data-side='+side+']');
       if(offset>0&&p){
-        const group=el('div','mj-seat'),badge=el('div','mj-opponent'+(actor===s?' is-turn':'')),details=el('div','mj-opponent-info');
-        group.dataset.side=side;
-        const avatar=el('span','table-avatar mj-chibi-avatar');avatar.style.setProperty('--mj-portrait',`url('/assets/mahjong-chibi-v1-${portraitIndex(p)}.webp')`);avatar.setAttribute('aria-hidden','true');badge.append(avatar,details);
-        details.append(el('strong','',p.name),el('small','',directions[s]+'位 · '+p.score+'分'+(r.dealer===s?' · 庄':'')+(p.bot||p.away?' · 托管':'')));
-        const rack=el('div','mj-rack');rack.setAttribute('aria-label','手牌 '+p.handCount+' 张'+(p.away?'，暂离托管':''));
-        for(let j=0;j<p.handCount;j++)rack.append(el('i'));
-        const melds=el('div','mj-mini-melds');for(const m of p.melds)melds.append(meldNode(m,true));
-        group.append(badge,rack,melds);opponents.append(group);
+        if(!group){group=el('div','mj-seat');group.dataset.side=side;const badge=el('div','mj-opponent'),avatar=el('span','table-avatar mj-chibi-avatar'),details=el('div','mj-opponent-info');avatar.setAttribute('aria-hidden','true');details.append(el('strong'),el('small'));badge.append(avatar,details);group.append(badge,el('div','mj-rack'),el('div','mj-mini-melds'));opponents.append(group);}
+        const badge=group.querySelector('.mj-opponent');badge.classList.toggle('is-turn',actor===s);
+        const key=JSON.stringify([p,r.dealer===s]);
+        if(group._key!==key){group._key=key;group.querySelector('.table-avatar').style.setProperty('--mj-portrait',`url('/assets/mahjong-chibi-v1-${portraitIndex(p)}.webp')`);
+          group.querySelector('strong').textContent=p.name;group.querySelector('small').textContent=directions[s]+'位 · '+p.score+'分'+(r.dealer===s?' · 庄':'')+(p.bot||p.away?' · 托管':'');
+          const rack=group.querySelector('.mj-rack');rack.setAttribute('aria-label','手牌 '+p.handCount+' 张'+(p.away?'，暂离托管':''));
+          while(rack.children.length>p.handCount)rack.lastElementChild.remove();while(rack.children.length<p.handCount)rack.append(el('i'));
+          const melds=group.querySelector('.mj-mini-melds'),meldKey=JSON.stringify(p.melds);if(melds._key!==meldKey){melds._key=meldKey;melds.replaceChildren(...p.melds.map(m=>meldNode(m,true)));}
+        }
+      }else group?.remove();
+      let box=rivers.querySelector('[data-side='+side+']');
+      if(!box){box=el('button','mj-river');box.type='button';box.dataset.side=side;box.append(el('span','mj-river-label'),el('span','mj-river-tiles'));rivers.append(box);}
+      box.onclick=()=>openRivers(s);const river=p?.river||[],tiles=box.lastElementChild;
+      const key=r.handNo+':'+river.join(',');
+      if(box._key!==key){
+        const sameHand=box._hand===r.handNo;box._key=key;box._hand=r.handNo;changed=true;
+        for(let i=tiles.children.length-1;i>=0;i--)if(!sameHand||i>=river.length||Number(tiles.children[i].dataset.tile)!==river[i])tiles.children[i].remove();
+        for(const [i,t]of river.entries()){
+          let entry=tiles.children[i];if(!entry||Number(entry.dataset.tile)!==t){entry=el('span','mj-river-tile');entry.dataset.tile=t;entry.title=name(t);entry.append(tile(t));tiles.insertBefore(entry,tiles.children[i]||null);if(sameHand&&featured?.seat===s&&featured.index===i)entry.classList.add('is-entering');}
+        }
+        box.setAttribute('aria-label',directions[s]+'位弃牌 '+river.length+'张，点按放大');box.firstElementChild.textContent=directions[s]+' · '+river.length+'张';box.hidden=!river.length;
       }
-      const box=el('button','mj-river'),tiles=el('span','mj-river-tiles');
-      box.type='button';box.dataset.side=side;box.setAttribute('aria-label',directions[s]+'位弃牌 '+(p?.river.length||0)+'张，点按放大');box.onclick=()=>openRivers(s);
-      for(const [i,t]of (p?.river||[]).entries()){
-        const svg=tile(t),entry=el('span','mj-river-tile');entry.title=name(t);
-        if(featured?.seat===s&&featured.index===i&&featured.tile===t)entry.classList.add('is-last');
-        entry.append(svg);tiles.append(entry);
-      }
-      box.append(el('span','mj-river-label',directions[s]+' · '+(p?.river.length||0)+'张'),tiles);box.hidden=!p?.river.length;rivers.append(box);
+      [...tiles.children].forEach((entry,i)=>entry.classList.toggle('is-last',featured?.seat===s&&featured.index===i&&featured.tile===river[i]));
     }
     $('mjWallCount').textContent='余 '+r.remaining+' 张';$('mjWallCount').title='另留 '+r.rules.reserve+' 张荒牌';
     $('mjCenterStatus').textContent=r.phase==='respond'?directions[r.pending.from]+'家'+(r.pending.rob?'补杠 ':'打出 ')+name(r.pending.tile):actor>=0?directions[actor]+'家出牌':phases[r.phase];
-    requestAnimationFrame(fitRivers);
-    if($('mjRiverDialog').open)paintRivers();
+    if(changed){scheduleRivers();if($('mjRiverDialog').open)paintRivers();}
   }
+  function scheduleRivers(){if(!riverFrame)riverFrame=requestAnimationFrame(()=>{riverFrame=0;fitRivers();});}
   function fitRivers(){
-    for(const box of $('mjRivers').children){
+    const sizes=[...$('mjRivers').children].filter(box=>!box.hidden).map(box=>{
       const sideways=['left','right'].includes(box.dataset.side),count=box.querySelectorAll('.mj-river-tile').length,cols=sideways?4:10,rows=Math.max(1,Math.ceil(count/cols));
       const widthLimit=(box.clientWidth-6-(cols-1))/cols/(sideways?1.4:1);
       const dense=Math.min(widthLimit,(box.clientHeight-18-(rows-1))/rows/(sideways?1:1.4))<11;
-      box.classList.toggle('is-dense',dense);
       const size=Math.max(2,Math.min(28,widthLimit,(box.clientHeight-(dense?6:18)-(rows-1))/rows/(sideways?1:1.4)));
-      box.style.setProperty('--pile-tile',size+'px');box.style.setProperty('--pile-cols',cols);
-    }
+      return {box,dense,size,cols};
+    });
+    for(const {box,dense,size,cols}of sizes){box.classList.toggle('is-dense',dense);box.style.setProperty('--pile-tile',size+'px');box.style.setProperty('--pile-cols',cols);}
   }
-  new ResizeObserver(fitRivers).observe($('mjBoard'));
+  new ResizeObserver(scheduleRivers).observe($('mjBoard'));
   function paintRivers(){
     if(!room)return;
     $('mjRiverDetail').replaceChildren(...room.seats.map((p,s)=>{
@@ -233,7 +265,7 @@
   }
   function openRivers(seat){paintRivers();$('mjRiverDialog').showModal();$('mjRiverDetail').querySelector('[data-seat="'+seat+'"]').scrollIntoView({block:'nearest'});}
   function render(){
-    const r=room;if(!r)return;const key=r.token+':'+r.version;if(lastRendered===key){countdown();return;}lastRendered=key;selected=null;
+    const r=room;if(!r)return;const key=r.token+':'+r.version;if(lastRendered===key){countdown();return;}lastRendered=key;
     $('mjTableTitle').textContent='第 '+r.handNo+'/'+r.rules.hands+' 局';$('mjMyName').textContent=r.seats[r.me].name+' · '+directions[r.me]+'位 · '+r.seats[r.me].score+'分'+(r.dealer===r.me?' · 庄':'');
     renderBoard(r);
     const lobby=$('mjLobby');lobby.hidden=r.phase!=='lobby'&&r.phase!=='closed';lobby.replaceChildren();
@@ -249,9 +281,25 @@
     if(a.hu)actions.append(actionButton('自摸',()=>mutate('action',{type:'hu'})));
     for(const k of a.kongs||[])actions.append(actionButton((k.type==='an'?'暗杠 ':'补杠 ')+name(k.tile),()=>mutate('action',{type:'kong',kind:k.type,tile:k.tile})));
     if(a.claims){for(const c of a.claims)actions.append(actionButton(({hu:'胡 ',kong:'杠 ',pong:'碰 '})[c]+name(a.tile),()=>mutate('action',{type:'claim',choice:c})));actions.append(actionButton('过',()=>mutate('action',{type:'claim',choice:'pass'}),'mj-pass'));}
-    $('mjMyMelds').replaceChildren();for(const m of r.seats[r.me].melds)$('mjMyMelds').append(meldNode(m));
-    const hand=$('mjHand');hand.replaceChildren();const ordered=[...r.hand];if(r.drawn!==null){ordered.splice(ordered.lastIndexOf(r.drawn),1);ordered.push(r.drawn);}ordered.forEach((t,i)=>{const b=el('button','mj-tile'+(i===ordered.length-1&&r.drawn!==null?' is-drawn':''));b.type='button';b.dataset.tile=String(t);b.dataset.index=String(i);b.setAttribute('aria-label',name(t)+(i===ordered.length-1&&r.drawn!==null?'，刚摸到的牌':''));b.append(tile(t));b.onclick=()=>{if(selected!==null&&selectedIndex===i){selected=null;selectedIndex=-1;}else{selected=t;selectedIndex=i;}controls();};hand.append(b);});
+    const melds=$('mjMyMelds'),meldKey=JSON.stringify(r.seats[r.me].melds);if(melds._key!==meldKey){melds._key=meldKey;melds.replaceChildren(...r.seats[r.me].melds.map(m=>meldNode(m)));}
+    renderHand(r);
     document.querySelector('.mj-hand-area').hidden=ended||r.phase==='lobby'||r.phase==='closed';$('mjMyMelds').hidden=ended||r.phase==='lobby';countdown();controls();
+  }
+  function renderHand(r){
+    const hand=$('mjHand'),ordered=[...r.hand];if(r.drawn!==null){ordered.splice(ordered.lastIndexOf(r.drawn),1);ordered.push(r.drawn);}
+    const key=r.handNo+':'+r.drawn+':'+ordered.join(',');
+    if(!r.actions.discard){selected=null;selectedIndex=-1;}
+    if(handKey===key)return;
+    const hadHand=!!handKey;handKey=key;selected=null;selectedIndex=-1;
+    const old=new Map([...hand.children].map(b=>[b.dataset.key,b])),counts=new Map(),next=[];
+    ordered.forEach((t,i)=>{
+      const n=(counts.get(t)||0)+1;counts.set(t,n);const id=t+':'+n,drawn=i===ordered.length-1&&r.drawn!==null;
+      let b=old.get(id);old.delete(id);
+      if(!b){b=el('button','mj-tile');b.type='button';b.dataset.key=id;b.dataset.tile=t;b.append(tile(t));if(hadHand&&drawn)b.classList.add('is-entering');
+        b.onclick=()=>{const index=Number(b.dataset.index);if(selected!==null&&selectedIndex===index){selected=null;selectedIndex=-1;}else{selected=Number(b.dataset.tile);selectedIndex=index;}controls();};}
+      b.dataset.index=i;b.classList.toggle('is-drawn',drawn);b.setAttribute('aria-label',name(t)+(drawn?'，刚摸到的牌':''));next.push(b);
+    });
+    for(const b of old.values())b.remove();next.forEach((b,i)=>{if(hand.children[i]!==b)hand.insertBefore(b,hand.children[i]||null);});
   }
   function renderResult(){
     const root=$('mjResult'),r=room,result=r.result;root.replaceChildren();if(!result)return;
@@ -280,8 +328,9 @@
   function authChanged(){const id=window.SJAuth.user?.id||null;if(id===authId)return;clearPrivate();authId=id;if(id){if(token)refresh();else recents();}else{recents();if(token)message('请点右上角登录，再加入朋友的牌室。');}}
   document.addEventListener('sj:auth-change',authChanged);document.addEventListener('sj:logout',clearPrivate);window.SJAuth.ready.then(authChanged);
   window.addEventListener('popstate',()=>{clearPrivate();token=/^\/mahjong\/([a-f0-9]{32})\/?$/.exec(location.pathname)?.[1]||'';if(token)refresh();else recents();});
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});window.addEventListener('online',refresh);
-  window.addEventListener('offline',()=>{if(room)$('mjConnection').textContent='网络已断开，恢复后会自动同步；出牌仍按牌桌计时。';else message('网络已断开，请恢复连接后再操作。');});
-  setInterval(()=>{if(!document.hidden&&navigator.onLine&&token&&window.SJAuth.user)refresh();},1200);setInterval(countdown,250);
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)stopStream();else{streamRetryAt=0;refresh();}});window.addEventListener('online',()=>{streamRetryAt=0;refresh();});
+  window.addEventListener('pagehide',stopStream);window.addEventListener('pageshow',()=>{if(room)refresh();});
+  window.addEventListener('offline',()=>{stopStream();if(room)$('mjConnection').textContent='网络已断开，恢复后会自动同步；出牌仍按牌桌计时。';else message('网络已断开，请恢复连接后再操作。');});
+  setInterval(()=>{if(document.hidden||!navigator.onLine||!token||!window.SJAuth.user)return;if(streamReady&&Date.now()-streamSeenAt>35000){stopStream();streamRetryAt=0;}if(!streamReady)refresh();},1200);setInterval(countdown,250);
   document.addEventListener('DOMContentLoaded',()=>{const nav=$('touchNav');if(nav){for(const n of nav.querySelectorAll('[aria-current]'))n.removeAttribute('aria-current');nav.querySelector('a[href="/games"]')?.setAttribute('aria-current','page');}});
 })();

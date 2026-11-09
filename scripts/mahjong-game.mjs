@@ -19,7 +19,7 @@ export function createMahjongGame({db,users,clock=Date.now}){
     CREATE TABLE IF NOT EXISTS mahjong_ops(token TEXT NOT NULL,user_id INTEGER NOT NULL,op_id TEXT NOT NULL,fingerprint TEXT NOT NULL,created_at INTEGER NOT NULL,PRIMARY KEY(token,user_id,op_id));
     CREATE TABLE IF NOT EXISTS mahjong_chat(id INTEGER PRIMARY KEY AUTOINCREMENT,token TEXT NOT NULL,user_id INTEGER NOT NULL,seat INTEGER NOT NULL,name TEXT NOT NULL,kind TEXT NOT NULL,text TEXT NOT NULL,created_at INTEGER NOT NULL);
     CREATE INDEX IF NOT EXISTS mahjong_chat_room ON mahjong_chat(token,id DESC);`);
-  const buckets=new Map();let cleanupAt=0;
+  const buckets=new Map(),streams=new Map();let cleanupAt=0;
   const transaction=fn=>{db.exec('BEGIN IMMEDIATE');try{const value=fn();db.exec('COMMIT');return value;}catch(e){db.exec('ROLLBACK');throw e;}};
   const load=token=>{const row=db.prepare('SELECT * FROM mahjong_rooms WHERE token=?').get(token);if(!row)throw fail(404,'没有找到这间牌室');if(row.expires_at<=clock())throw fail(410,'牌室已过期，请重新开房');return JSON.parse(row.state);};
   const save=(token,r)=>db.prepare('UPDATE mahjong_rooms SET state=?,updated_at=? WHERE token=?').run(JSON.stringify(r),clock(),token);
@@ -35,14 +35,35 @@ export function createMahjongGame({db,users,clock=Date.now}){
   });}
   const chatHistory=token=>db.prepare('SELECT id,seat,name,kind,text,created_at AS at FROM mahjong_chat WHERE token=? ORDER BY id DESC LIMIT ?').all(token,CHAT_LIMIT).reverse();
   const view=(token,r,id)=>{const v=roomView(r,id,token,clock());if(v.preview)v.preview.version=r.version;else v.room.chat=r.phase==='closed'?[]:chatHistory(token);return v;};
+  function write(stream,event,data){
+    if(stream.res.destroyed||stream.res.writableEnded)return false;
+    if(stream.res.writableLength>256*1024){stream.res.end();return false;}
+    return stream.res.write('event: '+event+'\ndata: '+JSON.stringify(data)+'\n\n');
+  }
+  function revoke(stream,status,message){write(stream,'revoked',{status,error:message});stream.res.end();}
+  function broadcast(token,r,heartbeat=false){
+    const list=streams.get(token);if(!list?.size)return;
+    const chat=r.phase==='closed'?[]:chatHistory(token),key=r.version+':'+(chat.at(-1)?.id||0);
+    if(!heartbeat&&[...list].every(s=>s.key===key))return;
+    for(const s of list){
+      const user=users.currentUser(s.req);
+      if(!user||user.id!==s.userId){revoke(s,401,'登录已失效，请重新登录。');continue;}
+      if(!r.seats.some(p=>p?.userId===s.userId&&!p.away)){revoke(s,403,'已离开牌室，请重新加入。');continue;}
+      if(r.phase==='closed'){revoke(s,410,'牌室已关闭，已返回大厅。');continue;}
+      if(s.key!==key){const data=roomView(r,s.userId,token,clock());data.room.chat=chat;write(s,'state',data);s.key=key;}
+      else if(heartbeat)write(s,'ping',{serverNow:clock()});
+    }
+  }
   const send=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','Vary':'Cookie','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(data));};
   async function body(req){if(!String(req.headers['content-type']||'').startsWith('application/json'))throw fail(415,'请求格式无效');let size=0;const chunks=[];for await(const c of req){size+=c.length;if(size>8192)throw fail(413,'请求过大');chunks.push(c);}try{const v=JSON.parse(Buffer.concat(chunks).toString());if(!v||typeof v!=='object'||Array.isArray(v))throw 0;return v;}catch{throw fail(400,'请求内容无效');}}
   async function handle(req,res){
     const path=new URL(req.url,'http://local').pathname;if(path!=='/api/mahjong'&&!path.startsWith('/api/mahjong/'))return false;
+    let requestedToken;
     try{
-      const match=/^\/api\/mahjong(?:\/([a-f0-9]{32})(?:\/(join|leave|ready|start|rules|next|close|action|chat))?)?\/?$/.exec(path);if(!match)throw fail(404,'未知牌室操作');
+      const match=/^\/api\/mahjong(?:\/([a-f0-9]{32})(?:\/(join|leave|ready|start|rules|next|close|action|chat|events))?)?\/?$/.exec(path);if(!match)throw fail(404,'未知牌室操作');
       if(!['GET','POST'].includes(req.method))throw fail(405,'不支持此操作');
       const [,token,action]=match;
+      requestedToken=token;
       const user=req.method==='POST'?users.requireUser(req):users.currentUser(req);if(!user)throw fail(401,'登录后可以开房或加入牌室');limit(user.id,req.method==='GET'?'read':action==='chat'?'chat':'write');
       if(!token){
         if(req.method==='GET'){
@@ -55,13 +76,24 @@ export function createMahjongGame({db,users,clock=Date.now}){
           db.prepare('INSERT INTO mahjong_rooms VALUES(?,?,?,?)').run(token,JSON.stringify(r),clock(),clock()+7*DAY);db.prepare('INSERT INTO mahjong_members VALUES(?,?,1)').run(token,user.id);
         });send(res,200,view(token,r,user.id));return true;
       }
-      let r=advance(token);
+      let r=advance(token);broadcast(token,r);
       if(req.method==='GET'){
+        if(action==='events'){
+          if(r.phase==='closed')throw fail(410,'牌室已关闭，请重新开房');
+          if(!active(r).some(s=>s.userId===user.id))throw fail(403,'入座后才能同步牌桌');
+          const list=streams.get(token)||new Set();
+          if([...streams.values()].reduce((n,items)=>n+[...items].filter(s=>s.userId===user.id).length,0)>=3)throw fail(429,'打开的牌桌太多，请关闭其他页面');
+          r.lastActive=clock();save(token,r);
+          res.writeHead(200,{'Content-Type':'text/event-stream; charset=utf-8','Cache-Control':'no-store','Connection':'keep-alive','X-Accel-Buffering':'no','Vary':'Cookie','X-Content-Type-Options':'nosniff'});res.flushHeaders();
+          const stream={req,res,userId:user.id,key:null};list.add(stream);streams.set(token,list);
+          res.on('close',()=>{list.delete(stream);if(!list.size)streams.delete(token);});
+          broadcast(token,r);return true;
+        }
         if(action)throw fail(405,'请通过按钮执行此操作');
         if(active(r).some(s=>s.userId===user.id)&&clock()-r.lastActive>60000){r.lastActive=clock();save(token,r);}
         send(res,200,view(token,r,user.id));return true;
       }
-      if(!action)throw fail(404,'请选择牌室操作');
+      if(!action||action==='events')throw fail(404,'请选择牌室操作');
       const input=await body(req);
       if(action==='chat'){
         if(!/^[a-f0-9]{32}$/.test(input.opId||''))throw fail(400,'聊天凭据无效，请重试');
@@ -77,7 +109,7 @@ export function createMahjongGame({db,users,clock=Date.now}){
           db.prepare('INSERT INTO mahjong_chat(token,user_id,seat,name,kind,text,created_at) VALUES(?,?,?,?,?,?,?)').run(token,user.id,seat,user.username,item.kind,item.text,now);
           db.prepare('DELETE FROM mahjong_chat WHERE token=? AND id < (SELECT id FROM mahjong_chat WHERE token=? ORDER BY id DESC LIMIT 1 OFFSET ?)').run(token,token,CHAT_LIMIT-1);
           db.prepare('INSERT INTO mahjong_ops VALUES(?,?,?,?,?)').run(token,user.id,input.opId,fingerprint,now);
-        });send(res,200,{chat:chatHistory(token)});return true;
+        });broadcast(token,r);send(res,200,{chat:chatHistory(token)});return true;
       }
       if(!/^[a-f0-9]{32}$/.test(input.opId||'')||!Number.isSafeInteger(input.version))throw fail(400,'操作凭据无效，请刷新后重试');
       const fingerprint=crypto.createHash('sha256').update(JSON.stringify([action,input])).digest('hex');
@@ -117,12 +149,12 @@ export function createMahjongGame({db,users,clock=Date.now}){
           }else throw fail(404,'未知操作');
         }
         r.lastActive=clock();r.version++;save(token,r);db.prepare('INSERT INTO mahjong_ops VALUES(?,?,?,?,?)').run(token,user.id,input.opId,fingerprint,clock());
-      });send(res,200,view(token,r,user.id));return true;
-    }catch(e){send(res,e.status||500,{error:e.status?e.message:'牌桌同步暂时失败，请稍后重试'});return true;}
+      });broadcast(token,r);send(res,200,view(token,r,user.id));return true;
+    }catch(e){if(e.status===410&&requestedToken)for(const s of streams.get(requestedToken)||[])revoke(s,410,e.message);send(res,e.status||500,{error:e.status?e.message:'牌桌同步暂时失败，请稍后重试'});return true;}
   }
   function sweep(){
     try{
-    for(const row of db.prepare('SELECT token,state FROM mahjong_rooms WHERE expires_at>? ORDER BY updated_at DESC LIMIT 500').all(clock())){const r=JSON.parse(row.state);if(['playing','respond','lobby'].includes(r.phase))try{advance(row.token);}catch{/* An expired room cannot stop other tables. */}}
+    for(const row of db.prepare('SELECT token,state FROM mahjong_rooms WHERE expires_at>? ORDER BY updated_at DESC LIMIT 500').all(clock())){const r=JSON.parse(row.state);if(['playing','respond','lobby'].includes(r.phase))try{broadcast(row.token,advance(row.token));}catch{/* An expired room cannot stop other tables. */}}
     if(clock()-cleanupAt>3600000){if(db.prepare('SELECT 1 FROM mahjong_rooms WHERE expires_at<=? LIMIT 1').get(clock()))transaction(()=>{for(const table of ['mahjong_chat','mahjong_ops','mahjong_members'])db.prepare(`DELETE FROM ${table} WHERE token IN (SELECT token FROM mahjong_rooms WHERE expires_at<=?)`).run(clock());db.prepare('DELETE FROM mahjong_rooms WHERE expires_at<=?').run(clock());});cleanupAt=clock();}
     }catch(e){
       // SQLite may be briefly locked by a backup, migration or another writer.
@@ -130,5 +162,12 @@ export function createMahjongGame({db,users,clock=Date.now}){
       if(![5,6].includes(e.errcode))console.error('Mahjong maintenance deferred; will retry.');
     }
   }
-  const timer=setInterval(sweep,500);timer.unref();return {handle,close(){clearInterval(timer);},sweep};
+  const timer=setInterval(sweep,500);timer.unref();
+  const heartbeat=setInterval(()=>{
+    for(const token of streams.keys())try{
+      const r=advance(token);broadcast(token,r,true);
+      if(r.phase!=='closed'&&clock()-r.lastActive>60000&&[...streams.get(token)||[]].some(s=>users.currentUser(s.req)?.id===s.userId&&active(r).some(p=>p.userId===s.userId))){r.lastActive=clock();save(token,r);}
+    }catch(e){if(e.status)for(const s of streams.get(token)||[])revoke(s,e.status,e.message);}
+  },15000);heartbeat.unref();
+  return {handle,close(){clearInterval(timer);clearInterval(heartbeat);for(const list of streams.values())for(const s of list)s.res.end();streams.clear();},sweep};
 }
