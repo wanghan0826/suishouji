@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import {newRoom,startHand,playAction,tick,roomView,normalizeRules} from './mahjong-engine.mjs';
 import {ensureGrowthMetrics,recordGrowthGuess} from './growth-metrics.mjs';
 import {parseVoice,sendVoice,VOICE_MAX_BYTES} from './mahjong-voice.mjs';
+import {createMahjongPresets} from './mahjong-presets.mjs';
 
 const fail=(status,message)=>Object.assign(Error(message),{status}),DAY=86400000;
 const CHAT_LIMIT=48,EMOJIS=new Set(['hello','laugh','clap','think','wow','again','love','proud','shock','cry','please','angry','sleepy','hurry','nice','shy']);
@@ -59,10 +60,12 @@ export function createMahjongGame({db,users,clock=Date.now}){
   }
   const send=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','Vary':'Cookie','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(data));};
   async function body(req,max=8192){if(!String(req.headers['content-type']||'').startsWith('application/json'))throw fail(415,'请求格式无效');let size=0;const chunks=[];for await(const c of req){size+=c.length;if(size>max)throw fail(413,'请求过大');chunks.push(c);}try{const v=JSON.parse(Buffer.concat(chunks).toString());if(!v||typeof v!=='object'||Array.isArray(v))throw 0;return v;}catch{throw fail(400,'请求内容无效');}}
+  const presets=createMahjongPresets({db,users,clock,body,send,transaction});
   async function handle(req,res){
     const path=new URL(req.url,'http://local').pathname;if(path!=='/api/mahjong'&&!path.startsWith('/api/mahjong/'))return false;
     let requestedToken;
     try{
+      if(await presets.handle(req,res,path))return true;
       const voiceMatch=/^\/api\/mahjong\/([a-f0-9]{32})\/voice\/([1-9]\d{0,14})$/.exec(path),match=voiceMatch?[null,voiceMatch[1],'voice']:/^\/api\/mahjong(?:\/([a-f0-9]{32})(?:\/(join|leave|ready|start|rules|next|close|action|chat|events))?)?\/?$/.exec(path);if(!match)throw fail(404,'未知牌室操作');
       if(!['GET','POST'].includes(req.method))throw fail(405,'不支持此操作');
       const [,token,action]=match;

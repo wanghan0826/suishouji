@@ -1,0 +1,29 @@
+/* Four hands remain visible between rounds; details never replace the revealed cards. */
+.mj-showing-result .mj-stage{padding:0!important;min-height:0}
+.mj-showing-result .mj-playbar{display:none}
+.mj-result:not([hidden]){display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:8px;width:100%;max-width:1200px;height:100%;max-height:100%;padding:10px 16px;margin:auto;overflow:hidden;background:radial-gradient(ellipse at 45% 0%,#28645e,#153c42 80%);color:#f5efdb;--settlement-tile:22px}
+.mj-result:focus{outline:none}
+.mj-settlement-head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px;padding:0 4px}
+.mj-settlement-kicker{font-size:9px;color:#c0cdb9;letter-spacing:.08em}
+.mj-settlement-head h2{font-size:25px;line-height:1.2;margin:2px 0;color:#ffe6a5;letter-spacing:.08em}
+.mj-result .mj-settlement-head p{font-size:10px;line-height:1.35;margin:3px 0 0;color:#c7ddcd}
+.mj-settlement-mine{text-align:right;flex:none}.mj-settlement-mine small{display:block;color:#bfd5c7;font-size:9px}.mj-settlement-mine strong{display:block;font:800 30px/1.1 ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.mj-settlement-list{display:grid;grid-template-rows:repeat(4,minmax(0,1fr));gap:5px;min-height:0}
+.mj-settlement-row{display:grid;grid-template-columns:minmax(105px,17%) minmax(0,1fr) 76px;grid-template-rows:minmax(0,1fr);gap:12px;align-items:center;min-height:0;min-width:0;padding:5px 10px;border:1px solid #c9d7b4;border-radius:6px;background:linear-gradient(100deg,#edf0dc,#faf7e8 48%,#eceddb);color:#27493e;box-shadow:0 2px 4px #0c282c30}
+.mj-settlement-row.is-winner{border-color:#e4bd68;background:linear-gradient(100deg,#f3d894,#fff5d4 48%,#f0e4b9);box-shadow:inset 3px 0 #c89e45,0 2px 4px #0c282c30}
+.mj-settlement-player{display:flex;align-items:center;gap:7px;min-width:0;min-height:0}.mj-settlement-player .table-avatar{width:32px;flex:none;border:1px solid #8da993;border-radius:6px;background:#a5c4ab}.mj-settlement-player .mj-chibi-avatar::before{background-image:var(--mj-portrait);background-size:cover;background-position:center}
+.mj-settlement-identity{min-width:0}.mj-settlement-identity strong,.mj-settlement-identity small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mj-settlement-identity strong{font-size:12px;line-height:1.5}.mj-settlement-identity small{font-size:9px;line-height:1.6;color:#5b7161}
+.mj-settlement-tiles,.mj-settlement-concealed,.mj-settlement-melds{display:flex;align-items:center;min-width:0;gap:1px}
+.mj-settlement-tiles{gap:9px;overflow:visible}.mj-settlement-concealed:empty{display:none}.mj-settlement-concealed,.mj-settlement-melds{flex:none}.mj-settlement-melds{gap:5px;padding-left:6px;border-left:1px solid #a3b39a80}
+.mj-settlement-tile,.mj-settlement-melds .mj-meld svg{display:block;width:var(--settlement-tile);height:calc(var(--settlement-tile)*1.4);flex:none;filter:drop-shadow(0 1px 0 #12372b33)}
+.mj-settlement-tile svg{display:block;width:100%;height:100%}.mj-settlement-melds .mj-meld{gap:1px;flex:none}.mj-settlement-melds .mj-meld small{display:none}
+.mj-settlement-winning{position:relative;margin-left:3px;outline:2px solid #b98220;outline-offset:1px;border-radius:3px}.mj-settlement-winning b{position:absolute;right:-5px;top:-5px;display:grid;place-items:center;width:15px;height:15px;font-size:9px;line-height:1;border-radius:50%;background:#b7771c;border:1px solid #ffebaf;color:#fff8dc}
+.mj-settlement-score{text-align:right;min-width:0}.mj-settlement-score strong{display:block;font:800 23px/1.1 ui-monospace,monospace;font-variant-numeric:tabular-nums}.mj-settlement-score small{display:block;margin-top:3px;font-size:9px;white-space:nowrap;color:#637662}
+.mj-result .is-gain{color:#a55f17}.mj-result .is-loss{color:#426757}.mj-settlement-mine .is-gain{color:#ffe09a}.mj-settlement-mine .is-loss{color:#c5d8c5}
+.mj-settlement-footer{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:42px}.mj-settlement-footer>div{display:flex;align-items:center;gap:7px;min-width:0}.mj-settlement-wait{font-size:10px;color:#b9cec0}
+.mahjong-page .mj-settlement-footer button{min-height:40px;padding:6px 13px;border-radius:5px;border:1px solid #a5c1a57a;background:#214f4c;color:#ebf1dc;font-size:12px;white-space:nowrap}.mahjong-page .mj-settlement-footer .mj-settlement-next{background:linear-gradient(#ffe7a9,#dcb767);border-color:#e8d298;color:#573d1e;font-weight:800;min-width:110px;box-shadow:0 2px 0 #8b6f3c}
+.mj-settlement-dialog p{padding:8px 0;border-bottom:1px solid var(--border);overflow-wrap:anywhere}
+@media(orientation:landscape) and (max-height:360px),(orientation:portrait) and (pointer:coarse) and (max-width:360px){
+ .mj-result:not([hidden]){padding:6px 10px;gap:5px}.mj-settlement-head{min-height:42px}.mj-settlement-head h2{font-size:20px}.mj-settlement-kicker{font-size:8px}.mj-result .mj-settlement-head p{font-size:9px;margin-top:1px}.mj-settlement-mine strong{font-size:25px}.mj-settlement-mine small{font-size:8px}
+ .mj-settlement-list{gap:4px}.mj-settlement-row{grid-template-columns:86px minmax(0,1fr) 55px;padding:3px 6px;gap:7px;border-radius:4px}.mj-settlement-player{gap:5px}.mj-settlement-player .table-avatar{width:27px;border-radius:4px}.mj-settlement-identity strong{font-size:10px}.mj-settlement-identity small{font-size:8px}.mj-settlement-score strong{font-size:19px}.mj-settlement-score small{font-size:8px;margin-top:2px}.mj-settlement-footer{min-height:38px}.mahjong-page .mj-settlement-footer button{min-height:36px;font-size:11px;padding:5px 9px}.mahjong-page .mj-settlement-footer .mj-settlement-next{min-width:92px}.mj-settlement-wait{font-size:9px}.mj-settlement-winning b{width:12px;height:12px;font-size:8px;top:-4px;right:-4px}
+}
