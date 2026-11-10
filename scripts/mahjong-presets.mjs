@@ -16,7 +16,7 @@ export function createMahjongPresets({db,users,clock=Date.now,body,send,transact
     UNIQUE(user_id,op_id));
     CREATE INDEX IF NOT EXISTS mahjong_presets_owner ON mahjong_rule_presets(user_id,removed_at);
     CREATE INDEX IF NOT EXISTS mahjong_presets_recent ON mahjong_rule_presets(removed_at,id DESC);`);
-  const view=(row,user)=>({id:row.id,author:{id:row.user_id,username:row.author_name},description:row.description,rules:JSON.parse(row.rules),createdAt:row.created_at,canRemove:row.user_id===user?.id});
+  const view=(row,user)=>({id:row.id,author:{id:row.user_id,username:row.author_name},description:row.description,rules:normalizeRules(JSON.parse(row.rules)),createdAt:row.created_at,canRemove:row.user_id===user?.id});
   const lookup=id=>db.prepare('SELECT p.*,u.username AS author_name FROM mahjong_rule_presets p JOIN site_users u ON u.id=p.user_id AND u.disabled=0 WHERE p.id=? AND p.removed_at IS NULL').get(id);
   return {async handle(req,res,path){
     if(path!=='/api/mahjong/presets'&&!path.startsWith('/api/mahjong/presets/'))return false;
@@ -38,7 +38,7 @@ export function createMahjongPresets({db,users,clock=Date.now,body,send,transact
     const input=inputPreset(await body(req)),rules=JSON.stringify(input.rules);let row,duplicate=false;
     transaction(()=>{
       const old=db.prepare('SELECT * FROM mahjong_rule_presets WHERE user_id=? AND op_id=?').get(user.id,input.opId);
-      if(old){if(old.rules!==rules||old.description!==input.description)throw fail(409,'这次发布凭据已使用，请重新编辑后提交');if(old.removed_at!==null)throw fail(409,'这个方案已经下架，请重新发布');row=lookup(old.id);duplicate=true;return;}
+      if(old){if(JSON.stringify(normalizeRules(JSON.parse(old.rules)))!==rules||old.description!==input.description)throw fail(409,'这次发布凭据已使用，请重新编辑后提交');if(old.removed_at!==null)throw fail(409,'这个方案已经下架，请重新发布');row=lookup(old.id);duplicate=true;return;}
       if(db.prepare('SELECT COUNT(*) AS n FROM mahjong_rule_presets WHERE user_id=? AND removed_at IS NULL').get(user.id).n>=10)throw fail(409,'每人最多公开10个规则方案，请先下架不再使用的方案');
       if(db.prepare('SELECT COUNT(*) AS n FROM mahjong_rule_presets WHERE user_id=? AND created_at>?').get(user.id,clock()-HOUR).n>=6)throw fail(429,'一小时最多发布6个方案，请稍后再试');
       const inserted=db.prepare('INSERT INTO mahjong_rule_presets(user_id,op_id,description,rules,created_at) VALUES(?,?,?,?,?)').run(user.id,input.opId,input.description,rules,clock());row=lookup(Number(inserted.lastInsertRowid));

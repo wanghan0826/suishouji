@@ -1,8 +1,9 @@
 (()=>{
   const $=id=>document.getElementById(id),el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
-  const defaults={hands:4,base:1,reserve:16,selfDrawOnly:true,sevenPairs:true,luxuryPairs:true,menqing:true,pungs:true,halfFlush:true,flush:true,allHonors:true,singleWait:true,kongDouble:true,kongFlower:true,multiHu:true,robKong:false,mingKong:1,anKong:2,kongSettlement:'immediate',cap:32,turnSeconds:60,responseSeconds:12,dealer:'winner'};
+  const factorDefaults={sevenPairs:4,luxuryPairs:8,menqing:2,pungs:2,halfFlush:2,flush:4,allHonors:8,singleWait:4,kongDouble:2,kongFlower:2};
+  const defaults={hands:4,base:1,reserve:16,selfDrawOnly:true,sevenPairs:true,luxuryPairs:true,menqing:true,pungs:true,halfFlush:true,flush:true,allHonors:true,singleWait:true,kongDouble:true,kongFlower:true,multiHu:true,robKong:false,mingKong:1,anKong:2,kongSettlement:'immediate',cap:32,turnSeconds:60,responseSeconds:12,dealer:'winner',...Object.fromEntries(Object.entries(factorDefaults).map(([k,v])=>[k+'Factor',v]))};
   const fields={hands:['局数',[[1,'1 局体验'],[4,'4 局'],[8,'8 局'],[16,'16 局']]],base:['基础积分',[[1,'1 分'],[2,'2 分'],[5,'5 分'],[10,'10 分']]],reserve:['荒牌保留',[[0,'不留荒牌'],[8,'留 8 张'],[16,'留 16 张'],[20,'留 20 张']]],selfDrawOnly:['胡牌方式',[[true,'只自摸'],[false,'可自摸、可点胡']]],mingKong:['明杠 / 补杠',[[0,'不计分'],[1,'每家 1 分'],[2,'每家 2 分']]],anKong:['暗杠',[[0,'不计分'],[1,'每家 1 分'],[2,'每家 2 分'],[4,'每家 4 分']]],kongSettlement:['杠分结算', [['immediate','流局也计杠分'],['win','有人胡牌才计杠分']]],cap:['胡牌倍数上限',[[8,'8 倍'],[16,'16 倍'],[32,'32 倍'],[64,'64 倍']]],turnSeconds:['出牌时间',[[30,'30 秒'],[60,'60 秒'],[90,'90 秒']]],responseSeconds:['碰杠胡响应',[[8,'8 秒'],[12,'12 秒'],[20,'20 秒']]],dealer:['下一局庄家',[['winner','赢家坐庄，流局连庄'],['rotate','每局轮庄']]]};
-  const checks={sevenPairs:'七对 ×4',luxuryPairs:'豪华七对 ×8',menqing:'门清 ×2',pungs:'碰碰胡 ×2',halfFlush:'混一色 ×2',flush:'清一色 ×4',allHonors:'全字牌 ×8',singleWait:'金钩钓 ×4',kongDouble:'开杠 ×2',kongFlower:'杠上开花 ×2',multiHu:'允许一炮多响',robKong:'允许抢补杠胡'};
+  const checks={sevenPairs:'七对',luxuryPairs:'豪华七对',menqing:'门清',pungs:'碰碰胡',halfFlush:'混一色',flush:'清一色',allHonors:'全字牌',singleWait:'单吊',kongDouble:'开杠',kongFlower:'杠上开花',multiHu:'允许一炮多响',robKong:'允许抢补杠胡'};
   const phases={lobby:'等待入座',playing:'正在打牌',respond:'等待响应',between:'本局结算',finished:'整桌结束',closed:'牌室关闭'},directions=['东','南','西','北'];
   let presetUI=null;
   let token=/^\/mahjong\/([a-f0-9]{32})\/?$/.exec(location.pathname)?.[1]||'',room=null,preview=null,selected=null,selectedIndex=-1,busy=false,epoch=0,authId=undefined,polling=false,lastRendered='',confirmAction=null;
@@ -142,15 +143,18 @@
   }
   [18,22,26].forEach(t=>$('mjCover').append(tile(t)));
   function rulesForm(root,values,disabled=false){
-    root.replaceChildren();
+    values={...defaults,...values};root.replaceChildren();
     const group=keys=>{const grid=el('div','mj-rule-grid');for(const k of keys){const label=el('label','',fields[k][0]),select=el('select');select.dataset.rule=k;select.setAttribute('aria-label',fields[k][0]);select.disabled=disabled;for(const[v,text]of fields[k][1]){const opt=el('option','',text);opt.value=String(v);select.append(opt);}select.value=String(values[k]);label.append(select);grid.append(label);}return grid;};
     root.append(group(['hands','base','selfDrawOnly','reserve']));
     for(const [title,keys]of [['积分与杠分',['mingKong','anKong','kongSettlement','cap']],['出牌与庄家',['turnSeconds','responseSeconds','dealer']]]){const d=el('details'),s=el('summary','',title);d.append(s,group(keys));root.append(d);}
-    const d=el('details'),s=el('summary','','可选牌型与胡牌细则'),grid=el('div','mj-rule-checks');for(const[k,text]of Object.entries(checks)){const label=el('label','',text),input=el('input');input.type='checkbox';input.dataset.rule=k;input.checked=values[k];input.disabled=disabled;label.append(input);grid.append(label);}d.append(s,grid);root.append(d);
-    root.append(el('p','mj-rule-note','固定：136张、无精、不可吃。各项倍数相乘后封顶，再乘基础分；点胡由放铳者支付，自摸由另外三家各付一份。杠分乘基础分，单独结算；明杠和补杠同分。豪华七对替代普通七对，全字牌替代清一色/混一色。只自摸时不能抢杠胡。'));
-    const sync=()=>{root.querySelector('[data-rule=robKong]').disabled=disabled||root.querySelector('[data-rule=selfDrawOnly]').value==='true';root.querySelector('[data-rule=luxuryPairs]').disabled=disabled||!root.querySelector('[data-rule=sevenPairs]').checked;};root.onchange=sync;sync();
+    const d=el('details'),s=el('summary','','可选牌型与胡牌细则'),grid=el('div','mj-rule-checks');for(const[k,text]of Object.entries(checks)){const row=el('div','mj-rule-check'),label=el('label','mj-rule-toggle'),input=el('input');input.type='checkbox';input.dataset.rule=k;input.checked=values[k];input.disabled=disabled;label.append(input,el('span','',text));row.append(label);
+      if(k==='singleWait')label.title='碰杠四组后，剩一张手牌配对胡牌';
+      if(Object.hasOwn(factorDefaults,k)){const factorLabel=el('label','mj-rule-factor'),number=el('input');number.type='number';number.min='1';number.max='64';number.step='1';number.required=true;number.inputMode='numeric';number.dataset.rule=k+'Factor';number.value=String(values[k+'Factor']);number.setAttribute('aria-label',text+'倍数');factorLabel.append(el('span','','×'),number,el('span','','倍'));row.append(factorLabel);}grid.append(row);
+    }d.append(s,el('p','mj-factor-note','各项可设1–64倍；1倍表示不额外翻倍。叠加后仍受本桌倍数上限限制。'),grid);root.append(d);
+    root.append(el('p','mj-rule-note','固定：136张、无精、不可吃。各项倍数相乘后封顶，再乘基础分；点胡即用别人打出的牌胡牌，由放铳者支付，自摸由另外三家各付一份。杠分乘基础分，单独结算；豪华七对替代普通七对，全字牌替代清一色/混一色。单吊指碰杠四组后，剩一张手牌配对胡牌。抢补杠胡独立开关，只自摸时也可单独开启。'));
+    const sync=()=>{root.querySelector('[data-rule=robKong]').disabled=disabled;root.querySelector('[data-rule=luxuryPairs]').disabled=disabled||!root.querySelector('[data-rule=sevenPairs]').checked;for(const k of Object.keys(factorDefaults)){const check=root.querySelector('[data-rule='+k+']'),n=root.querySelector('[data-rule='+k+'Factor]');n.disabled=disabled||check.disabled||!check.checked;if(n.disabled&&(!Number.isInteger(Number(n.value))||Number(n.value)<1||Number(n.value)>64))n.value=String(factorDefaults[k]);}};root.onchange=sync;sync();
   }
-  function readRules(root){const out={};for(const n of root.querySelectorAll('[data-rule]'))out[n.dataset.rule]=n.type==='checkbox'?n.checked:n.value==='true'?true:n.value==='false'?false:/^\d+$/.test(n.value)?Number(n.value):n.value;return out;}
+  function readRules(root){const out={};for(const n of root.querySelectorAll('[data-rule]'))out[n.dataset.rule]=n.type==='checkbox'?n.checked:n.type==='number'?Number(n.value):n.value==='true'?true:n.value==='false'?false:/^\d+$/.test(n.value)?Number(n.value):n.value;return out;}
   rulesForm($('mjCreateRules'),defaults);
   const advancedRules=el('details','mj-advanced'),advancedSummary=el('summary','','自定义更多家规');
   advancedSummary.append(el('small','','计分 · 杠分 · 胡牌细则'));
@@ -331,7 +335,7 @@
     const list=el('div','mj-settlement-list');list.setAttribute('aria-label','四家剩余手牌与本局积分');
     for(const offset of [0,1,2,3]){const seat=(r.me+offset)%4,p=r.seats[seat],winner=result.winners.includes(seat),row=el('section','mj-settlement-row'+(winner?' is-winner':'')+(seat===result.source?' is-source':''));row.dataset.seat=seat;row.setAttribute('aria-label',p.name+'，'+(winner?'胡牌，':'')+'本局'+signedPoints(result.delta[seat])+'分');
       const identity=el('div','mj-settlement-player'),avatar=el('span','table-avatar mj-chibi-avatar'),label=el('div','mj-settlement-identity');avatar.style.setProperty('--mj-portrait',`url('/assets/mahjong-chibi-v1-${portraitIndex(p)}.webp')`);avatar.setAttribute('aria-hidden','true');
-      const tags=[directions[seat]+'位'];if(seat===r.me)tags.push('你');if(winner)tags.push(result.source===null?'自摸':'胡牌');else if(seat===result.source)tags.push('放铳');label.append(el('strong','',p.name),el('small','',tags.join(' · ')));identity.append(avatar,label);
+      const tags=[directions[seat]+'位'];if(seat===r.me)tags.push('你');if(winner)tags.push(result.source===null?'自摸':'胡牌');else if(seat===result.source)tags.push(result.items.some(i=>i.rob)?'被抢杠':'放铳');label.append(el('strong','',p.name),el('small','',tags.join(' · ')));identity.append(avatar,label);
       const cards=el('div','mj-settlement-tiles'),hand=el('div','mj-settlement-concealed'),concealed=[...result.hands[seat]].sort((a,b)=>a-b),hasWinTile=winner&&Number.isInteger(result.tile);
       if(hasWinTile&&result.source===null){const i=concealed.lastIndexOf(result.tile);if(i>=0)concealed.splice(i,1);}
       for(const t of concealed)hand.append(resultTile(t));cards.append(hand);
@@ -342,7 +346,7 @@
     const footer=el('footer','mj-settlement-footer'),left=el('div'),right=el('div'),details=el('button','','计分明细');details.type='button';details.onclick=()=>$('mjSettlementDialog').showModal();left.append(details);
     if(r.phase==='between'&&r.hostId!==window.SJAuth.user?.id)left.append(el('span','mj-settlement-wait','等待房主开始下一局'));
     right.append(actionButton('返回大厅',()=>navigate('')));if(r.phase==='between'&&r.hostId===window.SJAuth.user?.id)right.append(actionButton('下一局 →',()=>mutate('next'),'mj-settlement-next'));footer.append(left,right);root.append(header,list,footer);
-    const detail=$('mjSettlementDetails');detail.replaceChildren();for(const item of result.items)detail.append(el('p','',r.seats[item.seat].name+'：'+item.patterns.map(p=>p.name+(p.factor>1?' ×'+p.factor:'')).join(' · ')+' → '+item.multiplier+'倍'+(item.uncapped>item.multiplier?'（已封顶）':'')+' × 基础'+r.rules.base+'分；'+(result.source===null?'其他三家各付':'放铳者支付')+item.points+'分'+(item.rob?' · 抢杠胡':'')));
+    const detail=$('mjSettlementDetails');detail.replaceChildren();for(const item of result.items)detail.append(el('p','',r.seats[item.seat].name+'：'+item.patterns.map(p=>(p.name==='金钩钓'?'单吊':p.name)+' ×'+p.factor).join(' · ')+' → '+item.uncapped+'倍'+(item.uncapped>item.multiplier?'，封顶至'+item.multiplier+'倍':'')+' × 基础'+r.rules.base+'分；'+(result.source===null?'其他三家各付':item.rob?'被抢杠者支付':'放铳者支付')+item.points+'分'+(item.rob?' · 抢杠胡':'')));
     detail.append(el('p','',result.kongs.length?result.kongs.map(k=>r.seats[k.seat].name+' '+(k.type==='an'?'暗杠':'明/补杠')+'，'+(k.applied?'另外三家各付'+k.points*r.rules.base+'分':'流局不计杠分')).join('；'):'本局没有杠分。'));root.scrollTop=0;scheduleSettlement();
     if($('mjChat').hidden&&!document.querySelector('dialog[open]'))root.focus({preventScroll:true});
   }

@@ -1,0 +1,7 @@
+.mj-rule-checks{gap:3px 14px}.mj-rule-check{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;border-bottom:1px solid var(--border)}
+.mj-rule-check .mj-rule-toggle{flex:1;min-width:0;justify-content:flex-start;gap:6px;line-height:1.4}.mj-rule-toggle>span{overflow-wrap:anywhere}.mj-rule-check .mj-rule-toggle input{flex:none}
+.mj-rule-check .mj-rule-factor{flex:none;justify-content:flex-end;gap:3px;min-height:44px;font-size:10px;color:var(--text2)}
+.mj-rule-check .mj-rule-factor input{width:52px;min-width:0;height:36px;min-height:36px;padding:4px 3px;margin:0;border:1px solid var(--border);border-radius:3px;background:var(--bg);color:var(--text);font-size:16px;line-height:1.4;text-align:center;accent-color:var(--accent)}
+.mj-rule-factor input:disabled{opacity:.5}.mj-rule-factor:has(input:disabled){color:var(--text2)}.mj-factor-note{font-size:10px;line-height:1.8;color:var(--text2);margin:0 0 6px}
+.mj-preset-dialog .mj-rule-check .mj-rule-toggle{font-size:11px}.mj-preset-dialog .mj-rule-check .mj-rule-factor input{font-size:16px}
+@media(max-width:380px){.mj-rule-checks{grid-template-columns:minmax(0,1fr);gap:0}.mj-rule-check .mj-rule-toggle{font-size:12px}.mj-rule-check .mj-rule-factor input{width:60px}}

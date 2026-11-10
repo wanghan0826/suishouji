@@ -1,6 +1,8 @@
 import crypto from 'node:crypto';
 
-export const DEFAULT_RULES=Object.freeze({hands:4,base:1,reserve:16,selfDrawOnly:true,sevenPairs:true,luxuryPairs:true,menqing:true,pungs:true,halfFlush:true,flush:true,allHonors:true,singleWait:true,kongDouble:true,kongFlower:true,multiHu:true,robKong:false,mingKong:1,anKong:2,kongSettlement:'immediate',cap:32,turnSeconds:60,responseSeconds:12,dealer:'winner'});
+export const DEFAULT_FACTORS=Object.freeze({sevenPairs:4,luxuryPairs:8,menqing:2,pungs:2,halfFlush:2,flush:4,allHonors:8,singleWait:4,kongDouble:2,kongFlower:2});
+const factorDefaults=Object.fromEntries(Object.entries(DEFAULT_FACTORS).map(([key,n])=>[key+'Factor',n]));
+export const DEFAULT_RULES=Object.freeze({hands:4,base:1,reserve:16,selfDrawOnly:true,sevenPairs:true,luxuryPairs:true,menqing:true,pungs:true,halfFlush:true,flush:true,allHonors:true,singleWait:true,kongDouble:true,kongFlower:true,multiHu:true,robKong:false,mingKong:1,anKong:2,kongSettlement:'immediate',cap:32,turnSeconds:60,responseSeconds:12,dealer:'winner',...factorDefaults});
 const choices={hands:[1,4,8,16],base:[1,2,5,10],reserve:[0,8,16,20],mingKong:[0,1,2],anKong:[0,1,2,4],kongSettlement:['immediate','win'],cap:[8,16,32,64],turnSeconds:[30,60,90],responseSeconds:[8,12,20],dealer:['winner','rotate']};
 const fail=(message,status=409)=>Object.assign(Error(message),{status});
 export function normalizeRules(input={}){
@@ -8,15 +10,15 @@ export function normalizeRules(input={}){
   const out={...DEFAULT_RULES};
   for(const [key,value]of Object.entries(input)){
     if(!Object.hasOwn(out,key))throw fail('未知规则：'+key,400);
-    if(choices[key]?!choices[key].includes(value):typeof value!=='boolean')throw fail('规则选项无效：'+key,400);
+    if(Object.hasOwn(factorDefaults,key)?!Number.isSafeInteger(value)||value<1||value>64:choices[key]?!choices[key].includes(value):typeof value!=='boolean')throw fail(Object.hasOwn(factorDefaults,key)?'胡牌倍率须为1–64的整数：'+key:'规则选项无效：'+key,400);
     out[key]=value;
   }
-  if(out.selfDrawOnly)out.robKong=false;
   if(!out.sevenPairs)out.luxuryPairs=false;
   return out;
 }
 export const tileName=t=>Number.isInteger(t)&&t>=0&&t<34?(t<27?['一','二','三','四','五','六','七','八','九'][t%9]+['万','筒','条'][Math.floor(t/9)]:['东','南','西','北','中','发','白'][t-27]):'暗牌';
 const count=hand=>{const c=Array(34).fill(0);for(const t of hand){if(!Number.isInteger(t)||t<0||t>33)return null;c[t]++;if(c[t]>4)return null;}return c;};
+const factor=(rules,key)=>rules[key+'Factor']??DEFAULT_FACTORS[key];
 function groups(c,n){
   const t=c.findIndex(v=>v>0);if(t<0)return n===0;if(n<=0)return false;
   if(c[t]>=3){c[t]-=3;const ok=groups(c,n-1);c[t]+=3;if(ok)return true;}
@@ -31,14 +33,14 @@ export function winningHand(hand,melds=[],rules=DEFAULT_RULES){
   let standard=false;for(let i=0;i<34&&!standard;i++)if(c[i]>=2){c[i]-=2;standard=groups(c,4-melds.length);c[i]+=2;}
   if(!pairs&&!standard)return null;
   const patterns=[{name:'自摸平胡',factor:1}],honors=all.slice(27).some(Boolean),suits=[0,1,2].filter(s=>all.slice(s*9,s*9+9).some(Boolean));
-  if(pairs){patterns.push({name:rules.luxuryPairs&&c.some(v=>v===4)?'豪华七对':'七对',factor:rules.luxuryPairs&&c.some(v=>v===4)?8:4});}
-  else if(rules.pungs&&c.filter(v=>v===2).length===1&&c.every(v=>v===0||v===2||v===3))patterns.push({name:'碰碰胡',factor:2});
-  if(rules.allHonors&&!suits.length)patterns.push({name:'全字牌',factor:8});
-  else if(rules.flush&&suits.length===1&&!honors)patterns.push({name:'清一色',factor:4});
-  else if(rules.halfFlush&&suits.length===1&&honors)patterns.push({name:'混一色',factor:2});
-  if(rules.menqing&&melds.every(m=>m.type==='an'))patterns.push({name:'门清',factor:2});
-  if(rules.singleWait&&melds.length===4)patterns.push({name:'金钩钓',factor:4});
-  if(rules.kongDouble&&melds.some(m=>m.type!=='pong'))patterns.push({name:'开杠',factor:2});
+  if(pairs){const luxury=rules.luxuryPairs&&c.some(v=>v===4);patterns.push({name:luxury?'豪华七对':'七对',factor:factor(rules,luxury?'luxuryPairs':'sevenPairs')});}
+  else if(rules.pungs&&c.filter(v=>v===2).length===1&&c.every(v=>v===0||v===2||v===3))patterns.push({name:'碰碰胡',factor:factor(rules,'pungs')});
+  if(rules.allHonors&&!suits.length)patterns.push({name:'全字牌',factor:factor(rules,'allHonors')});
+  else if(rules.flush&&suits.length===1&&!honors)patterns.push({name:'清一色',factor:factor(rules,'flush')});
+  else if(rules.halfFlush&&suits.length===1&&honors)patterns.push({name:'混一色',factor:factor(rules,'halfFlush')});
+  if(rules.menqing&&melds.every(m=>m.type==='an'))patterns.push({name:'门清',factor:factor(rules,'menqing')});
+  if(rules.singleWait&&melds.length===4)patterns.push({name:'单吊',factor:factor(rules,'singleWait')});
+  if(rules.kongDouble&&melds.some(m=>m.type!=='pong'))patterns.push({name:'开杠',factor:factor(rules,'kongDouble')});
   return patterns;
 }
 const log=(r,text)=>{r.log.push(text);if(r.log.length>32)r.log.shift();};
@@ -62,7 +64,7 @@ function draw(r,seat,now,tail=false){
 const remove=(hand,t,n)=>{for(let k=0;k<n;k++){const i=hand.indexOf(t);if(i<0)throw fail('手牌已变化，请重新选择');hand.splice(i,1);}};
 function huPatterns(r,seat,tile=null){
   const p=winningHand(tile===null?r.hands[seat]:[...r.hands[seat],tile],r.melds[seat],r.rules);
-  if(p){p[0].name=tile===null?'自摸':'点胡';if(tile===null&&r.afterKong&&r.rules.kongFlower)p.push({name:'杠上开花',factor:2});}
+  if(p){p[0].name=tile===null?'自摸':'点胡';if(tile===null&&r.afterKong&&r.rules.kongFlower)p.push({name:'杠上开花',factor:factor(r.rules,'kongFlower')});}
   return p;
 }
 export function available(r,seat){
@@ -76,6 +78,7 @@ function settle(r,winners,source,now,rob=false){
   const delta=[0,0,0,0],items=[];
   if(winners.length){
     for(const s of winners){const patterns=huPatterns(r,s,source===null?null:r.pending.tile),raw=patterns.reduce((n,p)=>n*p.factor,1),multiplier=Math.min(raw,r.rules.cap),points=multiplier*r.rules.base,payers=source===null?[0,1,2,3].filter(v=>v!==s):[source];
+      if(rob)patterns[0].name='抢杠胡';
       for(const from of payers){delta[from]-=points;delta[s]+=points;}
       items.push({seat:s,patterns,multiplier,uncapped:raw,points,payers,rob});
     }
@@ -96,7 +99,7 @@ function kong(r,seat,tile,type,now,from=null){
 function respond(r,tile,from,now,rob=false){
   const eligible={};
   for(let n=1;n<4;n++){const s=(from+n)%4,c=count(r.hands[s]),opts=[];
-    if(!r.rules.selfDrawOnly&&huPatterns(r,s,tile))opts.push('hu');
+    if((rob?r.rules.robKong:!r.rules.selfDrawOnly)&&huPatterns(r,s,tile))opts.push('hu');
     if(!rob){if(c[tile]>=3&&playable(r))opts.push('kong');if(c[tile]>=2)opts.push('pong');}
     if(opts.length)eligible[s]=opts;
   }
@@ -168,7 +171,7 @@ export function tick(r,now){
 }
 export function roomView(r,id,token,now){
   const me=r.seats.findIndex(s=>s?.userId===id&&!s.away),host=r.seats.find(s=>s?.userId===r.hostId);
-  if(me<0)return {preview:{host:host?.name||'朋友',count:r.seats.filter(Boolean).length,phase:r.phase,canJoin:r.phase==='lobby'&&r.seats.some(s=>!s)||r.seats.some(s=>s?.userId===id&&s.away)&&!['closed','finished'].includes(r.phase),rules:r.rules}};
+  if(me<0)return {preview:{host:host?.name||'朋友',count:r.seats.filter(Boolean).length,phase:r.phase,canJoin:r.phase==='lobby'&&r.seats.some(s=>!s)||r.seats.some(s=>s?.userId===id&&s.away)&&!['closed','finished'].includes(r.phase),rules:{...DEFAULT_RULES,...r.rules}}};
   const revealed=['between','finished'].includes(r.phase);
-  return {room:{token,phase:r.phase,version:r.version,handNo:r.handNo,rules:r.rules,me,hostId:r.hostId,dealer:r.dealer,turn:r.turn,remaining:Math.max(0,r.wall.length-r.rules.reserve),wallCount:r.wall.length,deadline:r.deadline,serverNow:now,drawn:r.turn===me&&r.phase==='playing'?r.drawn:null,hand:[...r.hands[me]],seats:r.seats.map((s,i)=>s?{...s,handCount:r.hands[i].length,melds:r.melds[i].map(m=>m.type==='an'&&i!==me&&!revealed?{type:'an',tile:null,from:null}:m),river:r.rivers[i],...(revealed?{hand:r.hands[i]}:{})}:null),actions:available(r,me),pending:r.pending?{id:r.pending.id,tile:r.pending.tile,from:r.pending.from,rob:r.pending.rob,responded:Object.hasOwn(r.pending.choices,me)}:null,result:r.result,log:r.log,discards:r.discards||[],sounds:r.sounds??r.discards??[]}};
+  return {room:{token,phase:r.phase,version:r.version,handNo:r.handNo,rules:{...DEFAULT_RULES,...r.rules},me,hostId:r.hostId,dealer:r.dealer,turn:r.turn,remaining:Math.max(0,r.wall.length-r.rules.reserve),wallCount:r.wall.length,deadline:r.deadline,serverNow:now,drawn:r.turn===me&&r.phase==='playing'?r.drawn:null,hand:[...r.hands[me]],seats:r.seats.map((s,i)=>s?{...s,handCount:r.hands[i].length,melds:r.melds[i].map(m=>m.type==='an'&&i!==me&&!revealed?{type:'an',tile:null,from:null}:m),river:r.rivers[i],...(revealed?{hand:r.hands[i]}:{})}:null),actions:available(r,me),pending:r.pending?{id:r.pending.id,tile:r.pending.tile,from:r.pending.from,rob:r.pending.rob,responded:Object.hasOwn(r.pending.choices,me)}:null,result:r.result,log:r.log,discards:r.discards||[],sounds:r.sounds??r.discards??[]}};
 }

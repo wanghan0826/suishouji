@@ -26,6 +26,8 @@
     function countDescription(){const n=[...$('mjPresetDescription').value.trim().normalize('NFC')].length;$('mjPresetCount').textContent=n+' / 20';$('mjPresetDescription').setCustomValidity(n>20?'文字说明最多20字':'');}
     function openPublisher(){
       if(!window.SJAuth.user){window.SJAuth.open({purpose:'登录后可以把规则方案分享给其他牌友。',resume:openPublisher});return;}
+      for(const invalid of $('mjCreateRules').querySelectorAll('input:invalid'))for(let d=invalid.closest('details');d;d=d.parentElement.closest('details'))d.open=true;
+      if(!$('mjCreate').reportValidity())return;
       draftRules=readRules($('mjCreateRules'));renderRules($('mjPresetPublishRules'),draftRules,true);$('mjPresetPublishSummary').textContent=summary(draftRules).join(' · ');$('mjPresetPublishError').textContent='';countDescription();$('mjPresetPublishDialog').showModal();
     }
     async function publish(e){e.preventDefault();if(publishing||!draftRules)return;countDescription();if(!$('mjPresetPublishForm').reportValidity())return;
