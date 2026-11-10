@@ -111,12 +111,12 @@
   function drawTile(t,back=false){
     const svg=document.createElementNS(svgNS,'svg');svg.setAttribute('viewBox','0 0 40 56');svg.setAttribute('aria-hidden','true');
     const node=(tag,attrs,text)=>{const n=document.createElementNS(svgNS,tag);for(const[k,v]of Object.entries(attrs))n.setAttribute(k,v);if(text)n.textContent=text;svg.append(n);return n;};
-    node('rect',{x:0,y:4,width:40,height:52,rx:3,fill:'#79a690'});node('rect',{x:0,y:0,width:40,height:50,rx:3,fill:back?'#2c7463':'#f8f3dd'});node('path',{d:'M3 3H37',stroke:back?'#81ac95':'#fffdf1','stroke-width':2});
+    node('rect',{x:0,y:4,width:40,height:52,rx:3,fill:'#7da68e'});node('rect',{x:.5,y:.5,width:39,height:50,rx:3,fill:back?'#2c7463':'#fffdf0',stroke:back?'#4f9276':'#d6d6bf','stroke-width':1});node('path',{d:'M3 3H37M2 5V46',fill:'none',stroke:back?'#81ac95':'#ffffff','stroke-width':2});node('path',{d:'M38 5V47Q38 49 35 49H4',fill:'none',stroke:back?'#235747':'#e5e1c9','stroke-width':1.4});
     if(back){node('path',{d:'M9 12H31V38H9ZM14 17H26V33H14Z',fill:'none',stroke:'#83b5a1','stroke-width':1});return svg;}
     if(t===33){node('path',{d:'M7 10H33V40H7ZM11 14H29V36H11Z',fill:'none',stroke:'#264c60','stroke-width':1.6});return svg;}
     if(t>=27){node('text',{x:20,y:35,'text-anchor':'middle','font-size':29,'font-weight':700,'font-family':'KaiTi, STKaiti, Microsoft YaHei, serif',fill:t===31?'#b34535':t===32?'#267357':'#233e4a'},name(t));return svg;}
     const n=t%9+1,suit=Math.floor(t/9);
-    if(suit===0){node('text',{x:20,y:23,'text-anchor':'middle','font-size':22,'font-weight':700,fill:'#273e49'},['一','二','三','四','五','六','七','八','九'][n-1]);node('text',{x:20,y:44,'text-anchor':'middle','font-size':20,'font-weight':700,fill:'#b34535'},'万');return svg;}
+    if(suit===0){node('text',{x:20,y:23,'text-anchor':'middle','font-size':23,'font-weight':700,'font-family':'KaiTi, STKaiti, Microsoft YaHei, serif',fill:'#263c43'},['一','二','三','四','五','六','七','八','九'][n-1]);node('text',{x:20,y:44,'text-anchor':'middle','font-size':22,'font-weight':700,'font-family':'KaiTi, STKaiti, Microsoft YaHei, serif',fill:'#b34535'},'万');return svg;}
     if(suit===2){
       const layouts={1:[[20,25]],2:[[12,25],[28,25]],3:[[20,14],[11,35],[29,35]],4:[[11,14],[29,14],[11,36],[29,36]],5:[[10,12],[30,12],[20,25],[10,38],[30,38]],6:[[10,15],[20,15],[30,15],[10,35],[20,35],[30,35]],7:[[10,11],[20,11],[30,11],[11,27],[29,27],[11,41],[29,41]],8:[[8,15],[16,15],[24,15],[32,15],[8,35],[16,35],[24,35],[32,35]],9:[[10,11],[20,11],[30,11],[10,25],[20,25],[30,25],[10,39],[20,39],[30,39]]};
       const height=n<=2?30:n<=4?17:n===6||n===8?17:11.5,width=n===1?8:n<=4?5.6:n===8?4.3:4.9;
@@ -179,7 +179,7 @@
     source.onerror=()=>{if(revision!==epoch||liveStream!==source)return;stopStream();streamRetryAt=Date.now()+Math.min(15000,1500*2**Math.min(++streamFailures,4));refresh();};
   }
   function hideTable(){stopStream();if(!$('mjTable').hidden){releaseFull();resetChat();voiceReset();}document.body.classList.remove('mj-in-table','game-landscape-page');$('mjTable').hidden=true;$('mjHome').hidden=false;}
-  function clearPrivate(){epoch++;for(const c of controllers)c.abort();room=null;preview=null;selected=null;selectedIndex=-1;handKey='';lastRendered='';busy=false;polling=false;delete $('mjMyMelds')._key;streamRetryAt=0;streamFailures=0;hideTable();for(const id of ['mjHand','mjOpponents','mjRivers','mjResult','mjActions','mjMyMelds','mjLobby','mjLog','mjRecent','mjRoomRules'])$(id).replaceChildren();for(const id of ['mjMyName','mjSelection','mjTurnHint','mjTableMessage','mjInviteInfo','mjCenterStatus','mjWallCount'])$(id).textContent='';$('mjShareLink').value='';$('mjCreate').querySelector('button[type=submit]').disabled=false;for(const d of document.querySelectorAll('.mj-dialog[open]'))d.close();$('mjInvite').hidden=true;$('mjConnection').textContent='';$('mjMessage').textContent='';}
+  function clearPrivate(){epoch++;for(const c of controllers)c.abort();room=null;preview=null;selected=null;selectedIndex=-1;handKey='';lastRendered='';busy=false;polling=false;delete $('mjMyMelds')._key;streamRetryAt=0;streamFailures=0;hideTable();for(const id of ['mjHand','mjOpponents','mjRivers','mjResult','mjActions','mjMyMelds','mjLobby','mjLog','mjRecent','mjRoomRules'])$(id).replaceChildren();for(const id of ['mjMyName','mjMyScore','mjSelection','mjTurnHint','mjTableMessage','mjInviteInfo','mjCenterStatus','mjWallCount'])$(id).textContent='';$('mjShareLink').value='';$('mjCreate').querySelector('button[type=submit]').disabled=false;for(const d of document.querySelectorAll('.mj-dialog[open]'))d.close();$('mjInvite').hidden=true;$('mjConnection').textContent='';$('mjMessage').textContent='';}
   function navigate(next){clearPrivate();token=next;history.pushState(null,'',next?'/mahjong/'+next:'/mahjong');if(next)refresh();else recents();}
   function endRoom(reason='牌室已关闭，已返回大厅。'){
     clearPrivate();token='';history.replaceState(null,'','/mahjong');message(reason);recents();window.scrollTo(0,0);
@@ -251,10 +251,25 @@
   }
   function scheduleRivers(){if(!riverFrame)riverFrame=requestAnimationFrame(()=>{riverFrame=0;fitRivers();});}
   function fitRivers(){
-    const boxes=[...$('mjRivers').children],board=$('mjBoard'),rows=Math.max(3,...boxes.map(b=>Math.ceil(b.querySelectorAll('.mj-river-tile').length/6))),available=Math.max(40,(board.clientHeight-36-$('mjCompass').clientHeight-18)/2);
-    const size=Math.max(3,Math.min(22,(board.clientWidth*.20-14)/8.4,(available-23-(rows-1))/rows/1.4)),cell=size*1.4;
-    board.style.setProperty('--pile-tile',size+'px');board.style.setProperty('--pile-cell',cell+'px');board.style.setProperty('--pile-width',(cell*6+14)+'px');board.style.setProperty('--pile-height',(cell*rows+rows+21)+'px');
-    for(const box of boxes){box.classList.remove('is-dense');box.style.setProperty('--pile-cols','6');}
+    const board=$('mjBoard'),table=$('mjTable'),w=board.clientWidth,h=board.clientHeight;if(!w||!h)return;
+    const boxes=[...$('mjRivers').children],rows=Math.max(3,...boxes.map(b=>Math.ceil(b.querySelectorAll('.mj-river-tile').length/6)));
+    const handCount=$('mjHand').children.length,meldCount=$('mjMyMelds').querySelectorAll('svg').length;
+    const discardWidth=parseFloat(getComputedStyle(table).getPropertyValue('--mj-discard-w'))||104,handAvailable=w*.85-discardWidth-16;
+    const handSize=Math.min(60,w*.048,h*.18,(handAvailable-30-handCount*2-meldCount)/(Math.max(1,handCount+meldCount*.64)));
+    table.style.setProperty('--mj-tile-w',handSize+'px');
+    // Reserve the top rack and bottom hand before fitting a square of four rotated rivers.
+    // Equal native grids stay disjoint even at the corners; labels sit outside each grid.
+    const top=Math.max(32,h*.03+handSize*.67+12),bottom=h-handSize*1.4-30,gap=7,available=Math.min(w*.43,bottom-top);
+    const size=Math.max(3,Math.min(24,(available-11-2*(rows+5)-gap*2)/(6+rows*2.8)));
+    const pileWidth=size*6+11,pileHeight=size*1.4*rows+rows+5;
+    const ringRadius=pileWidth/2+pileHeight+gap;
+    table.style.setProperty('--mj-ring-radius',ringRadius+'px');table.style.setProperty('--mj-action-w',Math.max(62,Math.min(110,w*.32-ringRadius-16-handSize*.56))+'px');
+    board.style.setProperty('--pile-tile',size+'px');board.style.setProperty('--pile-width',pileWidth+'px');board.style.setProperty('--pile-height',pileHeight+'px');
+    board.style.setProperty('--pile-offset',(pileWidth/2+gap+pileHeight/2)+'px');board.style.setProperty('--mj-center-y',((top+bottom)/2)+'px');
+    board.style.setProperty('--mj-compass-w',Math.min(86,pileWidth-8)+'px');board.style.setProperty('--mj-compass-h',Math.min(62,pileWidth-18)+'px');
+    board.style.setProperty('--mj-back-step',Math.min(15,(h*.54-13)/14)+'px');
+    for(const group of $('mjOpponents').children){const count=group.querySelectorAll('.mj-mini-melds svg').length,isTop=group.dataset.side==='top';group.style.setProperty('--mj-open-w',Math.min(handSize*.64,((isTop?w*.29:h*.67)-16)/Math.max(1,count))+'px');}
+    for(const box of boxes){box.classList.remove('is-dense');box.style.setProperty('--pile-cols','6');box.style.setProperty('--pile-rows',String(rows));}
   }
   new ResizeObserver(scheduleRivers).observe($('mjBoard'));
   function paintRivers(){
@@ -271,7 +286,7 @@
   function openRivers(seat){paintRivers();$('mjRiverDialog').showModal();$('mjRiverDetail').querySelector('[data-seat="'+seat+'"]').scrollIntoView({block:'nearest'});}
   function render(){
     const r=room;if(!r)return;const key=r.token+':'+r.version;if(lastRendered===key){countdown();return;}lastRendered=key;
-    $('mjTableTitle').textContent='第 '+r.handNo+'/'+r.rules.hands+' 局';$('mjMyName').textContent=r.seats[r.me].name+' · '+directions[r.me]+'位 · '+r.seats[r.me].score+'分'+(r.dealer===r.me?' · 庄':'');
+    $('mjTableTitle').textContent='第 '+r.handNo+'/'+r.rules.hands+' 局';$('mjMyName').textContent=r.seats[r.me].name;$('mjMyScore').textContent=directions[r.me]+'位 · '+r.seats[r.me].score+'分'+(r.dealer===r.me?' · 庄':'');$('mjMyAvatar').style.setProperty('--mj-portrait',`url('/assets/mahjong-chibi-v1-${portraitIndex(r.seats[r.me])}.webp')`);
     renderBoard(r);
     const lobby=$('mjLobby');lobby.hidden=r.phase!=='lobby'&&r.phase!=='closed';lobby.replaceChildren();
     if(r.phase==='lobby'){
@@ -288,7 +303,7 @@
     if(a.claims){for(const c of a.claims)actions.append(actionButton(({hu:'胡 ',kong:'杠 ',pong:'碰 '})[c]+name(a.tile),()=>mutate('action',{type:'claim',choice:c})));actions.append(actionButton('过',()=>mutate('action',{type:'claim',choice:'pass'}),'mj-pass'));}
     const melds=$('mjMyMelds'),meldKey=JSON.stringify(r.seats[r.me].melds);if(melds._key!==meldKey){melds._key=meldKey;melds.replaceChildren(...r.seats[r.me].melds.map(m=>meldNode(m)));}
     renderHand(r);
-    document.querySelector('.mj-hand-area').hidden=ended||r.phase==='lobby'||r.phase==='closed';$('mjMyMelds').hidden=ended||r.phase==='lobby';countdown();controls();
+    document.querySelector('.mj-hand-area').hidden=ended||r.phase==='lobby'||r.phase==='closed';$('mjDiscard').hidden=ended||r.phase==='lobby'||r.phase==='closed';$('mjMyMelds').hidden=ended||r.phase==='lobby';countdown();controls();scheduleRivers();
   }
   function renderHand(r){
     const hand=$('mjHand'),ordered=[...r.hand];if(r.drawn!==null){ordered.splice(ordered.lastIndexOf(r.drawn),1);ordered.push(r.drawn);}

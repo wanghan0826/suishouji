@@ -102,27 +102,66 @@
 @keyframes mj-discard-in{from{opacity:.3;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
 @media(prefers-reduced-motion:reduce){.mahjong-page .mj-tile{transition:none}.mj-tile.is-entering>svg,.mj-river-tile.is-entering{animation:none}}
 
-/* Side hands stay inside the board; expose two compact meld groups per row. */
-.mj-seat:is([data-side=left],[data-side=right]){top:18%;width:13%;height:76%;gap:5px;align-items:center;justify-content:flex-start}
-.mj-seat:is([data-side=left],[data-side=right]) .mj-opponent{width:100%;max-width:100%;gap:2px}
-.mj-seat:is([data-side=left],[data-side=right]) .table-avatar{width:clamp(30px,calc(10 * var(--game-vh)),60px);border-radius:9px}
-.mj-seat:is([data-side=left],[data-side=right]) .mj-rack{top:50%;gap:1px}
-.mj-rack i{flex:none;width:clamp(6px,calc(.95 * var(--game-vw)),13px)}
-.mj-seat[data-side=left] .mj-rack{left:calc(100% + 5px)}.mj-seat[data-side=right] .mj-rack{right:calc(100% + 5px)}
-.mj-seat:is([data-side=left],[data-side=right]) .mj-mini-melds{position:static;width:100%;max-width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:3px}
-.mj-mini-melds>span{display:flex;justify-content:center;min-width:0;gap:1px}
-.mj-seat:is([data-side=left],[data-side=right]) .mj-mini-melds svg{width:calc((100% - 3px)/4);min-width:0;height:auto;flex:0 1 auto}
-.mj-seat[data-side=top]{max-width:75%}.mj-seat[data-side=top] .mj-mini-melds{position:static;left:auto;top:auto;width:clamp(54px,calc(14 * var(--game-vw)),132px);max-width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px}
-.mj-seat[data-side=top] .mj-mini-melds:empty{display:none}.mj-seat[data-side=top] .mj-mini-melds svg{width:calc((100% - 3px)/4);min-width:0;flex:0 1 auto}
-.mahjong-page .mj-river{width:var(--pile-width,100px);height:var(--pile-height,55px);min-width:0;min-height:0;flex-direction:column;gap:2px;padding:3px;border:1px solid #d6dfb32b;border-radius:4px;background:#173d352e;overflow:visible;--pile-cols:6;--pile-tile:inherit}
-.mj-river[data-side=top],.mj-river[data-side=bottom]{left:50%;transform:translateX(-50%)}
-.mj-river[data-side=top]{top:34px;bottom:auto}.mj-river[data-side=bottom]{top:auto;bottom:2px}
-.mj-river[data-side=left],.mj-river[data-side=right]{top:50%;transform:translateY(-50%);height:var(--pile-height,55px);width:var(--pile-width,100px)}
-.mj-river[data-side=left]{left:16%;right:auto}.mj-river[data-side=right]{right:16%;left:auto}
-.mj-river-tiles,.mj-river:is([data-side=left],[data-side=right]) .mj-river-tiles{grid-template-columns:repeat(6,var(--pile-cell,12px));grid-auto-rows:var(--pile-cell,12px);align-items:center;justify-items:center;gap:1px}
-.mj-river .mj-river-tile{width:var(--pile-tile);height:calc(var(--pile-tile)*1.4)}
-.mj-river:is([data-side=left],[data-side=right]) .mj-river-tile{width:calc(var(--pile-tile)*1.4);height:var(--pile-tile)}
-.mj-river-label{display:block!important;font-size:8px;line-height:10px;flex:none}
+/* One landscape table: concealed hands and melds at the edge, four rivers inside. */
+.mahjong-page .mj-table{padding:0;--mj-tile-w:calc(4.8 * var(--game-vw));--mj-discard-w:104px;background:radial-gradient(ellipse at 50% 38%,#266a6a,#143f47 72%,#102a35)}
+.mj-table-toolbar{position:relative;min-height:36px;padding:0 max(10px,var(--game-inset-right)) 0 max(10px,var(--game-inset-left));z-index:4;background:#143e444d}
+.mahjong-page .mj-table-toolbar button{min-height:36px;font-size:11px}
+.mj-stage{position:relative;display:block;flex:1;width:100%;max-width:1600px;min-height:0;margin:auto}
+.mj-board{height:100%;width:100%}
+.mj-board::before{inset:0 5% 0;clip-path:polygon(8% 0,92% 0,100% 100%,0 100%);background:linear-gradient(110deg,#aa965c,#e2cd93 46%,#8e7c52 75%,#b4a16c);border-radius:0}
+.mj-board::after{inset:0 calc(5% + 4px) 0;clip-path:polygon(8% 0,92% 0,100% 100%,0 100%);border-radius:0;background:radial-gradient(ellipse at 47% 40%,#328b85,#26766f 63%,#205a5d)}
+.mj-felt{inset:0;overflow:visible}
+.mj-felt::before{inset:11% 24% 25%;clip-path:none;border:1px solid #173f4933;box-shadow:inset 0 0 0 3px #8ac2af05;background:repeating-linear-gradient(40deg,#d3e6ca04 0 1px,transparent 1px 5px);border-radius:8px}
+.mj-felt::after{bottom:23%;font-size:10px;color:#133e4b60;letter-spacing:.25em}
+.mj-seat,.mj-seat[data-side=top],.mj-seat:is([data-side=left],[data-side=right]){inset:0;width:100%;height:100%;max-width:none;transform:none;display:block;pointer-events:none}
+.mj-seat .mj-opponent{position:absolute;width:9%;max-width:100px;gap:3px;padding:0;border:0;background:none;text-align:center;flex-direction:column}
+.mj-seat[data-side=left] .mj-opponent{left:2%;top:28%}.mj-seat[data-side=right] .mj-opponent{right:2%;top:28%}
+.mj-seat[data-side=top] .mj-opponent{left:67%;top:1%;padding:0;background:none;border:0;max-width:100px;flex-direction:column;text-align:center;border-radius:0}
+.mj-seat .table-avatar,.mj-seat[data-side=top] .table-avatar,.mj-self .table-avatar{width:clamp(32px,calc(13 * var(--game-vh)),70px);border:1px solid #c1d9bb99;border-radius:8px;box-shadow:0 2px 4px #102e3b66}
+.mj-opponent-info strong{font-size:11px}.mj-opponent-info small{font-size:9px;color:#e3e1b6}.mj-opponent-info{width:100%;padding:2px;background:#153e4040;border-radius:3px}
+.mj-opponent.is-turn::before{left:50%;transform:translateX(-50%);top:-10px}
+.mj-rack{position:absolute;gap:1px;filter:drop-shadow(1px 3px 1px #103b3b66)}
+.mj-rack i{flex:none;width:calc(var(--mj-tile-w)*.52);height:calc(var(--mj-tile-w)*.67);border-radius:2px;border:1px solid #1b6249;border-top:3px solid #e2e7c9;background:linear-gradient(90deg,#418e66,#267a50 75%,#236546)}
+.mj-seat[data-side=top] .mj-rack{left:47%;top:3%;transform:translateX(-50%)}
+.mj-seat[data-side=top]:has(.mj-mini-melds>span) .mj-rack{left:53%}
+.mj-seat:is([data-side=left],[data-side=right]) .mj-rack{top:24%;display:flex;flex-direction:column;gap:1px;width:auto;transform:none}
+.mj-seat[data-side=left] .mj-rack{left:18%;right:auto}.mj-seat[data-side=right] .mj-rack{right:18%;left:auto}
+.mj-seat:is([data-side=left],[data-side=right]) .mj-rack i{width:calc(var(--mj-tile-w)*.56);height:var(--mj-back-step,12px);border-top:1px solid #589c72;border-left:3px solid #eee9d1;background:linear-gradient(#46946f,#297b55 80%)}
+.mj-seat[data-side=right] .mj-rack i{border-left:1px solid #357c59;border-right:3px solid #eee9d1}
+.mj-mini-melds,.mj-seat[data-side=top] .mj-mini-melds,.mj-seat:is([data-side=left],[data-side=right]) .mj-mini-melds{position:absolute;display:flex;flex-wrap:nowrap;width:max-content;max-width:none;gap:4px;justify-content:flex-start;transform-origin:top left}
+.mj-mini-melds:empty{display:none!important}.mj-mini-melds>span{display:flex;flex:none;gap:1px;justify-content:flex-start}
+.mj-mini-melds svg,.mj-seat[data-side=top] .mj-mini-melds svg,.mj-seat:is([data-side=left],[data-side=right]) .mj-mini-melds svg{display:block;width:var(--mj-open-w,18px);height:calc(var(--mj-open-w,18px)*1.4);flex:none;min-width:0}
+.mj-seat[data-side=top] .mj-mini-melds{left:18%;top:3%;transform:rotate(180deg) translate(-100%,-100%)}
+.mj-seat[data-side=left] .mj-mini-melds{left:12%;top:80%;transform:rotate(-90deg)}
+.mj-seat[data-side=right] .mj-mini-melds{left:auto;right:12%;top:13%;transform:translateX(100%) rotate(90deg)}
+.mahjong-page .mj-river{--pile-cols:6;--pile-tile:inherit;position:absolute;left:50%;right:auto;top:var(--mj-center-y,45%);bottom:auto;width:var(--pile-width,100px);height:var(--pile-height,65px);min-width:0;min-height:0;display:block;padding:3px;border:1px solid #b1d2b51c;border-radius:3px;background:#143c3e0a;overflow:visible;transform-origin:center;transition:background .12s}
+.mj-river[data-side=top]{top:calc(var(--mj-center-y) - var(--pile-offset));transform:translate(-50%,-50%) rotate(180deg)}
+.mj-river[data-side=bottom]{top:calc(var(--mj-center-y) + var(--pile-offset));transform:translate(-50%,-50%)}
+.mj-river[data-side=left]{left:calc(50% - var(--pile-offset));transform:translate(-50%,-50%) rotate(90deg)}
+.mj-river[data-side=right]{left:calc(50% + var(--pile-offset));transform:translate(-50%,-50%) rotate(-90deg)}
+.mj-river-tiles,.mj-river:is([data-side=left],[data-side=right]) .mj-river-tiles{display:grid;grid-template-columns:repeat(6,var(--pile-tile));grid-template-rows:repeat(var(--pile-rows,3),calc(var(--pile-tile)*1.4));grid-auto-rows:calc(var(--pile-tile)*1.4);gap:1px;justify-content:start;align-content:start;align-items:start;justify-items:start}
+.mj-river .mj-river-tile,.mj-river:is([data-side=left],[data-side=right]) .mj-river-tile{width:var(--pile-tile);height:calc(var(--pile-tile)*1.4)}
+.mj-river .mj-river-tile svg,.mj-river:is([data-side=left],[data-side=right]) .mj-river-tile svg{position:static;width:100%;height:100%;transform:none}
+.mj-river-label{display:block!important;position:absolute;top:-12px;left:0;width:100%;font-size:8px;line-height:10px;color:#d7e4c0b3;white-space:nowrap}
+.mj-table-center{top:var(--mj-center-y,45%);width:var(--mj-compass-w,78px);height:var(--mj-compass-h,56px);z-index:1}
+.mj-compass{border:1px solid #acc7ab;border-radius:7px;background:linear-gradient(145deg,#276367,#143d45);box-shadow:inset 0 0 0 3px #143e4377,0 3px 5px #153c4580}
+.mj-compass strong{font-size:22px;color:#ffd890}.mj-compass b{font-size:10px}.mj-compass small{font-size:8px;line-height:10px}.mj-center-status{font-size:8px;line-height:12px}
+.mj-self{position:absolute;left:2%;bottom:21%;width:9%;max-width:100px;z-index:2;pointer-events:none}
+.mj-playbar{position:absolute;bottom:calc(var(--mj-hand-h) + 11px);left:29%;right:29%;min-height:16px;pointer-events:none;z-index:2}.mj-playbar p{font-size:10px}
+.mj-hand-area{position:absolute;bottom:max(8px,var(--game-inset-bottom));left:13%;width:calc(85% - var(--mj-discard-w) - 16px);max-width:1250px;padding:0;margin:0;z-index:3}
+.mj-hand-label{position:absolute;bottom:calc(100% + 7px);left:0;margin:0;min-height:12px;pointer-events:none}.mj-hand-label span{font-size:9px;color:#c4d9cb}
+.mj-hand-row{justify-content:space-between;gap:20px;min-height:var(--mj-hand-h);width:100%}.mj-hand{justify-content:flex-start;flex:none;gap:2px}
+.mahjong-page .mj-tile{flex:none;border-radius:4px;filter:drop-shadow(0 3px 1px #0b303f80)}.mj-tile.is-drawn{margin-left:8px}
+.mj-my-melds{max-width:none;gap:5px}.mj-meld svg{width:calc(var(--mj-tile-w)*.64);height:calc(var(--mj-tile-w)*.896)}.mj-meld small{top:-12px;font-size:8px}
+.mahjong-page #mjDiscard{right:max(2%,var(--game-inset-right));bottom:max(8px,var(--game-inset-bottom));width:var(--mj-discard-w);max-width:none;min-width:0;min-height:42px;padding:4px 8px;border-radius:5px;font-size:14px}
+.mj-table{--mj-action-w:84px}
+.mj-actions{bottom:calc(var(--mj-hand-h) + 49px);left:calc(50% - var(--mj-ring-radius,120px) - 8px - var(--mj-action-w));right:auto;gap:5px;width:calc(var(--mj-ring-radius,120px)*2 + 16px + var(--mj-action-w)*2);max-width:none;display:grid;grid-template-columns:var(--mj-action-w) var(--mj-action-w);justify-content:space-between;align-items:stretch;pointer-events:none}.mahjong-page .mj-actions button{grid-column:2;font-size:13px;min-height:42px;min-width:0;padding:5px 3px;border-radius:5px;line-height:1.25;pointer-events:auto}
+.mj-actions button:nth-child(1){grid-row:1}.mj-actions button:nth-child(2){grid-row:2}.mj-actions button:nth-child(3){grid-column:1;grid-row:1}.mj-actions button:nth-child(4){grid-column:1;grid-row:2}
+.mj-table-message{position:absolute;left:25%;right:25%;bottom:calc(var(--mj-hand-h) + 70px);z-index:5;background:#173c42e6;padding:5px;border-radius:3px;pointer-events:none}
+.mj-connection,.mj-mode-notice{z-index:5;position:absolute;top:36px;left:15%;right:15%;background:#244e4af0;pointer-events:none}
+.mj-result{height:100%;max-height:100%;padding:20px max(20px,8%);background:#153e3deb}.mj-stage:has(.mj-result:not([hidden])){padding-bottom:12px}
+.mj-keyboard .mj-stage{min-height:0}.mj-keyboard .mj-self,.mj-keyboard #mjDiscard{display:none}
+@media(orientation:landscape) and (max-height:360px),(orientation:portrait) and (pointer:coarse) and (max-width:360px){.mj-table-toolbar{min-height:32px}.mahjong-page .mj-table-toolbar button{min-height:32px}.mj-seat .table-avatar,.mj-seat[data-side=top] .table-avatar,.mj-self .table-avatar{width:32px}.mj-opponent-info strong{font-size:9px}.mj-opponent-info small{font-size:8px}.mj-hand-area{bottom:6px}.mj-playbar p{font-size:9px}.mahjong-page #mjDiscard{font-size:12px;min-width:88px}.mahjong-page .mj-actions button{font-size:12px;min-width:48px;padding-inline:8px}.mj-table-center .mj-compass strong{font-size:18px}.mj-table-center .mj-compass b{font-size:8px}.mj-hand-label span{font-size:8px}}
 .mj-river-detail>div{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;width:min(100%,360px)}
 .mj-river-detail>div>span{display:flex;justify-content:center}.mj-river-detail svg{width:min(100%,42px);height:auto}
 .mj-chat{top:44px;bottom:6px;left:max(9px,var(--game-inset-left));right:auto;width:min(320px,40%);grid-template-rows:auto minmax(0,1fr) auto auto auto auto auto;gap:4px}
@@ -139,7 +178,7 @@
 .mahjong-page .mj-voice-message{display:block;min-height:36px;min-width:100px;text-align:left;font-size:12px;cursor:pointer;background:#416c57;border-color:#a3bf8d55;color:#f7f0cc}
 .mahjong-page .mj-voice-message.is-playing{background:#d4d8a6;color:#15382c}.mj-chat-voice{padding:0;background:transparent!important}
 .mahjong-page #mjVoiceRetry{font-size:11px;min-height:30px;background:#725739;color:#fff3d2}
-@media(orientation:landscape) and (max-height:360px),(orientation:portrait) and (pointer:coarse) and (max-width:360px){.mj-seat:is([data-side=left],[data-side=right]){top:12%;height:85%;gap:3px}.mj-seat:is([data-side=left],[data-side=right]) .table-avatar{width:28px}.mj-opponent-info strong{font-size:9px}.mj-opponent-info small{font-size:8px}.mj-river[data-side=top]{top:28px}.mj-emoji{max-height:60px}.mahjong-page .mj-emoji button{min-height:27px}.mj-chat-reaction .mj-sticker{width:50px}}
+@media(orientation:landscape) and (max-height:360px),(orientation:portrait) and (pointer:coarse) and (max-width:360px){.mj-emoji{max-height:60px}.mahjong-page .mj-emoji button{min-height:27px}.mj-chat-reaction .mj-sticker{width:50px}}
 
 /* The hall scrolls naturally; only an occupied table uses the rotated canvas. */
 .mahjong-page:not(.mj-in-table){overflow-x:clip}
