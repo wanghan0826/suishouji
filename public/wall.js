@@ -79,7 +79,8 @@
     shape();const w=area.clientWidth,h=area.clientHeight,mobile=w<=760;
     let maxHeight=portrait()?60:mobile?44:46;for(const lane of lanes)for(const entry of lane.items){const summary=SJWallText.summary(entry.post);entry.element.querySelector('.wall-text').textContent=portrait()?summary.text:entry.post.text;entry.element.querySelector('.wall-meta').textContent=(entry.post.name||'小伙伴')+' · '+(portrait()?summary.kind:(THEMES[entry.post.theme]?.label||'分享'));entry.width=entry.element.getBoundingClientRect().width;maxHeight=Math.max(maxHeight,entry.element.getBoundingClientRect().height);}
     const reading=mobile&&document.body.classList.contains('has-open-post');
-    const top=reading?126:mobile?216:218,bottom=reading?(document.getElementById('postReader')?.getBoundingClientRect().height||0)+16:mobile?105:100;
+    const intro=document.querySelector('.wall-intro'),introBottom=intro?intro.getBoundingClientRect().bottom-area.getBoundingClientRect().top+14:0;
+    const top=reading?126:Math.max(mobile?216:218,introBottom),bottom=reading?(document.getElementById('postReader')?.getBoundingClientRect().height||0)+16:mobile?105:100;
     const usable=Math.max(44,h-top-bottom);
     const count=Math.max(1,Math.min(pool.length,mobile?6:7,Math.floor(usable/(portrait()?maxHeight+18:mobile?68:76))));
     const spacing=usable/count;
