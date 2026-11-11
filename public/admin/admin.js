@@ -76,7 +76,7 @@
     try{
       const d=await api('growth?days='+$('growthPeriod').value);if(id!==requestId||view!=='growth')return;
       const n=d.registrations,pct=(a,b)=>b?(100*a/b).toFixed(1)+'%':'暂无样本';
-      const labels={home:'弹幕首页',games:'游戏大厅',feedback:'游戏建议',word:'同频猜词大厅',word_invite:'猜词房间 / 邀请入口',draw:'你画我猜大厅',draw_invite:'你画我猜房间 / 邀请入口',mahjong:'新余麻将大厅',mahjong_invite:'麻将牌室 / 邀请入口',plaza:'讨论广场',post:'帖子详情',space:'个人空间',friends:'朋友动态',unknown:'未记录'};
+      const labels={home:'弹幕首页',games:'游戏大厅',feedback:'游戏建议',word:'同频猜词大厅',word_invite:'猜词房间 / 邀请入口',draw:'你画我猜大厅',draw_invite:'你画我猜房间 / 邀请入口',mahjong:'激战麻将大厅',mahjong_invite:'麻将牌室 / 邀请入口',plaza:'讨论广场',post:'帖子详情',space:'个人空间',friends:'朋友动态',unknown:'未记录'};
       const channels={qq:'QQ',wechat:'微信',xiaohongshu:'小红书',campus:'校园',github:'GitHub',direct:'普通链接',other:'其他',search:'搜索引擎'};
       const channelLabel=value=>{if(value==='unknown')return '直接或未识别';const [kind,key]=value.split(':');return (channels[key]||'其他')+' · '+(kind==='link'?'链接标记':'外站来源');};
       const rows=(id,items,empty='还没有记录')=>{const target=$(id);target.replaceChildren(...(items.length?items.map(cells=>{const row=node('tr');for(const value of cells)row.append(node('td','',value));return row;}):[(()=>{const row=node('tr'),cell=node('td','',empty);cell.colSpan=4;row.append(cell);return row;})()]));};
