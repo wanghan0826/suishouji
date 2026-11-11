@@ -38,4 +38,5 @@ html[data-lightweight=true] .home-wall-art{display:none}html[data-lightweight=tr
 @media(orientation:landscape) and (max-height:550px){.home-picker-panel{position:fixed;top:86px;left:50%;right:auto;transform:translateX(-50%);max-height:calc(100svh - 100px)}}
 
 .home-section-head>div{min-width:0}
+.home-page .header-actions #btnAccount[aria-label="登录或注册"]{min-width:108px;max-width:none;white-space:nowrap}
 html:is([data-appearance=night],[data-appearance=forest],[data-appearance=sunset]) .home-game-card{background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 12%,var(--surface)),var(--surface) 78%);border-color:var(--border)}
