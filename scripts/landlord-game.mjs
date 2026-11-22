@@ -28,7 +28,7 @@ async function readInput(req) {
   }
 }
 
-export function createLandlordGame({db, users, clock = Date.now}) {
+export function createLandlordGame({db, users, clock = Date.now, usage}) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS landlord_rooms(
       token TEXT PRIMARY KEY, state TEXT NOT NULL, expires INTEGER NOT NULL,
@@ -82,9 +82,10 @@ export function createLandlordGame({db, users, clock = Date.now}) {
     } else if (!active.some(seat => seat.id === room.host)) room.host = active[0].id;
   }
 
-  function save(token,room,seen) {
+  function save(token,room,seen,now=seen) {
     room.version++;
     update.run(JSON.stringify(room),seen,dueAt(room),token);
+    if(room.phase==='result')usage?.finish('landlord',token,room.round,now);
   }
 
   function advance(token, now) {
@@ -107,7 +108,7 @@ export function createLandlordGame({db, users, clock = Date.now}) {
         }
       }
       if (changed) updateHost(room);
-      if (advanceTurn(room,now) || changed) save(token,room,row.seen);
+      if (advanceTurn(room,now) || changed) save(token,room,row.seen,now);
       return room;
     });
   }
@@ -200,7 +201,10 @@ export function createLandlordGame({db, users, clock = Date.now}) {
             db.prepare('DELETE FROM landlord_members WHERE token=? AND user_id=?').run(token,user.id);
           } else room.seats[seat].away = true;
           updateHost(room);
-        } else act(room,seat,action,input,now);
+        } else {
+          act(room,seat,action,input,now);
+          usage?.play('landlord',token,room.round,user.id,now);
+        }
       }
       save(token,room,now);
       db.prepare('INSERT INTO landlord_ops VALUES (?,?,?,?)').run(token,user.id,input.opId,hash);

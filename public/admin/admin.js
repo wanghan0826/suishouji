@@ -80,6 +80,14 @@
       const channels={qq:'QQ',wechat:'微信',xiaohongshu:'小红书',campus:'校园',github:'GitHub',direct:'普通链接',other:'其他',search:'搜索引擎'};
       const channelLabel=value=>{if(value==='unknown')return '直接或未识别';const [kind,key]=value.split(':');return (channels[key]||'其他')+' · '+(kind==='link'?'链接标记':'外站来源');};
       const rows=(id,items,empty='还没有记录')=>{const target=$(id);target.replaceChildren(...(items.length?items.map(cells=>{const row=node('tr');for(const value of cells)row.append(node('td','',value));return row;}):[(()=>{const row=node('tr'),cell=node('td','',empty);cell.colSpan=4;row.append(cell);return row;})()]));};
+      const usage=d.gameUsage;
+      const formatTime=new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',dateStyle:'medium',timeStyle:'short'});
+      const hasPlay=usage.games.some(game=>game.matches>0);
+      $('gameUsageStatus').textContent=(usage.startedAt?'记录始于 '+formatTime.format(usage.startedAt):'等待开始记录')+
+        (hasPlay?'。当前显示近 '+d.days+' 天。':'。这个范围还没有游玩记录。');
+      rows('gameUsageRows',usage.games.map(game=>[
+        game.name,game.players,game.matches,game.completed,game.matches?pct(game.completed,game.matches):'—'
+      ]));
       $('growthStarted').textContent='来源和精确行为开始记录：'+new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',dateStyle:'medium',timeStyle:'short'}).format(new Date(d.startedAt));
       $('growthUsers').textContent=n.total;$('growthPlayers').textContent=n.played;$('growthPlayerRate').textContent='占新增账号 '+pct(n.played,n.total)+' · 含可确认的历史记录';$('growthGameSignups').textContent=n.gamePage;$('growthInviteSignups').textContent=n.inviteEntry;
       $('growthSummary').textContent=n.total?'近'+d.days+'天注册了'+n.total+'个可用账号，其中'+n.played+'人实际参与过游戏。游戏参与不等于注册原因，请结合入口和后续回访判断。':'这个范围内还没有新增账号。新数据会从真实访问、注册和成功操作中积累。';

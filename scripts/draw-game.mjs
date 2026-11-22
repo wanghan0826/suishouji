@@ -18,7 +18,7 @@ export function validStroke(input,height=640){
   if(!/^[a-f0-9]{32}$/.test(input.opId||'')||!/^[a-f0-9]{32}$/.test(input.strokeId||'')||!DRAW_COLORS.includes(input.color)||![3,6,12,20].includes(input.size)||!Array.isArray(input.points)||!input.points.length||input.points.length>128||input.points.some(p=>!Array.isArray(p)||p.length!==2||!p.every(Number.isInteger)||p[0]<0||p[0]>960||p[1]<0||p[1]>height))throw fail(400,'画笔数据无效，请刷新画板后重试');
   return {opId:input.opId,strokeId:input.strokeId,color:input.color,size:input.size,points:input.points};
 }
-export function createDrawingGame({db,users,clock=Date.now}){
+export function createDrawingGame({db,users,clock=Date.now,usage}){
   ensureGrowthMetrics(db);
   db.exec(`CREATE TABLE IF NOT EXISTS draw_rooms(token TEXT PRIMARY KEY,host_id INTEGER NOT NULL,phase TEXT NOT NULL DEFAULT 'lobby',round INTEGER NOT NULL DEFAULT 0,roster TEXT NOT NULL DEFAULT '[]',next_at INTEGER NOT NULL DEFAULT 0,version INTEGER NOT NULL DEFAULT 1,created_at INTEGER NOT NULL,expires_at INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS draw_members(room_token TEXT NOT NULL,user_id INTEGER NOT NULL,seat INTEGER NOT NULL,active INTEGER NOT NULL DEFAULT 1,score INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(room_token,user_id),UNIQUE(room_token,seat));
@@ -46,12 +46,17 @@ export function createDrawingGame({db,users,clock=Date.now}){
   const members=token=>db.prepare('SELECT m.*,u.username FROM draw_members m JOIN site_users u ON u.id=m.user_id WHERE m.room_token=? AND m.active=1 AND u.disabled=0 ORDER BY m.seat').all(token);
   const turn=r=>db.prepare('SELECT * FROM draw_rounds WHERE room_token=? AND round=?').get(r.token,r.round);
   const correct=r=>db.prepare('SELECT user_id,rank FROM draw_correct WHERE room_token=? AND round=? ORDER BY rank').all(r.token,r.round);
-  function participate(r,id){if(db.prepare('INSERT OR IGNORE INTO draw_activity VALUES(?,?,?)').run(r.token,r.round,id).changes)recordGrowthGuess(db,id,clock());}
+  function participate(r,id){
+    const now=clock();
+    if(db.prepare('INSERT OR IGNORE INTO draw_activity VALUES(?,?,?)').run(r.token,r.round,id).changes)recordGrowthGuess(db,id,now);
+    usage?.play('draw',r.token,r.round,id,now);
+  }
   function limit(id,kind){const max=kind==='stroke'?650:['create','nickname'].includes(kind)?6:kind==='guess'?60:90,window=kind==='create'?3600000:60000,key=id+':'+kind,now=clock();let row=buckets.get(key);if(!row||row.until<=now){row={n:0,until:now+window};buckets.set(key,row);}if(++row.n>max)throw fail(429,kind==='stroke'?'画笔同步稍快，请稍停一下。':'操作有点快，请稍后再试');if(buckets.size>3000)for(const[k,v]of buckets)if(v.until<now)buckets.delete(k);}
   function settle(r,reason='time'){
     const t=turn(r);if(!t||t.settled_at!==null)return;
     const guessed=correct(r).map(v=>v.user_id),eligible=JSON.parse(t.eligible),cancelled=['left','skip'].includes(reason),scores=cancelled?[]:score(r,eligible,guessed,t.drawer_id),now=clock();
     db.prepare('UPDATE draw_rounds SET settled_at=?,reason=? WHERE room_token=? AND round=? AND settled_at IS NULL').run(now,reason,r.token,r.round);
+    if(!cancelled)usage?.finish('draw',r.token,r.round,now);
     for(const s of scores)db.prepare('UPDATE draw_members SET score=score+? WHERE room_token=? AND user_id=?').run(s.points,r.token,s.userId);
     const roster=JSON.parse(r.roster),active=members(r.token),hasNext=roster.slice(r.round).some(id=>active.some(m=>m.user_id===id));
     db.prepare('UPDATE draw_rooms SET phase=?,next_at=?,version=version+1 WHERE token=?').run((r.mode==='studio'?active.some(m=>m.user_id===r.host_id):hasNext&&active.length>=3)?'between':'finished',now+BREAK,r.token);

@@ -4,6 +4,7 @@ import {ensureCommunity,channelFilter} from './scripts/community.mjs';
 import {visibleSpaceMessage} from './scripts/space-threads.mjs';
 import {ensureSocialMetrics,readSocialMetrics} from './scripts/social-metrics.mjs';
 import {readGrowthMetrics} from './scripts/growth-metrics.mjs';
+import {readGameUsage} from './scripts/game-usage.mjs';
 import {ensureGameFeedback,readAdminGameFeedback,updateGameFeedback} from './scripts/game-feedback.mjs';
 import {ensureInvitationSchema,readInvitationAnalytics} from './scripts/invitations.mjs';
 import {ensureSpaces} from './scripts/spaces.mjs';
@@ -110,7 +111,11 @@ export function createAdminService({db,dataDir,publicDir,origin='https://example
       if(p==='/api/admin/game-feedback'&&req.method==='GET'){json(res,200,readAdminGameFeedback(db,{status:url.searchParams.get('status')??'new',page:url.searchParams.get('page')??1}));return true;}
       const feedbackMatch=/^\/api\/admin\/game-feedback\/(\d+)$/.exec(p);
       if(feedbackMatch&&req.method==='POST'){const result=updateGameFeedback(db,checkId(feedbackMatch[1]),await body(req));if(result.changed)audit(s.username,'game_feedback',feedbackMatch[1]);json(res,200,result);return true;}
-      if(p==='/api/admin/growth'&&req.method==='GET'){json(res,200,readGrowthMetrics(db,Number(url.searchParams.get('days')||7)));return true;}
+      if(p==='/api/admin/growth'&&req.method==='GET'){
+        const days=Number(url.searchParams.get('days')||7);
+        const growth=readGrowthMetrics(db,days);
+        json(res,200,{...growth,gameUsage:readGameUsage(db,days)});return true;
+      }
       if(p==='/api/admin/invitations'&&req.method==='GET'){json(res,200,readInvitationAnalytics(db));return true;}
       if(p==='/api/admin/analytics'&&req.method==='GET'){json(res,200,readAnalytics(db));return true;}
       if(p==='/api/admin/overview'&&req.method==='GET'){
