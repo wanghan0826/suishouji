@@ -1,5 +1,7 @@
 (() => {
  const $=id=>document.getElementById(id),route=location.pathname.match(/^\/u\/([a-zA-Z0-9_]+)\/?$/),name=route?route[1].toLowerCase():'me',base='/api/spaces/'+name;
+ $('spaceShortcuts').hidden=!!route;
+ $('spaceAccountShortcut').onclick=()=>$('btnAccount').click();
  let profile,tab='updates',page=1,pages=1,version=0,composeGeneration=0,checkingEntry=false;const labels={public:'公开空间',followers:'仅粉丝可见',mutual:'仅互关可见'};
  const node=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=String(text);if(cls)e.className=cls;return e;};
  async function api(path='',body){const opts={credentials:'same-origin',cache:'no-store'};if(body!==undefined){await SJAuth.ready;Object.assign(opts,{method:'POST',headers:{'Content-Type':'application/json','X-SJ-CSRF':SJAuth.csrf},body:JSON.stringify(body)});}const r=await fetch(base+path,opts),data=await r.json();if(!r.ok){const error=Error(data.error||'暂时无法完成操作');error.status=r.status;throw error;}return data;}

@@ -1,23 +1,33 @@
 <!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>游戏大厅 · 随手记</title><meta name="description" content="先选游戏，再看玩法。双人同频猜词、十人画室和四人激战麻将，邀请朋友在网页直接玩。"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/appearance.css"><link rel="stylesheet" href="/plaza.css"><link rel="stylesheet" href="/user-auth.css"><link rel="stylesheet" href="/social-inbox.css"><link rel="stylesheet" href="/platform.css"><script src="/appearance.js"></script><link rel="stylesheet" href="/touch-ui.css"><link rel="stylesheet" href="/interaction.css"><link rel="stylesheet" href="/graphic.css"><link rel="stylesheet" href="/navigation.css"><link rel="stylesheet" href="/games-compact.css"><link rel="stylesheet" href="/editorial.css"></head><body class="plaza-page games-page editorial-games"><header class="plaza-header"><a class="brand" href="/"><span class="brand-icon">记</span><span class="brand-name">随手记</span></a><nav aria-label="主导航"><a href="/">弹幕首页</a><a href="/games" aria-current="page">游戏大厅</a><a href="/plaza">社区广场</a><a href="/space">我的空间</a></nav><div><button id="btnAppearance" class="btn-ghost">主题</button><button id="btnAccount" class="btn-ghost">登录 / 注册</button></div></header><main class="games-main">
   <section class="games-launchpad" aria-labelledby="gamesLaunchTitle">
     <header class="editorial-games-heading"><h1 id="gamesLaunchTitle">游戏大厅</h1><p>今天想和朋友玩哪一局？</p></header>
-    <div class="editorial-games-grid">
+    <div class="editorial-games-groups">
+      <section class="editorial-games-group" aria-labelledby="creativeGames">
+        <h2 id="creativeGames">联想与绘画</h2>
+        <div class="editorial-games-grid">
       <a id="launchWordGame" class="editorial-tile editorial-tile-word" href="/play">
         <img src="/assets/editorial-cover-word.webp" alt="" width="460" height="460">
-        <div><h2>同频猜词</h2><span class="editorial-tile-action">开始游戏 <b aria-hidden="true">→</b></span></div>
+        <div><h3>同频猜词</h3><span class="editorial-tile-action">开始游戏 <b aria-hidden="true">→</b></span></div>
       </a>
       <a id="launchDrawGame" class="editorial-tile editorial-tile-draw" href="/draw">
         <img src="/assets/editorial-cover-draw.webp" alt="" width="460" height="460">
-        <div><h2>灵魂画手</h2><span class="editorial-tile-action">开始游戏 <b aria-hidden="true">→</b></span></div>
+        <div><h3>灵魂画手</h3><span class="editorial-tile-action">开始游戏 <b aria-hidden="true">→</b></span></div>
       </a>
+        </div>
+      </section>
+      <section class="editorial-games-group" aria-labelledby="tableGames">
+        <h2 id="tableGames">棋牌</h2>
+        <div class="editorial-games-grid">
       <a id="launchMahjongGame" class="editorial-tile editorial-tile-mahjong" href="/mahjong">
         <img src="/assets/editorial-cover-mahjong.webp" alt="" width="460" height="460">
-        <div><h2>激战麻将</h2><b aria-hidden="true">→</b></div>
+        <div><h3>激战麻将</h3><b aria-hidden="true">→</b></div>
       </a>
       <a id="launchLandlordGame" class="editorial-tile editorial-tile-landlord" href="/landlord">
         <img src="/assets/editorial-cover-landlord.webp" alt="" width="460" height="460">
-        <div><h2>经典斗地主</h2><b aria-hidden="true">→</b></div>
+        <div><h3>经典斗地主</h3><b aria-hidden="true">→</b></div>
       </a>
+        </div>
+      </section>
     </div>
   </section>
   <a class="editorial-games-feedback" href="/feedback"><span class="editorial-feedback-icon" aria-hidden="true"></span><strong>游戏建议</strong><span aria-hidden="true">→</span></a>
