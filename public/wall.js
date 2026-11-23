@@ -4,6 +4,7 @@
   const bg=document.getElementById('danmakuBg');
   const status=document.getElementById('wallStatus');
   const toggle=document.getElementById('toggleDanmaku');
+  const illustrated=document.body.classList.contains('editorial-home');
   const classicMode=new URLSearchParams(location.search).get('wall')==='classic';const portrait=()=>area.clientWidth<=760&&!classicMode;
   const shape=()=>document.body.classList.toggle('portrait-wall',portrait());shape();
   // Remove only the legacy player's initial items when taking over playback.
@@ -19,6 +20,10 @@
   function restoreProgress(){if(restored)return null;restored=true;try{const s=JSON.parse(sessionStorage.getItem(progressKey));if(s&&Number.isFinite(s.at)&&Date.now()-s.at>=0&&Date.now()-s.at<86400000&&typeof s.ids==='string'&&Number.isFinite(s.width)&&s.width>0&&Array.isArray(s.lanes)&&s.lanes.length<=7&&s.lanes.every(row=>Array.isArray(row)&&row.length<=5&&row.every(e=>e&&Number.isSafeInteger(e.id)&&Number.isFinite(e.x)&&Math.abs(e.x)<10000))){const byId=new Map(pool.map(p=>[p.id,p])),order=s.ids.split(',').map(Number);if(order.length!==pool.length||new Set(order).size!==pool.length||order.some(id=>!byId.has(id)))return null;pool=order.map(id=>byId.get(id));const next=pool.findIndex(p=>p.id===s.nextId);if(next>=0)cursor=next;return s;}}catch{}return null;}
   let backgroundImages=[],backgroundIndex=0;const lightweight=()=>document.documentElement.dataset.lightweight==='true';
   function changeBackground(){
+    if(illustrated&&(lightweight()||document.documentElement.dataset.backgroundRotation!=='true'||!backgroundImages.length)){
+      bg.style.removeProperty('background-image');
+      return;
+    }
     bg.style.backgroundImage=!lightweight()&&backgroundImages.length?`url("/uploads/${encodeURIComponent(backgroundImages[backgroundIndex++%backgroundImages.length].media)}")`:'url("/assets/lake.jpg")';
     bg.classList.add('show');
   }
@@ -33,7 +38,9 @@
   const wallInUse=()=>!document.hidden&&!pageSuspended&&wallVisible&&!document.body.classList.contains('sj-image-open')&&!(innerWidth<=760&&document.body.classList.contains('reader-expanded'));
   const stopped=()=>manualPaused||!wallInUse();
   const updateControl=()=>{
-    toggle.textContent=manualPaused?'▶ 播放弹幕':'Ⅱ 暂停弹幕';
+    const label=manualPaused?'播放弹幕':'暂停弹幕';
+    toggle.textContent=(manualPaused?'▶ ':'Ⅱ ')+label;
+    if(illustrated){toggle.setAttribute('aria-label',label);toggle.title=label;}
     toggle.setAttribute('aria-pressed',String(manualPaused));
     area.classList.toggle('is-paused',stopped());
     if(stopped()||!pool.length){if(raf)cancelAnimationFrame(raf);raf=0;last=0;}
@@ -77,10 +84,10 @@
   function layout(){
     if(!pool.length){for(const l of lanes)for(const e of l.items){e.release?.();e.element.remove();}lanes=[];status.textContent='这里还很安静，写一条，让你的心情飘过屏幕。';return;}
     shape();const w=area.clientWidth,h=area.clientHeight,mobile=w<=760;
-    let maxHeight=portrait()?60:mobile?44:46;for(const lane of lanes)for(const entry of lane.items){const summary=SJWallText.summary(entry.post);entry.element.querySelector('.wall-text').textContent=portrait()?summary.text:entry.post.text;entry.element.querySelector('.wall-meta').textContent=(entry.post.name||'小伙伴')+' · '+(portrait()?summary.kind:(THEMES[entry.post.theme]?.label||'分享'));entry.width=entry.element.getBoundingClientRect().width;maxHeight=Math.max(maxHeight,entry.element.getBoundingClientRect().height);}
+    let maxHeight=portrait()?(illustrated?42:60):mobile?44:46;for(const lane of lanes)for(const entry of lane.items){const summary=SJWallText.summary(entry.post);entry.element.querySelector('.wall-text').textContent=portrait()?summary.text:entry.post.text;entry.element.querySelector('.wall-meta').textContent=(entry.post.name||'小伙伴')+' · '+(portrait()?summary.kind:(THEMES[entry.post.theme]?.label||'分享'));entry.width=entry.element.getBoundingClientRect().width;maxHeight=Math.max(maxHeight,entry.element.getBoundingClientRect().height);}
     const reading=mobile&&document.body.classList.contains('has-open-post');
     const intro=document.querySelector('.wall-intro'),introBottom=intro?intro.getBoundingClientRect().bottom-area.getBoundingClientRect().top+14:0;
-    const top=reading?126:Math.max(mobile?216:218,introBottom),bottom=reading?(document.getElementById('postReader')?.getBoundingClientRect().height||0)+16:mobile?105:100;
+    const top=reading?126:Math.max(illustrated?142:mobile?216:218,introBottom),bottom=reading?(document.getElementById('postReader')?.getBoundingClientRect().height||0)+16:illustrated?84:mobile?105:100;
     const usable=Math.max(44,h-top-bottom);
     const count=Math.max(1,Math.min(pool.length,mobile?6:7,Math.floor(usable/(portrait()?maxHeight+18:mobile?68:76))));
     const spacing=usable/count;
